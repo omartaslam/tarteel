@@ -20,4 +20,4 @@ RUN python -c "from transformers import Wav2Vec2ForCTC, AutoProcessor; \
     AutoProcessor.from_pretrained(m); Wav2Vec2ForCTC.from_pretrained(m)"
 
 ENV PORT=8000
-CMD uvicorn server:app --host 0.0.0.0 --port $PORT
+CMD ["sh","-c","uvicorn server:app --host 0.0.0.0 --port ${PORT}"]
