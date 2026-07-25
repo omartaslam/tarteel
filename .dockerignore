@@ -1,0 +1,8 @@
+__pycache__
+*.pyc
+.tarteel_work
+aligner.onnx
+*.m4a
+ikhlas_corpus
+ikhlas_aligned
+audio

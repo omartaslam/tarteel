@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-multipart
+transformers
+librosa
+numpy
+scikit-learn
+quranic-phonemizer
