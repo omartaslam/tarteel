@@ -49,6 +49,7 @@ def build_feedback(
     heard_arabic=None,
     heard_phonetic=None,
     mastered=None,
+    last_focus=None,
 ):
     spec = VERSE_ELEMENTS.get(verse, {})
     ok_cards = []
@@ -143,7 +144,7 @@ def build_feedback(
     cards.extend(errors)
     cards.extend(tips)
 
-    nxt = coach.pick_next_step(issues, mastered=mastered)
+    nxt = coach.pick_next_step(issues, mastered=mastered, last_focus=last_focus)
     if nxt:
         cards.append(nxt)
     elif not issues:

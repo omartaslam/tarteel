@@ -54,7 +54,7 @@ def _set_job(jid, **kw):
         _JOBS[jid] = job
 
 
-def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None):
+def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, last_focus=None):
     t0 = time.time()
 
     def on_progress(pct, phase, msg):
@@ -70,7 +70,10 @@ def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None):
     try:
         on_progress(2, "start", "Starting analysis…")
         cards = analyze.analyze_verse(
-            path, verse, on_progress=on_progress, mastered=mastered or [],
+            path, verse,
+            on_progress=on_progress,
+            mastered=mastered or [],
+            last_focus=last_focus or None,
         ) or []
         sid = storage.save(
             raw, ext, verse, cards,
@@ -80,6 +83,7 @@ def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None):
                 "bytes": len(raw),
                 "job": jid,
                 "mastered": mastered or [],
+                "last_focus": last_focus,
             },
         )
         diag = _diag_from_cards(cards)
@@ -114,6 +118,7 @@ async def analyze_start(
     audio: UploadFile,
     verse: int = Form(...),
     mastered: str = Form(""),
+    last_focus: str = Form(""),
 ):
     raw = await audio.read()
     ext = (audio.filename or "audio.webm").split(".")[-1].lower()
@@ -124,6 +129,7 @@ async def analyze_start(
         path = tmp.name
     jid = uuid.uuid4().hex[:12]
     mastered_list = _parse_mastered(mastered)
+    focus = (last_focus or "").strip() or None
     _set_job(
         jid,
         status="queued",
@@ -136,7 +142,10 @@ async def analyze_start(
     )
     threading.Thread(
         target=_run_job,
-        args=(jid, path, ext, raw, verse, audio.filename, audio.content_type, mastered_list),
+        args=(
+            jid, path, ext, raw, verse, audio.filename, audio.content_type,
+            mastered_list, focus,
+        ),
         daemon=True,
     ).start()
     return {"job": jid}
@@ -168,6 +177,7 @@ async def do_analyze(
     audio: UploadFile,
     verse: int = Form(...),
     mastered: str = Form(""),
+    last_focus: str = Form(""),
 ):
     """Legacy one-shot analyze (still used as fallback)."""
     raw = await audio.read()
@@ -175,12 +185,13 @@ async def do_analyze(
     if ext not in ("webm", "m4a", "wav", "ogg", "mp4", "mp3"):
         ext = "webm"
     mastered_list = _parse_mastered(mastered)
+    focus = (last_focus or "").strip() or None
     with tempfile.NamedTemporaryFile(suffix="." + ext, delete=False) as tmp:
         tmp.write(raw)
         path = tmp.name
     try:
         results = await run_in_threadpool(
-            analyze.analyze_verse, path, verse, None, mastered_list,
+            analyze.analyze_verse, path, verse, None, mastered_list, focus,
         )
     except Exception as e:
         return JSONResponse({"error": str(e), "results": [], "verse": verse}, status_code=500)
@@ -197,6 +208,7 @@ async def do_analyze(
             "content_type": audio.content_type,
             "bytes": len(raw),
             "mastered": mastered_list,
+            "last_focus": focus,
         },
     )
     diag = _diag_from_cards(cards)

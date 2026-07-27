@@ -509,6 +509,8 @@ def word_shape_card(
         "fix": fix,
         "scholarly": None,
         "identity": bool(tip),
+        "heard_letter": tip["ar"][0] if tip else None,
+        "expected_letter": tip["ar"][1] if tip else None,
     }
 
 
@@ -680,7 +682,75 @@ def _issue_sort_key(c: dict):
     return (tier, c.get("priority", 50))
 
 
-def pick_next_step(issue_cards: list[dict], mastered: list[str] | None = None) -> dict | None:
+def describe_skill(key: str | None, card: dict | None = None) -> str:
+    """Short elegant English label for a practice-log / next-step key."""
+
+    def _tw(w: str) -> str:
+        if not w:
+            return w
+        return w if w[0].isupper() else (w[0].upper() + w[1:])
+
+    if card and card.get("word_en"):
+        wen = _tw(card["word_en"])
+        rule = card.get("rule") or ""
+        if rule == "word_shape" and card.get("identity"):
+            plain = card.get("plain") or ""
+            if "W sound" in plain or card.get("expected_letter") == "و":
+                return f"the W in {wen}"
+            if "B sound" in plain or card.get("expected_letter") == "ب":
+                return f"the B in {wen}"
+            return f"the sound shape of {wen}"
+        if rule == "word_shape":
+            return f"the shape of {wen}"
+        if rule == "pronunciation":
+            hc, ec = card.get("heard_letter"), card.get("expected_letter")
+            if hc == "ك" and ec == "ق":
+                return f"the deep Q in {wen}"
+            if hc == "ه" and ec == "ح":
+                return f"the strong Ḥ in {wen}"
+            return f"the letter detail in {wen}"
+        if rule in ("madd",):
+            return f"the vowel length in {wen}"
+        if rule in ("qalqalah", "qalqalah_practice"):
+            return f"the bounce on {wen}"
+        if wen:
+            return wen
+
+    if not key:
+        return "this point"
+    parts = str(key).split(":")
+    head, rest = parts[0], parts[1:]
+    if head == "word_shape":
+        wen = _tw(rest[0]) if rest else "this word"
+        if len(rest) >= 2 and "ف→و" in rest[1]:
+            return f"the W in {wen}"
+        if len(rest) >= 2 and "ب→و" in rest[1]:
+            return f"the W in {wen}"
+        if len(rest) >= 2 and "و→ف" in rest[1]:
+            return f"the F in {wen}"
+        return f"the shape of {wen}"
+    if head == "pronunciation":
+        wen = _tw(rest[0]) if rest else "this word"
+        swap = rest[1] if len(rest) > 1 else ""
+        if swap == "ك→ق":
+            return f"the deep Q in {wen}"
+        if swap == "ه→ح":
+            return f"the strong Ḥ in {wen}"
+        return f"the letter detail in {wen}"
+    if head == "madd":
+        return f"the vowel length in {_tw(rest[0]) if rest else 'this word'}"
+    if head == "qalqalah":
+        return f"the bounce on {_tw(rest[0]) if rest else 'this word'}"
+    if head == "shadda":
+        return f"the doubling in {_tw(rest[0]) if rest else 'this word'}"
+    return key
+
+
+def pick_next_step(
+    issue_cards: list[dict],
+    mastered: list[str] | None = None,
+    last_focus: str | None = None,
+) -> dict | None:
     """
     One focus at a time.
     If a previously-mastered skill is broken again, that regression wins
@@ -694,32 +764,80 @@ def pick_next_step(issue_cards: list[dict], mastered: list[str] | None = None) -
         return None
 
     mastered_set = {m for m in (mastered or []) if m}
+    issue_keys = {c.get("key") for c in actionable if c.get("key")}
     regressions = [c for c in actionable if c.get("key") and c["key"] in mastered_set]
     pool = regressions if regressions else actionable
     pool = sorted(pool, key=_issue_sort_key)
     top = dict(pool[0])
     is_reg = bool(regressions) and top.get("key") in mastered_set
+    orig_rule = top.get("rule")
+    need = describe_skill(top.get("key"), {**top, "rule": orig_rule})
+
     top["level"] = "next"
     top["rule"] = "next_step"
     top["tag"] = "REGRESSION" if is_reg else "NEXT STEP"
     top["regression"] = is_reg
-    top["key"] = top.get("key")  # keep stable key for the practice log
+    top["key"] = top.get("key")
     n_left = len(actionable)
-    n_reg = len(regressions)
-    if is_reg:
-        head = (
-            f"<b>Regression — fix this before moving on</b> "
-            f"<span class=\"arlight\">(you had it right earlier · "
-            f"{n_reg} regression{'s' if n_reg != 1 else ''} · "
-            f"{n_left} issue{'s' if n_left != 1 else ''} on this take)</span><br>"
+    issue_keys = {c.get("key") for c in actionable if c.get("key")}
+
+    fixed_key = None
+    if last_focus and last_focus not in issue_keys:
+        fixed_key = last_focus
+    keep_key = fixed_key
+    if is_reg and last_focus and top.get("key") != last_focus:
+        keep_key = last_focus
+
+    kept = describe_skill(keep_key) if keep_key else None
+    detail = top.get("plain", "")
+
+    if is_reg and kept and keep_key != top.get("key"):
+        if fixed_key:
+            head = (
+                f"<b>You’ve steadied {kept}</b> — well done. "
+                f"But <b>{need}</b> slipped.<br>"
+                f"<b>Next:</b> restore {need}, and keep {kept} as it is."
+            )
+        else:
+            head = (
+                f"Hold what you’ve gained on <b>{kept}</b>. "
+                f"But <b>{need}</b> has slipped.<br>"
+                f"<b>Next:</b> restore {need} first — keep {kept} steady while you do."
+            )
+        top["plain"] = head + (
+            f"<div class=\"arlight\" style=\"margin-top:8px\">{detail}</div>"
+            if detail else ""
         )
+        if top.get("fix"):
+            top["fix"] = (
+                f"{top['fix']} "
+                f"Protect {kept} while you restore {need} — don’t trade one fix for the other."
+            )
+    elif is_reg:
+        labeled = need[0].upper() + need[1:] if need else need
+        head = (
+            f"<b>{labeled}</b> slipped from an earlier win.<br>"
+            f"<b>Next:</b> restore {need} before taking on anything new."
+        )
+        top["plain"] = head + (
+            f"<div class=\"arlight\" style=\"margin-top:8px\">{detail}</div>"
+            if detail else ""
+        )
+    elif kept:
+        head = (
+            f"<b>Nice — {kept} is holding.</b> "
+            f"One thing next: <b>{need}</b> "
+            f"<span class=\"arlight\">({n_left} left on this ayah)</span>."
+        )
+        top["plain"] = head + "<br>" + detail
     else:
         head = (
-            f"<b>Practice this one thing next</b> "
-            f"<span class=\"arlight\">({n_left} fix{'es' if n_left != 1 else ''} "
-            f"to go on this ayah)</span><br>"
+            f"<b>One thing next:</b> {need} "
+            f"<span class=\"arlight\">({n_left} left on this ayah)</span>."
         )
-    # strip any prior head if re-picking
-    body = top.get("plain", "")
-    top["plain"] = head + body
+        top["plain"] = head + "<br>" + detail
+
+    top["steps_remaining"] = n_left
+    top["fixed_key"] = fixed_key
+    top["keep_key"] = keep_key
     return top

@@ -300,7 +300,9 @@ $('rec').onclick=async()=>{
     const ext = mt.includes('mp4')||mt.includes('aac')||mt.includes('m4a') ? 'm4a'
               : mt.includes('ogg') ? 'ogg' : 'webm';
     const fd=new FormData(); fd.append('audio',blob,'rec.'+ext); fd.append('verse',v);
-    fd.append('mastered', JSON.stringify(loadPractice(v).mastered||[]));
+    const prac=loadPractice(v);
+    fd.append('mastered', JSON.stringify(prac.mastered||[]));
+    if(prac.lastFocus) fd.append('last_focus', prac.lastFocus);
     showProg(true, 0, 'Uploading your recording…', 0);
     try{
       const startRes=await fetch('/analyze/start',{method:'POST',body:fd});
