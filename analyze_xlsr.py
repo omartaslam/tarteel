@@ -18,8 +18,14 @@ _proc=_model=_clf=None
 def _load():
     global _proc,_model,_clf
     if _model is None:
-        _proc=AutoProcessor.from_pretrained(MID)
-        _model=Wav2Vec2ForCTC.from_pretrained(MID); _model.eval()
+        # Prefer local image cache; fall back to download if offline flags unset
+        kw={"local_files_only": bool(os.environ.get("TRANSFORMERS_OFFLINE") or os.environ.get("HF_HUB_OFFLINE"))}
+        try:
+            _proc=AutoProcessor.from_pretrained(MID, **kw)
+            _model=Wav2Vec2ForCTC.from_pretrained(MID, **kw); _model.eval()
+        except Exception:
+            _proc=AutoProcessor.from_pretrained(MID)
+            _model=Wav2Vec2ForCTC.from_pretrained(MID); _model.eval()
         _clf=pickle.load(open(CLF,"rb"))
     # Quran Whisper for accurate "what I heard" (XLSR free-CTC is unreliable on tilawah)
     tq._load()

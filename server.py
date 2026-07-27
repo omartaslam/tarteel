@@ -3,6 +3,7 @@ import os, tempfile, json
 from fastapi import FastAPI, UploadFile, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
+from starlette.concurrency import run_in_threadpool
 import analyze_xlsr as analyze, explanations as ex, storage
 
 app = FastAPI(title="Tarteel demo")
@@ -10,6 +11,19 @@ app = FastAPI(title="Tarteel demo")
 @app.on_event("startup")
 def warm():
     analyze._load()
+
+def _diag_from_cards(cards):
+    d = next((c for c in (cards or []) if c.get("audio_quality") is not None), {}) or {}
+    return {
+        "audio_quality": d.get("audio_quality"),
+        "heard_arabic": d.get("heard_arabic", ""),
+        "heard_phonetic": d.get("heard_phonetic", ""),
+        "heard_raw": d.get("heard_raw", ""),
+        "heard_match": d.get("heard_match", ""),
+        "matched_arabic": d.get("matched_arabic", ""),
+        "matched_phonetic": d.get("matched_phonetic", ""),
+        "rms_level": d.get("rms_level"),
+    }
 
 @app.post("/analyze")
 async def do_analyze(audio: UploadFile, verse: int = Form(...)):
@@ -20,14 +34,19 @@ async def do_analyze(audio: UploadFile, verse: int = Form(...)):
     with tempfile.NamedTemporaryFile(suffix="."+ext, delete=False) as tmp:
         tmp.write(raw); path = tmp.name
     try:
-        results = analyze.analyze_verse(path, verse)
+        # CPU-heavy — must not block the asyncio loop (mobile proxies drop hung connections)
+        results = await run_in_threadpool(analyze.analyze_verse, path, verse)
+    except Exception as e:
+        return JSONResponse({"error": str(e), "results": [], "verse": verse}, status_code=500)
     finally:
-        os.unlink(path)
-    cards = results  # analyze now returns full per-element feedback cards
-    # store everything for diagnosis
+        try: os.unlink(path)
+        except Exception: pass
+    cards = results or []
     sid = storage.save(raw, ext, verse, cards, extra={"filename":audio.filename,
                        "content_type":audio.content_type, "bytes":len(raw)})
-    return JSONResponse({"verse":verse, "results":cards, "session":sid})
+    diag = _diag_from_cards(cards)
+    return JSONResponse({"verse":verse, "results":cards, "session":sid, **diag})
+
 
 @app.get("/sessions")
 def sessions():

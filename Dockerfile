@@ -25,5 +25,8 @@ RUN python -c "from transformers import Wav2Vec2ForCTC, AutoProcessor, \
 # App source last — invalidate only this thin layer on code changes
 COPY . .
 
+# Never hit Hugging Face at runtime (models are baked into the image)
+ENV TRANSFORMERS_OFFLINE=1
+ENV HF_HUB_OFFLINE=1
 ENV PORT=8000
 CMD ["sh","-c","uvicorn server:app --host 0.0.0.0 --port ${PORT}"]

@@ -151,11 +151,24 @@ $('rec').onclick=async()=>{
     const ext = mt.includes('mp4')||mt.includes('aac')||mt.includes('m4a') ? 'm4a'
               : mt.includes('ogg') ? 'ogg' : 'webm';
     const fd=new FormData(); fd.append('audio',blob,'rec.'+ext); fd.append('verse',v);
+    $('spin').textContent='Analysing your recitation…';
+    const slow=setTimeout(()=>{$('spin').textContent='Still analysing — usually under a minute on first try…';},15000);
     try{
       const res=await fetch('/analyze',{method:'POST',body:fd});
-      const data=await res.json(); render(data);
-    }catch(e){$('results').innerHTML='<p>Error. Try again.</p>';}
-    $('spin').style.display='none';
+      clearTimeout(slow);
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok){
+        $('results').innerHTML=`<p>Server error (${res.status}). ${data.error||'Try again — tap the green header to refresh first.'}</p>`;
+      } else if(!(data.results||[]).length && data.error){
+        $('results').innerHTML=`<p>Analysis failed. ${data.error}</p>`;
+      } else {
+        render(data);
+      }
+    }catch(e){
+      clearTimeout(slow);
+      $('results').innerHTML='<p>Network error / timeout. Stay on Wi‑Fi, tap the green header to refresh, then try again.</p>';
+    }
+    $('spin').style.display='none';$('spin').textContent='Analysing your recitation…';
   };
   // timeslice keeps chunks flowing (helps some mobile browsers)
   rec.start(250);$('rec').classList.add('on');$('rec').textContent='■ Stop';
@@ -163,18 +176,29 @@ $('rec').onclick=async()=>{
 
 function render(data){
   const rs=data.results||[];
-  const qcard=rs.find(r=>r.audio_quality);
-  const q=qcard&&qcard.audio_quality;
+  // Prefer top-level diag (reliable); fall back to card-embedded fields
+  const view = (data.heard_arabic!=null || data.audio_quality!=null) ? {
+    audio_quality: data.audio_quality,
+    heard_arabic: data.heard_arabic,
+    heard_phonetic: data.heard_phonetic,
+    heard_raw: data.heard_raw,
+    heard_match: data.heard_match,
+    matched_arabic: data.matched_arabic,
+    matched_phonetic: data.matched_phonetic,
+  } : (rs.find(r=>r.audio_quality) || {});
+
+  const q=view.audio_quality;
   const qd=$('quality');
   if(q==='good'||q==='ok'){qd.className='good';qd.textContent='✓ Good recording';}
   else if(q){qd.className='bad';qd.textContent='⚠ Recording very quiet — hold phone closer, or use Voice Memos';}
+  else {qd.className=''; qd.style.display='none';}
 
   // WHAT I HEARD — literal capture of your voice (Arabic + English phonetics)
   let heardHtml='';
-  if(qcard&&qcard.heard_arabic!==undefined){
-    const match=qcard.heard_match||'';
-    const matchedAr=(qcard.matched_arabic||'').trim();
-    const matchedPh=(qcard.matched_phonetic||'').trim();
+  if(view.heard_arabic!==undefined){
+    const match=view.heard_match||'';
+    const matchedAr=(view.matched_arabic||'').trim();
+    const matchedPh=(view.matched_phonetic||'').trim();
     const showMatch = matchedAr && (match==='exact'||match==='close');
     let note;
     if(match==='raw'||match==='empty'){
@@ -191,11 +215,17 @@ function render(data){
       : '';
     heardHtml=`<div class="heard">
       <div class="hh">What the app heard (your voice)</div>
-      <div class="har" dir="rtl" lang="ar">${qcard.heard_arabic||'(unclear)'}</div>
-      <div class="hph">${qcard.heard_phonetic||''}</div>
+      <div class="har" dir="rtl" lang="ar">${view.heard_arabic||'(unclear)'}</div>
+      <div class="hph">${view.heard_phonetic||''}</div>
       ${matchBlock}
       <div class="hnote">${note}</div>
     </div>`;
+  }
+
+  if(!rs.length){
+    $('results').innerHTML=heardHtml + '<p>No feedback cards returned. Tap the green header to refresh and try again.</p>';
+    if(data.session) $('sessionInfo').textContent='session: '+data.session;
+    return;
   }
 
   $('results').innerHTML=heardHtml + rs.map(r=>{
