@@ -6,3 +6,6 @@ aligner.onnx
 ikhlas_corpus
 ikhlas_aligned
 audio
+.venv
+sessions
+.git
