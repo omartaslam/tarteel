@@ -33,10 +33,13 @@ def _feat(y,sr,a,b):
 
 def analyze_verse(path, verse):
     proc,model,clf=_load()
-    # measure quality on ORIGINAL (pre-normalization) audio
+    # measure raw level first; if very quiet, apply hard gain before loudnorm
     subprocess.run(["ffmpeg","-i",path,"-ar","16000","-ac","1","/tmp/xl_orig.wav","-y"],capture_output=True)
+    _probe,_=librosa.load("/tmp/xl_orig.wav",sr=16000)
+    _pk=float(np.abs(_probe).max()) if len(_probe) else 0.0
+    gain = "volume=25dB," if _pk < 0.05 else ("volume=12dB," if _pk < 0.15 else "")
     subprocess.run(["ffmpeg","-i",path,
-                    "-af","loudnorm=I=-16:TP=-1.5:LRA=11",
+                    "-af",gain+"loudnorm=I=-16:TP=-1.5:LRA=11",
                     "-ar","16000","-ac","1","/tmp/xl.wav","-y"],capture_output=True)
     wav,_=librosa.load("/tmp/xl.wav",sr=16000)
     iv=proc(wav,sampling_rate=16000,return_tensors="pt").input_values

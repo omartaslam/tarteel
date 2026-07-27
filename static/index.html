@@ -95,14 +95,20 @@ $('playH').onclick=()=>{
 $('rec').onclick=async()=>{
   if(rec&&rec.state==='recording'){rec.stop();return;}
   const stream=await navigator.mediaDevices.getUserMedia({audio:{
-    echoCancellation:false, noiseSuppression:false, autoGainControl:false}});
-  rec=new MediaRecorder(stream); chunks=[];
+    autoGainControl:true, echoCancellation:false, noiseSuppression:false}});
+  let mime='';
+  for(const m of ['audio/mp4','audio/webm;codecs=opus','audio/webm']){
+    if(MediaRecorder.isTypeSupported(m)){mime=m;break;}
+  }
+  rec = mime ? new MediaRecorder(stream,{mimeType:mime}) : new MediaRecorder(stream);
+  chunks=[];
   rec.ondataavailable=e=>chunks.push(e.data);
   rec.onstop=async()=>{
     $('rec').classList.remove('on');$('rec').textContent='● Record';
     $('spin').style.display='block';$('results').innerHTML='';$('quality').style.display='none';
-    const blob=new Blob(chunks,{type:'audio/webm'});
-    const fd=new FormData(); fd.append('audio',blob,'rec.webm'); fd.append('verse',v);
+    const blob=new Blob(chunks,{type:rec.mimeType||'audio/webm'});
+    const ext=(rec.mimeType||'').includes('mp4')?'m4a':'webm';
+    const fd=new FormData(); fd.append('audio',blob,'rec.'+ext); fd.append('verse',v);
     try{
       const res=await fetch('/analyze',{method:'POST',body:fd});
       const data=await res.json(); render(data);
