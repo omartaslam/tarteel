@@ -42,9 +42,11 @@ def analyze_verse(path, verse):
             _pk=float(np.abs(_probe).max()) if len(_probe) else 0.0
     except Exception:
         _pk=0.0
-    gain = "volume=25dB," if _pk < 0.05 else ("volume=12dB," if _pk < 0.15 else "")
+    gain = "volume=32dB," if _pk < 0.03 else ("volume=22dB," if _pk < 0.08 else ("volume=14dB," if _pk<0.15 else ""))
+    # dynamic compression evens out the quiet iOS capture, then normalize
+    afilter = gain + "acompressor=threshold=-24dB:ratio=4:makeup=6," + "loudnorm=I=-14:TP=-1.5:LRA=11"
     r1=subprocess.run(["ffmpeg","-i",path,
-                    "-af",gain+"loudnorm=I=-16:TP=-1.5:LRA=11",
+                    "-af",afilter,
                     "-ar","16000","-ac","1","/tmp/xl.wav","-y"],capture_output=True)
     if not os.path.exists("/tmp/xl.wav"):
         # normalization failed - fall back to plain convert
@@ -79,17 +81,18 @@ def analyze_verse(path, verse):
     y22,_=librosa.load("/tmp/xl.wav",sr=22050)
     f=_feat(y22,22050,a,b)
     # --- diagnostics: audio quality + full letter alignment ---
-    # quality from ORIGINAL capture (before normalization)
+    # quality: judge on the PROCESSED (gained) audio actually used for analysis
     peak=0.0; rmslev=0.0
     try:
-        if os.path.exists("/tmp/xl_orig.wav"):
-            worig,_=librosa.load("/tmp/xl_orig.wav",sr=16000)
-            if len(worig):
-                peak=float(np.abs(worig).max()); rmslev=float(np.sqrt((worig**2).mean()))
+        if os.path.exists("/tmp/xl.wav"):
+            wproc,_=librosa.load("/tmp/xl.wav",sr=16000)
+            if len(wproc):
+                peak=float(np.abs(wproc).max()); rmslev=float(np.sqrt((wproc**2).mean()))
     except Exception:
         pass
-    quality = "good" if (peak>0.1 and peak<0.99 and rmslev>0.02) else \
-              ("too_quiet" if rmslev<=0.02 else "clipping" if peak>=0.99 else "ok")
+    # also note the raw capture level for diagnostics
+    raw_peak=_pk
+    quality = "good" if (rmslev>0.03) else ("too_quiet" if raw_peak<0.008 else "ok")
     letters=[]
     prev=None
     for i,tok in enumerate(frames):
