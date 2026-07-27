@@ -78,6 +78,7 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .wohitnear{background:#fff3bf;color:#7a5a00;font-weight:bold;padding:0 4px;border-radius:4px}
 .wohitbad{background:#f5c6c6;color:#7a1d13;font-weight:bold;padding:0 4px;border-radius:4px}
 .retry{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+.restlbl{font-size:12px;font-weight:bold;letter-spacing:.4px;color:#6a7a8a;margin:18px 0 6px;text-transform:uppercase}
 .rbtn{background:#2c5f2d;color:#fff;flex:1;min-width:150px}
 .notebox{display:flex;gap:8px;margin:10px 0}
 .notebox input{flex:1;padding:10px;border:1px solid #ccc;border-radius:8px;font-family:inherit;font-size:14px}
@@ -323,14 +324,18 @@ function render(data){
     return;
   }
 
-  // Journey: errors + tips + next step → retry controls → good cards
-  const before = rs.filter(r => r.level !== 'ok');
-  const goods = rs.filter(r => r.level === 'ok');
+  // Focus journey: NEXT STEP → retry actions → everything else (regression check)
+  const nextCards = rs.filter(r => r.level === 'next');
+  const rest = rs.filter(r => r.level !== 'next');
+  const restLabel = rest.length
+    ? `<div class="restlbl">Also check — other notes on this take</div>`
+    : '';
   $('results').innerHTML =
     heardHtml +
-    before.map(cardHtml).join('') +
+    nextCards.map(cardHtml).join('') +
     retryHtml +
-    goods.map(cardHtml).join('');
+    restLabel +
+    rest.map(cardHtml).join('');
 
   bindRetry(data);
   if(data.session) $('sessionInfo').textContent='session: '+data.session;
