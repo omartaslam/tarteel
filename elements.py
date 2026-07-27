@@ -32,7 +32,7 @@ VERSE_ELEMENTS = {
         "madd":[], "shadda":[], "qalqalah":("د","أَحَدٌ / ahad")},
 }
 
-def build_feedback(verse, letters, qalqalah_result):
+def build_feedback(verse, letters, qalqalah_result, heard_arabic=None):
     """letters: [{'c':char,'t':time}]  -> list of feedback cards."""
     spec = VERSE_ELEMENTS.get(verse, {})
     cards=[]
@@ -45,6 +45,11 @@ def build_feedback(verse, letters, qalqalah_result):
             "plain":f"Recitation detected — {len([l for l in letters if l['c']=='|'])+1} words in the right order.",
             "scholarly":"Word sequence aligned correctly against the expected verse.",
         })
+
+    # 1b. Pronunciation coaching from literal ASR vs expected ayah
+    if heard_arabic:
+        import coaching as coach
+        cards.extend(coach.coach_from_heard(verse, heard_arabic))
 
     # 2. Madd (elongation) — measure the vowel-carrier duration
     for (letter,word,desc,lo,hi) in spec.get("madd",[]):
@@ -70,6 +75,26 @@ def build_feedback(verse, letters, qalqalah_result):
     # 4. Qalqalah — from the trained classifier (already computed)
     if qalqalah_result:
         cards.append(qalqalah_result)
+        # If classifier is unsure, still give a concrete ahad/dal practice tip
+        if qalqalah_result.get("level") == "defer":
+            import coaching as coach
+            # Avoid duplicate if ASR already flagged ح→ه on ahad
+            already = any(
+                c.get("rule") == "pronunciation" and c.get("expected_letter") in ("ح", "د")
+                and "ahad" in (c.get("word") or "")
+                for c in cards
+            )
+            tip = coach.ahad_practice_tip(verse)
+            if already:
+                # still reinforce the bounce specifically
+                tip = {
+                    **tip,
+                    "plain": (
+                        "Also check the qalqalah bounce on the final dal (د): stop, then a light echo — "
+                        "not a flat cut-off. Hear Al-Husary once, then retry."
+                    ),
+                }
+            cards.append(tip)
 
     return cards
 

@@ -141,8 +141,11 @@ def analyze_verse(path, verse):
     qcard={**qfb,"rule":"qalqalah","verse":verse,
            "confidence":round(float(conf),2),"p_error":round(float(proba),2),
            "dal_start":round(a,3),"dal_end":round(b,3)}
-    # full per-element feedback (madd, shadda, words) + qalqalah
-    cards=el.build_feedback(verse, diag["letters"], qcard)
+    # full per-element feedback (pronunciation coaching, madd, shadda, qalqalah)
+    cards=el.build_feedback(
+        verse, diag["letters"], qcard,
+        heard_arabic=diag.get("heard_arabic") or diag.get("heard_raw"),
+    )
     # attach diagnostics to the first card so UI/quality still works
     if cards: cards[0]={**cards[0],**diag}
     return cards
