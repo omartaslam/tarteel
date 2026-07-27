@@ -22,7 +22,7 @@ QALQALAH_LETTER = {
     4: ("د", "dal", "أَحَدٌ / ahad"),
 }
 
-def qalqalah_feedback(verse, verdict, confidence):
+def qalqalah_feedback(verse, verdict, confidence, p_error=None):
     letter, name, word = QALQALAH_LETTER.get(verse, ("د","dal","the final letter"))
     if verdict == "correct":
         return {
@@ -31,21 +31,25 @@ def qalqalah_feedback(verse, verdict, confidence):
             "scholarly": None,
         }
     if verdict == "error":
+        soft = (p_error is not None and confidence < 0.70)
+        tip = (f"The qalqalah bounce on the {name} ({letter}) in {word} "
+               f"isn't clear. On your next try: stop on the {name}, then give it "
+               f"a light echo — like a small bounce off the letter — not a flat stop.")
         return {
             "level": "error",
-            "plain": f"The qalqalah bounce on the {name} ({letter}) in {word} "
-                     f"isn't clear. It needs a light echo — like a small bounce "
-                     f"off the letter — not a flat stop.",
+            "plain": (("Likely issue — " if soft else "") + tip),
             "scholarly": f"Qalqalah ({GLOSSARY['qalqalah']}). The letter {letter} "
                          f"carries sukun at the verse end, so it takes qalqalah kubra "
                          f"(the stronger bounce at a stop).",
+            "verdict": "error",
         }
-    # deferred — low confidence
+    # deferred — low confidence both ways
     return {
         "level": "defer",
         "plain": f"Not sure about the qalqalah on the {name} ({letter}) in {word}. "
                  f"Check this one with your teacher.",
         "scholarly": None,
+        "verdict": "defer",
     }
 
 def madd_feedback(word, measured_s, target_s, beats):

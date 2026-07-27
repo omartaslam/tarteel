@@ -26,6 +26,10 @@ def _load():
     return _proc,_model,_clf
 
 HI=0.70
+# Surface likely-error coaching a bit earlier than "confident correct",
+# so learners get a retry tip instead of a blank "ask your teacher".
+HI_ERROR=0.55
+
 
 def _feat(y,sr,a,b):
     s=y[int(max(0,a-0.08)*sr):int((b+0.02)*sr)]
@@ -124,9 +128,13 @@ def analyze_verse(path, verse):
     if f is None:
         return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"feat_none",**diag}]
     proba=clf.predict_proba([f])[0][1]; conf=abs(proba-0.5)*2
-    verdict="defer" if conf<HI else ("error" if proba>0.5 else "correct")
+    if proba>0.5:
+        # leans error: coach when reasonably sure; only fully defer if very unsure
+        verdict="error" if conf>=HI_ERROR else "defer"
+    else:
+        verdict="correct" if conf>=HI else "defer"
     import explanations as ex, elements as el
-    qfb=ex.qalqalah_feedback(verse, verdict, round(float(conf),2))
+    qfb=ex.qalqalah_feedback(verse, verdict, round(float(conf),2), p_error=round(float(proba),2))
     qcard={**qfb,"rule":"qalqalah","verse":verse,
            "confidence":round(float(conf),2),"p_error":round(float(proba),2),
            "dal_start":round(a,3),"dal_end":round(b,3)}
