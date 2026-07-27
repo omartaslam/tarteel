@@ -34,6 +34,33 @@ def sessions():
     # JSON list of all stored sessions + their computed data
     return JSONResponse(storage.list_sessions())
 
+@app.get("/batch")
+def batch():
+    # compact one-per-session summary for quick review
+    out=[]
+    for s in storage.list_sessions():
+        r=(s.get("results") or [{}])
+        qc=next((c for c in r if c.get("rule")=="qalqalah"), {})
+        diag=next((c for c in r if c.get("audio_quality")), {})
+        out.append({
+            "session":s.get("session"), "verse":s.get("verse"), "note":s.get("note",""),
+            "quality":diag.get("audio_quality"), "rms":diag.get("rms_level"),
+            "heard":diag.get("heard_arabic"), "heard_ph":diag.get("heard_phonetic"),
+            "qalqalah":qc.get("verdict"), "p_error":qc.get("p_error"), "confidence":qc.get("confidence"),
+            "cards":[c.get("plain") for c in r if c.get("plain")],
+        })
+    return JSONResponse(out)
+
+@app.post("/note")
+async def add_note(session: str = Form(...), note: str = Form(...)):
+    import json as _j
+    p=os.path.join(storage.STORE, session, "data.json")
+    if os.path.exists(p):
+        d=_j.load(open(p,encoding="utf-8")); d["note"]=note
+        _j.dump(d, open(p,"w",encoding="utf-8"), ensure_ascii=False, indent=2)
+        return {"ok":True}
+    return JSONResponse({"error":"not found"}, status_code=404)
+
 @app.get("/sessions/{sid}/audio")
 def session_audio(sid: str):
     d = os.path.join(storage.STORE, sid)

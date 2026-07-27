@@ -40,6 +40,8 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .heard .hnote{font-size:12px;color:#888;margin-top:6px}
 .retry{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
 .rbtn{background:#2c5f2d;color:#fff;flex:1;min-width:150px}
+.notebox{display:flex;gap:8px;margin:10px 0}
+.notebox input{flex:1;padding:10px;border:1px solid #ccc;border-radius:8px;font-family:inherit;font-size:14px}
 .foot{margin-top:36px;font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px}
 </style></head><body>
 
@@ -154,10 +156,20 @@ function render(data){
   `<div class="retry">
      <button id="hearRight" class="rbtn">▷ Hear it right — Al-Husary</button>
      <button id="tryAgain" class="rbtn">↻ Try this ayah again</button>
+   </div>
+   <div class="notebox">
+     <input id="noteInput" placeholder="Label this take (e.g. 'did qalqalah right')" />
+     <button id="saveNote" class="rbtn">Save note</button>
    </div>`;
 
   const hr=$('hearRight'); if(hr) hr.onclick=()=>$('playH').click();
   const ta=$('tryAgain'); if(ta) ta.onclick=()=>{$('results').innerHTML='';$('quality').style.display='none';$('rec').click();};
+  const sn=$('saveNote'); if(sn) sn.onclick=async()=>{
+    const note=$('noteInput').value; if(!note||!data.session)return;
+    const fd=new FormData(); fd.append('session',data.session); fd.append('note',note);
+    await fetch('/note',{method:'POST',body:fd});
+    sn.textContent='Saved ✓'; sn.disabled=true;
+  };
 
   if(data.session) $('sessionInfo').textContent='session: '+data.session;
 }
