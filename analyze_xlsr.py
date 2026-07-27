@@ -72,7 +72,8 @@ def analyze_verse(path, verse):
         heard_info=tq.transcribe_path("/tmp/xl.wav", verse=verse)
     except Exception as e:
         heard_info={"heard_arabic":"","heard_phonetic":"","heard_raw":"",
-                    "heard_match":f"error:{e}","heard_verse":None}
+                    "heard_match":f"error:{e}","heard_verse":None,
+                    "matched_arabic":"","matched_phonetic":""}
     vocab=proc.tokenizer.get_vocab()
     text=VTEXT[verse]
     ids=[vocab[c] for c in text.replace(" ","|") if c in vocab]
@@ -124,7 +125,9 @@ def analyze_verse(path, verse):
           "heard_phonetic":heard_info.get("heard_phonetic",""),
           "heard_raw":heard_info.get("heard_raw",""),
           "heard_match":heard_info.get("heard_match",""),
-          "heard_verse":heard_info.get("heard_verse")}
+          "heard_verse":heard_info.get("heard_verse"),
+          "matched_arabic":heard_info.get("matched_arabic",""),
+          "matched_phonetic":heard_info.get("matched_phonetic","")}
     if f is None:
         return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"feat_none",**diag}]
     proba=clf.predict_proba([f])[0][1]; conf=abs(proba-0.5)*2

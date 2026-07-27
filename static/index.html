@@ -37,8 +37,10 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .heard .hh{font-size:12px;font-weight:bold;color:#2c5f8f;letter-spacing:.5px;margin-bottom:6px}
 .heard .har{font-size:28px;font-family:'Amiri','Traditional Arabic',serif;color:#1a1a1a;margin:6px 0;text-align:right;direction:rtl;line-height:1.6}
 .heard .hph{font-size:16px;color:#2c5f8f;font-style:italic;margin:4px 0}
-.heard .hraw{font-size:18px;font-family:'Amiri','Traditional Arabic',serif;color:#444;margin:6px 0 2px;text-align:right;direction:rtl}
-.heard .hrawlbl{font-size:11px;font-weight:bold;color:#6a7a8a;letter-spacing:.4px;margin-top:8px}
+.heard .hmatch{margin-top:10px;padding-top:8px;border-top:1px dashed #c9d8e8}
+.heard .hmatchlbl{font-size:11px;font-weight:bold;color:#6a7a8a;letter-spacing:.4px}
+.heard .hmatchar{font-size:18px;font-family:'Amiri','Traditional Arabic',serif;color:#555;margin:4px 0;text-align:right;direction:rtl}
+.heard .hmatchph{font-size:14px;color:#6a7a8a;font-style:italic}
 .heard .hnote{font-size:12px;color:#888;margin-top:6px}
 .retry{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
 .rbtn{background:#2c5f2d;color:#fff;flex:1;min-width:150px}
@@ -155,30 +157,31 @@ function render(data){
   if(q==='good'||q==='ok'){qd.className='good';qd.textContent='✓ Good recording';}
   else if(q){qd.className='bad';qd.textContent='⚠ Recording very quiet — hold phone closer, or use Voice Memos';}
 
-  // WHAT I HEARD — show matched ayah form for verification, plus raw ASR when it differs
+  // WHAT I HEARD — literal capture of your voice (Arabic + English phonetics)
   let heardHtml='';
   if(qcard&&qcard.heard_arabic!==undefined){
     const match=qcard.heard_match||'';
-    const raw=(qcard.heard_raw||'').trim();
-    const shown=(qcard.heard_arabic||'').trim();
-    const rawDiffers = raw && shown && raw.replace(/\s+/g,' ') !== shown.replace(/\s+/g,' ')
-      && match !== 'raw';
+    const matchedAr=(qcard.matched_arabic||'').trim();
+    const matchedPh=(qcard.matched_phonetic||'').trim();
+    const showMatch = matchedAr && (match==='exact'||match==='close');
     let note;
-    if(match==='raw'){
-      note='Could not match a known ayah cleanly — showing raw capture. Try again closer to the mic.';
-    } else if(rawDiffers){
-      note='Top line is the closest ayah match (for checking). Raw line is the literal ASR capture.';
+    if(match==='raw'||match==='empty'){
+      note='Showing the literal capture of this take. Could not cleanly match a known ayah.';
+    } else if(showMatch){
+      note='Arabic + English phonetics above are what the app heard from your voice. Closest ayah match is shown below for comparison.';
     } else {
-      note='Compare with the ayah above. Arabic and English phonetics should match what you recited.';
+      note='Arabic + English phonetics are what the app heard from your voice.';
     }
-    const rawBlock = rawDiffers
-      ? `<div class="hrawlbl">Raw capture</div><div class="hraw" dir="rtl" lang="ar">${raw}</div>`
+    const matchBlock = showMatch
+      ? `<div class="hmatch"><div class="hmatchlbl">Closest ayah match</div>
+         <div class="hmatchar" dir="rtl" lang="ar">${matchedAr}</div>
+         <div class="hmatchph">${matchedPh}</div></div>`
       : '';
     heardHtml=`<div class="heard">
-      <div class="hh">What the app heard</div>
+      <div class="hh">What the app heard (your voice)</div>
       <div class="har" dir="rtl" lang="ar">${qcard.heard_arabic||'(unclear)'}</div>
       <div class="hph">${qcard.heard_phonetic||''}</div>
-      ${rawBlock}
+      ${matchBlock}
       <div class="hnote">${note}</div>
     </div>`;
   }
