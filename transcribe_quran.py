@@ -167,8 +167,14 @@ _DIAC = re.compile(r"[\u064B-\u065F\u0670\u0640\u06D6-\u06ED]")
 def _load():
     global _proc, _model
     if _model is None:
-        _proc = WhisperProcessor.from_pretrained(MID)
-        _model = WhisperForConditionalGeneration.from_pretrained(MID)
+        import os
+        kw = {"local_files_only": bool(os.environ.get("TRANSFORMERS_OFFLINE") or os.environ.get("HF_HUB_OFFLINE"))}
+        try:
+            _proc = WhisperProcessor.from_pretrained(MID, **kw)
+            _model = WhisperForConditionalGeneration.from_pretrained(MID, **kw)
+        except Exception:
+            _proc = WhisperProcessor.from_pretrained(MID)
+            _model = WhisperForConditionalGeneration.from_pretrained(MID)
         _model.eval()
     return _proc, _model
 
