@@ -36,6 +36,10 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .card .fix{font-size:15px;color:#1a1a1a;margin-top:8px;padding:10px 12px;background:rgba(255,255,255,.65);border-radius:8px}
 .card .fix b{color:#1a5fb4}
 .arlight{font-size:.92em;color:#888;font-weight:normal}
+.ayatsec{margin:8px 0 12px;padding:10px 12px;background:rgba(255,255,255,.7);border-radius:8px;border:1px solid rgba(0,0,0,.06)}
+.ayatph{font-size:18px;color:#1a1a1a;line-height:1.45}
+.ayatar{font-size:15px;color:#888;margin-top:4px;font-family:'Amiri','Traditional Arabic',serif;line-height:1.5}
+.focusw{background:#fff3bf;color:#1a1a1a;font-weight:bold;padding:0 4px;border-radius:4px}
 .spin{display:none;margin:14px 0;color:#666}
 .heard{background:#eef3f8;border:1px solid #c9d8e8;border-radius:10px;padding:12px 16px;margin:10px 0}
 .heard .hh{font-size:12px;font-weight:bold;color:#2c5f8f;letter-spacing:.5px;margin-bottom:6px}
@@ -193,8 +197,10 @@ function render(data){
   $('results').innerHTML=heardHtml + rs.map(r=>{
     const lvl=r.level||'defer';
     const tag=r.tag||({ok:'✓ GOOD',error:'FIX',defer:'ASK YOUR TEACHER',measured:'TIP',next:'NEXT STEP'}[lvl]||'');
+    const sec=r.section||'';
     const fix=r.fix?`<div class="fix"><b>How to fix:</b> ${r.fix}</div>`:'';
     return `<div class="card ${lvl}"><span class="tag t-${lvl}">${tag}</span>
+      ${sec}
       <div class="plain">${r.plain||''}</div>
       ${fix}
       ${r.scholarly?`<div class="schol">${r.scholarly}</div>`:''}</div>`;

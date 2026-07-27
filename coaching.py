@@ -37,6 +37,61 @@ EXPECTED = {
     ],
 }
 
+# Full ayah lines for the in-card section (English-led).
+AYAH_LINE = {
+    1: {
+        "ph": ["Qul", "huwa", "Allāhu", "aḥad"],
+        "ar": ["قُلْ", "هُوَ", "ٱللَّهُ", "أَحَدٌ"],
+        "key": ["qul", "huwa", "Allāhu", "aḥad"],
+    },
+    2: {
+        "ph": ["Allāhu", "aṣ-ṣamad"],
+        "ar": ["ٱللَّهُ", "ٱلصَّمَدُ"],
+        "key": ["Allāhu", "aṣ-ṣamad"],
+    },
+    3: {
+        "ph": ["Lam", "yalid", "wa lam", "yūlad"],
+        "ar": ["لَمْ", "يَلِدْ", "وَلَمْ", "يُولَدْ"],
+        "key": ["lam", "yalid", "wa lam", "yūlad"],
+    },
+    4: {
+        "ph": ["Wa lam", "yakun", "lahu", "kufuwan", "aḥad"],
+        "ar": ["وَلَمْ", "يَكُن", "لَّهُ", "كُفُوًا", "أَحَدٌ"],
+        "key": ["wa lam", "yakun", "lahu", "kufuwan", "aḥad"],
+    },
+}
+
+
+def section_html(verse: int, word_en: str) -> str:
+    """English-phonetic ayah line with the focus word highlighted; Arabic light under it."""
+    line = AYAH_LINE.get(verse)
+    if not line:
+        return ""
+    target = (word_en or "").lower().replace("ā", "a").replace("ḥ", "h").replace("ṣ", "s")
+    ph_parts = []
+    ar_parts = []
+    for ph, ar, key in zip(line["ph"], line["ar"], line["key"]):
+        k = key.lower().replace("ā", "a").replace("ḥ", "h").replace("ṣ", "s")
+        # also match without article marks
+        hit = (
+            k == target
+            or k.split()[-1] == target
+            or target in k
+            or k in target
+        )
+        if hit:
+            ph_parts.append(f'<span class="focusw">{ph}</span>')
+            ar_parts.append(f'<span class="focusw">{ar}</span>')
+        else:
+            ph_parts.append(ph)
+            ar_parts.append(f'<span class="arlight">{ar}</span>')
+    return (
+        f'<div class="ayatsec">'
+        f'<div class="ayatph">{" ".join(ph_parts)}</div>'
+        f'<div class="ayatar" dir="rtl" lang="ar">{" ".join(ar_parts)}</div>'
+        f'</div>'
+    )
+
 # (heard, expected) → English-first tip. Arabic only in light brackets.
 FIX = {
     ("ك", "ق"): {
@@ -197,22 +252,23 @@ def _align_words(heard_words: list[str], expected: list[tuple[str, str, str]]):
     return out
 
 
-def _card(priority: int, word_en: str, word_ar: str, tip: dict, hc: str, ec: str) -> dict:
+def _card(priority: int, verse: int, word_en: str, word_ar: str, tip: dict, hc: str, ec: str) -> dict:
     har, ear = tip.get("ar", (hc, ec))
     plain = (
-        f"On {word_en} <span class=\"arlight\">({word_ar})</span>: "
+        f"On <b>{word_en}</b> <span class=\"arlight\">({word_ar})</span>: "
         f"heard {tip['heard']} <span class=\"arlight\">({har})</span>, "
         f"want {tip['want']} <span class=\"arlight\">({ear})</span>."
     )
-    fix = tip["fix"]
     return {
         "level": "error",
         "rule": "pronunciation",
         "priority": priority,
+        "verse": verse,
         "word_en": word_en,
         "word_ar": word_ar,
+        "section": section_html(verse, word_en),
         "plain": plain,
-        "fix": fix,
+        "fix": tip["fix"],
         "scholarly": None,
         "heard_letter": hc,
         "expected_letter": ec,
@@ -256,19 +312,21 @@ def coach_from_heard(verse: int, heard_arabic: str) -> list[dict]:
             if key in seen:
                 continue
             seen.add(key)
-            cards.append(_card(priority, en, ar, tip, hc, ec))
+            cards.append(_card(priority, verse, en, ar, tip, hc, ec))
     return cards
 
 
-def madd_short_card(word_en: str, word_ar: str, dur: float, priority: int) -> dict:
+def madd_short_card(verse: int, word_en: str, word_ar: str, dur: float, priority: int) -> dict:
     return {
         "level": "measured",
         "rule": "madd",
         "priority": priority,
+        "verse": verse,
         "word_en": word_en,
         "word_ar": word_ar,
+        "section": section_html(verse, word_en),
         "plain": (
-            f"On {word_en} <span class=\"arlight\">({word_ar})</span>: "
+            f"On <b>{word_en}</b> <span class=\"arlight\">({word_ar})</span>: "
             f"the “oo/uu” stretch was very short (~{dur:.2f}s)."
         ),
         "fix": f"Hold the vowel in {word_en} a little longer — about two beats.",
@@ -286,10 +344,12 @@ def ahad_bounce_card(verse: int, priority: int = 90) -> dict:
         "level": "measured",
         "rule": "qalqalah_practice",
         "priority": priority,
+        "verse": verse,
         "word_en": en,
         "word_ar": ar,
+        "section": section_html(verse, en),
         "plain": (
-            f"On {en} <span class=\"arlight\">({ar})</span>: "
+            f"On <b>{en}</b> <span class=\"arlight\">({ar})</span>: "
             f"finish with a light bounce on the final D sound (dal)."
         ),
         "fix": (
@@ -310,12 +370,14 @@ def qalqalah_error_card(verse: int, soft: bool = False, priority: int = 85) -> d
         "level": "error",
         "rule": "qalqalah",
         "priority": priority,
+        "verse": verse,
         "word_en": en,
         "word_ar": ar,
+        "section": section_html(verse, en),
         "verdict": "error",
         "plain": (
             f"{'Likely: ' if soft else ''}"
-            f"On {en} <span class=\"arlight\">({ar})</span>: "
+            f"On <b>{en}</b> <span class=\"arlight\">({ar})</span>: "
             f"the bounce on the final D wasn’t clear."
         ),
         "fix": "Stop on the D, then add a light echo/bounce — not a flat stop. Hear Al-Husary, then retry.",

@@ -70,7 +70,7 @@ def build_feedback(verse, letters, qalqalah_result, heard_arabic=None):
                 "scholarly": None,
             })
         else:
-            issues.append(coach.madd_short_card(wen, war, seg, pri))
+            issues.append(coach.madd_short_card(verse, wen, war, seg, pri))
 
     # Shadda
     for (letter, wen, war, desc, pri) in spec.get("shadda", []):
