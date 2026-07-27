@@ -57,7 +57,13 @@ def analyze_verse(path, verse):
     wav,_=librosa.load("/tmp/xl.wav",sr=16000)
     iv=proc(wav,sampling_rate=16000,return_tensors="pt").input_values
     with torch.no_grad():
-        emissions=torch.log_softmax(model(iv).logits,dim=-1)
+        logits=model(iv).logits
+        emissions=torch.log_softmax(logits,dim=-1)
+    # ALSO decode what the model literally heard (transcription mode) - shown to user
+    try:
+        heard=proc.decode(torch.argmax(logits[0],dim=-1))
+    except Exception:
+        heard=""
     vocab=proc.tokenizer.get_vocab()
     text=VTEXT[verse]
     ids=[vocab[c] for c in text.replace(" ","|") if c in vocab]
@@ -99,8 +105,12 @@ def analyze_verse(path, verse):
         if tok!=prev and tok!=pad:
             letters.append({"c":inv.get(tok,str(tok)),"t":round(i/T*dur,3)})
         prev=tok
+    # phonetic transliteration of what the model heard (Arabic letters -> english sounds)
+    import elements as _el
+    heard_ph=" ".join(_el.SOUND.get(c,c).split(" (")[0] for c in heard if c.strip() and c!=" ")
     diag={"audio_quality":quality,"peak":round(peak,3),"rms_level":round(rmslev,4),
-          "duration":round(dur,2),"letters":letters}
+          "duration":round(dur,2),"letters":letters,
+          "heard_arabic":heard,"heard_phonetic":heard_ph}
     if f is None:
         return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"feat_none",**diag}]
     proba=clf.predict_proba([f])[0][1]; conf=abs(proba-0.5)*2
