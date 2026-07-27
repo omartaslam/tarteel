@@ -42,6 +42,12 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .ayatar{font-size:15px;color:#888;margin-top:4px;font-family:'Amiri','Traditional Arabic',serif;line-height:1.5}
 .focusw{background:#fff3bf;color:#1a1a1a;font-weight:bold;padding:0 4px;border-radius:4px}
 .spin{display:none;margin:14px 0;color:#666}
+.progwrap{display:none;margin:14px 0;padding:14px 16px;background:#f4f7fb;border:1px solid #d0dbe8;border-radius:10px}
+.progwrap.on{display:block}
+.progphase{font-size:15px;font-weight:bold;color:#1a3a5c;margin-bottom:6px}
+.progmeta{font-size:12px;color:#667;margin-bottom:10px}
+.progtrack{height:12px;background:#dde6f0;border-radius:8px;overflow:hidden}
+.progbar{height:100%;width:0%;background:linear-gradient(90deg,#2c5f8f,#1a5fb4);border-radius:8px;transition:width .35s ease}
 .heard{background:#eef3f8;border:1px solid #c9d8e8;border-radius:10px;padding:12px 16px;margin:10px 0}
 .heard .hh{font-size:12px;font-weight:bold;color:#2c5f8f;letter-spacing:.5px;margin-bottom:6px}
 .heard .har{font-size:28px;font-family:'Amiri','Traditional Arabic',serif;color:#1a1a1a;margin:6px 0;text-align:right;direction:rtl;line-height:1.6}
@@ -84,6 +90,11 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 <div class="controls"><button class="rec" id="rec">● Record</button><span id="status"></span></div>
 <div id="quality"></div>
 <div class="spin" id="spin">Analysing your recitation…</div>
+<div class="progwrap" id="prog">
+  <div class="progphase" id="progPhase">Starting…</div>
+  <div class="progmeta"><span id="progPct">0%</span> · <span id="progTime">0s</span></div>
+  <div class="progtrack"><div class="progbar" id="progBar"></div></div>
+</div>
 <div id="results"></div>
 
 <div class="foot" id="sessionInfo"></div>
@@ -103,6 +114,7 @@ function draw(){
   $('verseAr').textContent=d.ar; $('phon').textContent=d.ph; $('trans').textContent='"'+d.tr+'"';
   $('vnum').textContent='Ayah '+v+' of 4';
   $('results').innerHTML=''; $('quality').className=''; $('quality').style.display='none';
+  showProg(false);
 }
 $('prev').onclick=()=>{if(v>1){v--;draw();}};
 $('next').onclick=()=>{if(v<4){v++;draw();}};
@@ -151,28 +163,66 @@ $('rec').onclick=async()=>{
     const ext = mt.includes('mp4')||mt.includes('aac')||mt.includes('m4a') ? 'm4a'
               : mt.includes('ogg') ? 'ogg' : 'webm';
     const fd=new FormData(); fd.append('audio',blob,'rec.'+ext); fd.append('verse',v);
-    $('spin').textContent='Analysing your recitation…';
-    const slow=setTimeout(()=>{$('spin').textContent='Still analysing — usually under a minute on first try…';},15000);
+    showProg(true, 0, 'Uploading your recording…', 0);
     try{
-      const res=await fetch('/analyze',{method:'POST',body:fd});
-      clearTimeout(slow);
-      const data=await res.json().catch(()=>({}));
-      if(!res.ok){
-        $('results').innerHTML=`<p>Server error (${res.status}). ${data.error||'Try again — tap the green header to refresh first.'}</p>`;
-      } else if(!(data.results||[]).length && data.error){
-        $('results').innerHTML=`<p>Analysis failed. ${data.error}</p>`;
+      const startRes=await fetch('/analyze/start',{method:'POST',body:fd});
+      const startData=await startRes.json().catch(()=>({}));
+      if(!startRes.ok || !startData.job){
+        // fallback to one-shot
+        showProg(true, 5, 'Analysing (one-shot mode)…', 0);
+        const res=await fetch('/analyze',{method:'POST',body:fd});
+        const data=await res.json().catch(()=>({}));
+        showProg(false);
+        if(!res.ok){
+          $('results').innerHTML=`<p>Server error (${res.status}). ${data.error||'Try again — tap the green header to refresh first.'}</p>`;
+        } else { render(data); }
       } else {
-        render(data);
+        await pollJob(startData.job);
       }
     }catch(e){
-      clearTimeout(slow);
+      showProg(false);
       $('results').innerHTML='<p>Network error / timeout. Stay on Wi‑Fi, tap the green header to refresh, then try again.</p>';
     }
-    $('spin').style.display='none';$('spin').textContent='Analysing your recitation…';
   };
   // timeslice keeps chunks flowing (helps some mobile browsers)
   rec.start(250);$('rec').classList.add('on');$('rec').textContent='■ Stop';
 };
+
+function showProg(on, pct, msg, elapsed){
+  const w=$('prog');
+  if(!on){ w.classList.remove('on'); $('spin').style.display='none'; return; }
+  w.classList.add('on');
+  $('spin').style.display='none';
+  if(pct!=null){ $('progBar').style.width=Math.max(0,Math.min(100,pct))+'%'; $('progPct').textContent=Math.round(pct)+'%'; }
+  if(msg!=null) $('progPhase').textContent=msg;
+  if(elapsed!=null) $('progTime').textContent=Math.round(elapsed)+'s elapsed';
+}
+
+async function pollJob(job){
+  const t0=Date.now();
+  for(;;){
+    const res=await fetch('/analyze/status/'+job);
+    const st=await res.json().catch(()=>({}));
+    if(!res.ok){
+      showProg(false);
+      $('results').innerHTML=`<p>Lost analysis job. Tap header to refresh and try again.</p>`;
+      return;
+    }
+    const elapsed=st.elapsed!=null?st.elapsed:((Date.now()-t0)/1000);
+    showProg(true, st.pct||0, st.message||'Working…', elapsed);
+    if(st.status==='done'){
+      showProg(true, 100, 'Done', elapsed);
+      setTimeout(()=>{ showProg(false); render(st.result||{}); }, 250);
+      return;
+    }
+    if(st.status==='error'){
+      showProg(false);
+      $('results').innerHTML=`<p>Analysis failed. ${st.error||st.message||'Try again.'}</p>`;
+      return;
+    }
+    await new Promise(r=>setTimeout(r, 400));
+  }
+}
 
 function render(data){
   const rs=data.results||[];

@@ -44,117 +44,129 @@ def _feat(y,sr,a,b):
     rms=librosa.feature.rms(y=s,hop_length=128)[0]
     return np.concatenate([mf.mean(1),mf.std(1),[rms.min(),rms.max(),rms.max()-rms.min(),len(s)/sr]])
 
-def analyze_verse(path, verse):
+def analyze_verse(path, verse, on_progress=None):
+    def prog(pct, phase, msg):
+        if on_progress:
+            try: on_progress(pct, phase, msg)
+            except Exception: pass
+
+    prog(3, "start", "Starting analysis…")
     proc,model,clf=_load()
-    # measure raw level first; if very quiet, apply hard gain before loudnorm
-    subprocess.run(["ffmpeg","-i",path,"-ar","16000","-ac","1","/tmp/xl_orig.wav","-y"],capture_output=True)
-    _pk=0.0
+    uid = f"{os.getpid()}_{id(path)}_{os.path.basename(path)}"
+    orig = f"/tmp/xl_orig_{uid}.wav"
+    wavp = f"/tmp/xl_{uid}.wav"
     try:
-        if os.path.exists("/tmp/xl_orig.wav"):
-            _probe,_=librosa.load("/tmp/xl_orig.wav",sr=16000)
-            _pk=float(np.abs(_probe).max()) if len(_probe) else 0.0
-    except Exception:
+        prog(8, "decode", "Reading your recording…")
+        # measure raw level first; if very quiet, apply hard gain before loudnorm
+        subprocess.run(["ffmpeg","-i",path,"-ar","16000","-ac","1",orig,"-y"],capture_output=True)
         _pk=0.0
-    gain = "volume=32dB," if _pk < 0.03 else ("volume=22dB," if _pk < 0.08 else ("volume=14dB," if _pk<0.15 else ""))
-    # dynamic compression evens out the quiet iOS capture, then normalize
-    afilter = gain + "acompressor=threshold=-24dB:ratio=4:makeup=6," + "loudnorm=I=-14:TP=-1.5:LRA=11"
-    r1=subprocess.run(["ffmpeg","-i",path,
-                    "-af",afilter,
-                    "-ar","16000","-ac","1","/tmp/xl.wav","-y"],capture_output=True)
-    if not os.path.exists("/tmp/xl.wav"):
-        # normalization failed - fall back to plain convert
-        subprocess.run(["ffmpeg","-i",path,"-ar","16000","-ac","1","/tmp/xl.wav","-y"],capture_output=True)
-    if not os.path.exists("/tmp/xl.wav"):
-        return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"audio_decode_failed",
-                 "level":"defer","plain":"Could not read the recording. Try again.","scholarly":None}]
-    wav,_=librosa.load("/tmp/xl.wav",sr=16000)
-    iv=proc(wav,sampling_rate=16000,return_tensors="pt").input_values
-    with torch.no_grad():
-        logits=model(iv).logits
-        emissions=torch.log_softmax(logits,dim=-1)
-    # Accurate Quran ASR for the transparency panel (not XLSR free-CTC — that
-    # yields garbage on tilawah even when forced-alignment feedback is correct).
-    try:
-        heard_info=tq.transcribe_path("/tmp/xl.wav", verse=verse)
-    except Exception as e:
-        heard_info={"heard_arabic":"","heard_phonetic":"","heard_raw":"",
-                    "heard_match":f"error:{e}","heard_verse":None,
-                    "matched_arabic":"","matched_phonetic":""}
-    vocab=proc.tokenizer.get_vocab()
-    text=VTEXT[verse]
-    ids=[vocab[c] for c in text.replace(" ","|") if c in vocab]
-    targets=torch.tensor([ids],dtype=torch.int32)
-    try:
-        aligned,_=TAF.forced_align(emissions,targets,blank=proc.tokenizer.pad_token_id)
-    except Exception as e:
-        return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":f"align_error:{e}",
-                 "level":"defer","plain":"Could not align the recording to the ayah. Try again.",
-                 **heard_info}]
-    frames=aligned[0].tolist(); T=len(frames); dur=len(wav)/16000
-    inv={v:k for k,v in vocab.items()}
-    pad=proc.tokenizer.pad_token_id
-    # find the LAST 'د' (dal) - the qalqalah position
-    dal_id=vocab.get("د")
-    dal_frames=[i for i,t in enumerate(frames) if t==dal_id]
-    if not dal_frames:
-        return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"no_dal_found",
-                 "level":"defer","plain":"Could not find the final dal in the recording.",
-                 **heard_info}]
-    a=dal_frames[0]/T*dur; b=(dal_frames[-1]+1)/T*dur
-    # XLSR marks letter ONSET, not full duration - widen to capture the
-    # qalqalah release burst that follows (classifier trained on ~100ms windows)
-    b=max(b, a+0.12)
-    y22,_=librosa.load("/tmp/xl.wav",sr=22050)
-    f=_feat(y22,22050,a,b)
-    # --- diagnostics: audio quality + full letter alignment ---
-    # quality: judge on the PROCESSED (gained) audio actually used for analysis
-    peak=0.0; rmslev=0.0
-    try:
-        if os.path.exists("/tmp/xl.wav"):
-            wproc,_=librosa.load("/tmp/xl.wav",sr=16000)
+        try:
+            if os.path.exists(orig):
+                _probe,_=librosa.load(orig,sr=16000)
+                _pk=float(np.abs(_probe).max()) if len(_probe) else 0.0
+        except Exception:
+            _pk=0.0
+        gain = "volume=32dB," if _pk < 0.03 else ("volume=22dB," if _pk < 0.08 else ("volume=14dB," if _pk<0.15 else ""))
+        prog(18, "normalize", "Cleaning & boosting the audio…")
+        # dynamic compression evens out the quiet iOS capture, then normalize
+        afilter = gain + "acompressor=threshold=-24dB:ratio=4:makeup=6," + "loudnorm=I=-14:TP=-1.5:LRA=11"
+        subprocess.run(["ffmpeg","-i",path,
+                        "-af",afilter,
+                        "-ar","16000","-ac","1",wavp,"-y"],capture_output=True)
+        if not os.path.exists(wavp):
+            subprocess.run(["ffmpeg","-i",path,"-ar","16000","-ac","1",wavp,"-y"],capture_output=True)
+        if not os.path.exists(wavp):
+            return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"audio_decode_failed",
+                     "level":"defer","plain":"Could not read the recording. Try again.","scholarly":None}]
+        wav,_=librosa.load(wavp,sr=16000)
+        prog(30, "align_model", "Matching rhythm to the ayah…")
+        iv=proc(wav,sampling_rate=16000,return_tensors="pt").input_values
+        with torch.no_grad():
+            logits=model(iv).logits
+            emissions=torch.log_softmax(logits,dim=-1)
+        prog(45, "transcribe", "Transcribing what you said (English + Arabic)…")
+        # Accurate Quran ASR for the transparency panel
+        try:
+            heard_info=tq.transcribe_path(wavp, verse=verse)
+        except Exception as e:
+            heard_info={"heard_arabic":"","heard_phonetic":"","heard_raw":"",
+                        "heard_match":f"error:{e}","heard_verse":None,
+                        "matched_arabic":"","matched_phonetic":""}
+        prog(70, "align", "Lining up letters to the expected ayah…")
+        vocab=proc.tokenizer.get_vocab()
+        text=VTEXT[verse]
+        ids=[vocab[c] for c in text.replace(" ","|") if c in vocab]
+        targets=torch.tensor([ids],dtype=torch.int32)
+        try:
+            aligned,_=TAF.forced_align(emissions,targets,blank=proc.tokenizer.pad_token_id)
+        except Exception as e:
+            return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":f"align_error:{e}",
+                     "level":"defer","plain":"Could not align the recording to the ayah. Try again.",
+                     **heard_info}]
+        frames=aligned[0].tolist(); T=len(frames); dur=len(wav)/16000
+        inv={v:k for k,v in vocab.items()}
+        pad=proc.tokenizer.pad_token_id
+        dal_id=vocab.get("د")
+        dal_frames=[i for i,t in enumerate(frames) if t==dal_id]
+        if not dal_frames:
+            return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"no_dal_found",
+                     "level":"defer","plain":"Could not find the final dal in the recording.",
+                     **heard_info}]
+        a=dal_frames[0]/T*dur; b=(dal_frames[-1]+1)/T*dur
+        b=max(b, a+0.12)
+        prog(82, "tajweed", "Checking length, doubling & final bounce…")
+        y22,_=librosa.load(wavp,sr=22050)
+        f=_feat(y22,22050,a,b)
+        peak=0.0; rmslev=0.0
+        try:
+            wproc,_=librosa.load(wavp,sr=16000)
             if len(wproc):
                 peak=float(np.abs(wproc).max()); rmslev=float(np.sqrt((wproc**2).mean()))
-    except Exception:
-        pass
-    # also note the raw capture level for diagnostics
-    raw_peak=_pk
-    quality = "good" if (rmslev>0.03) else ("too_quiet" if raw_peak<0.008 else "ok")
-    letters=[]
-    prev=None
-    for i,tok in enumerate(frames):
-        if tok!=prev and tok!=pad:
-            letters.append({"c":inv.get(tok,str(tok)),"t":round(i/T*dur,3)})
-        prev=tok
-    diag={"audio_quality":quality,"peak":round(peak,3),"rms_level":round(rmslev,4),
-          "duration":round(dur,2),"letters":letters,
-          "heard_arabic":heard_info.get("heard_arabic",""),
-          "heard_phonetic":heard_info.get("heard_phonetic",""),
-          "heard_raw":heard_info.get("heard_raw",""),
-          "heard_match":heard_info.get("heard_match",""),
-          "heard_verse":heard_info.get("heard_verse"),
-          "matched_arabic":heard_info.get("matched_arabic",""),
-          "matched_phonetic":heard_info.get("matched_phonetic","")}
-    if f is None:
-        return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"feat_none",**diag}]
-    proba=clf.predict_proba([f])[0][1]; conf=abs(proba-0.5)*2
-    if proba>0.5:
-        # leans error: coach when reasonably sure; only fully defer if very unsure
-        verdict="error" if conf>=HI_ERROR else "defer"
-    else:
-        verdict="correct" if conf>=HI else "defer"
-    import explanations as ex, elements as el
-    qfb=ex.qalqalah_feedback(verse, verdict, round(float(conf),2), p_error=round(float(proba),2))
-    qcard={**qfb,"rule":"qalqalah","verse":verse,
-           "confidence":round(float(conf),2),"p_error":round(float(proba),2),
-           "dal_start":round(a,3),"dal_end":round(b,3)}
-    # full per-element feedback (pronunciation coaching, madd, shadda, qalqalah)
-    cards=el.build_feedback(
-        verse, diag["letters"], qcard,
-        heard_arabic=diag.get("heard_arabic") or diag.get("heard_raw"),
-    )
-    # attach diagnostics to the first card so UI/quality still works
-    if cards: cards[0]={**cards[0],**diag}
-    return cards
+        except Exception:
+            pass
+        raw_peak=_pk
+        quality = "good" if (rmslev>0.03) else ("too_quiet" if raw_peak<0.008 else "ok")
+        letters=[]
+        prev=None
+        for i,tok in enumerate(frames):
+            if tok!=prev and tok!=pad:
+                letters.append({"c":inv.get(tok,str(tok)),"t":round(i/T*dur,3)})
+            prev=tok
+        diag={"audio_quality":quality,"peak":round(peak,3),"rms_level":round(rmslev,4),
+              "duration":round(dur,2),"letters":letters,
+              "heard_arabic":heard_info.get("heard_arabic",""),
+              "heard_phonetic":heard_info.get("heard_phonetic",""),
+              "heard_raw":heard_info.get("heard_raw",""),
+              "heard_match":heard_info.get("heard_match",""),
+              "heard_verse":heard_info.get("heard_verse"),
+              "matched_arabic":heard_info.get("matched_arabic",""),
+              "matched_phonetic":heard_info.get("matched_phonetic","")}
+        if f is None:
+            return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"feat_none",**diag}]
+        proba=clf.predict_proba([f])[0][1]; conf=abs(proba-0.5)*2
+        if proba>0.5:
+            verdict="error" if conf>=HI_ERROR else "defer"
+        else:
+            verdict="correct" if conf>=HI else "defer"
+        prog(92, "coach", "Writing your next-step tips…")
+        import explanations as ex, elements as el
+        qfb=ex.qalqalah_feedback(verse, verdict, round(float(conf),2), p_error=round(float(proba),2))
+        qcard={**qfb,"rule":"qalqalah","verse":verse,
+               "confidence":round(float(conf),2),"p_error":round(float(proba),2),
+               "dal_start":round(a,3),"dal_end":round(b,3)}
+        cards=el.build_feedback(
+            verse, diag["letters"], qcard,
+            heard_arabic=diag.get("heard_arabic") or diag.get("heard_raw"),
+        )
+        if cards: cards[0]={**cards[0],**diag}
+        prog(100, "done", "Done")
+        return cards
+    finally:
+        for p in (orig, wavp):
+            try:
+                if os.path.exists(p): os.unlink(p)
+            except Exception:
+                pass
 
 if __name__=="__main__":
     import sys
