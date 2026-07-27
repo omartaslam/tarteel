@@ -1,105 +1,129 @@
 <!DOCTYPE html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Tarteel — recitation practice (demo)</title>
+<title>Tarteel — recitation practice</title>
 <style>
 *{box-sizing:border-box}
-body{font-family:Georgia,serif;max-width:680px;margin:0 auto;padding:0 20px 60px;color:#242424;line-height:1.55}
-.hero{background:linear-gradient(135deg,#123d1e,#2c5f2d);color:#fff;margin:0 -20px 24px;padding:30px 24px}
-.hero h1{margin:0 0 4px}
-.hero .ar{font-size:30px;float:right;opacity:.9}
-.hero .sub{opacity:.9;font-style:italic;font-size:14px}
-.banner{background:#fff7e6;border:1px solid #f0d9a0;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:20px}
-.verse{font-size:28px;text-align:right;direction:rtl;font-family:'Amiri','Traditional Arabic',serif;background:#f7f9f7;border-radius:8px;padding:16px 20px;margin:12px 0}
-.controls{display:flex;gap:10px;align-items:center;margin:16px 0}
-button{font-family:inherit;font-size:15px;padding:10px 20px;border:none;border-radius:8px;cursor:pointer}
-.rec{background:#c0392b;color:#fff}.rec.on{background:#7a1d13}
+body{font-family:Georgia,serif;max-width:680px;margin:0 auto;padding:0 16px 60px;color:#242424}
+.hero{background:linear-gradient(135deg,#123d1e,#2c5f2d);color:#fff;margin:0 -16px 20px;padding:24px 20px}
+.hero h1{margin:0;font-size:24px}.hero .ar{font-size:30px;float:right;opacity:.9}
+.hero .sub{opacity:.9;font-style:italic;font-size:13px}
+.banner{background:#fff7e6;border:1px solid #f0d9a0;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px}
+.verse-ar{font-size:30px;text-align:right;direction:rtl;font-family:'Amiri','Traditional Arabic',serif;background:#f7f9f7;border-radius:8px;padding:18px;margin:10px 0}
+.phon{font-size:16px;color:#2c5f2d;font-style:italic;margin:6px 2px}
+.trans{font-size:15px;color:#444;margin:4px 2px 14px}
+.husary{display:flex;align-items:center;gap:10px;background:#eef5ee;border-radius:8px;padding:10px 14px;margin-bottom:14px}
+.husary button{background:#2c5f2d;color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:18px;cursor:pointer}
+.husary .lbl{font-size:13px;color:#2c5f2d}
+.controls{display:flex;gap:10px;align-items:center;margin:14px 0}
+button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-radius:8px;cursor:pointer}
+.rec{background:#c0392b;color:#fff;font-size:17px;padding:14px 26px}.rec.on{background:#7a1d13}
 .nav{background:#2c5f2d;color:#fff}
-.card{border-radius:8px;padding:12px 16px;margin:10px 0;border-left:5px solid #ccc}
+/* BIG quality indicator */
+#quality{display:none;margin:14px 0;padding:14px;border-radius:10px;font-size:16px;font-weight:bold;text-align:center}
+#quality.good{display:block;background:#e8f5e9;color:#1b5e20;border:2px solid #2c5f2d}
+#quality.bad{display:block;background:#fdecea;color:#7a1d13;border:2px solid #c0392b}
+.card{border-radius:10px;padding:14px 16px;margin:10px 0;border-left:6px solid #ccc}
 .card.ok{background:#f0f7f0;border-color:#2c5f2d}
 .card.error{background:#fdecea;border-color:#c0392b}
 .card.defer{background:#fff8e6;border-color:#e6c229}
 .card.measured{background:#fef4e8;border-color:#e08a1e}
-.card .plain{font-weight:bold;margin-bottom:4px}
-.card .schol{font-size:13px;color:#555;font-style:italic}
-.tag{display:inline-block;font-size:10px;font-weight:bold;letter-spacing:.5px;color:#fff;padding:2px 8px;border-radius:10px;margin-bottom:6px}
+.card .tag{display:inline-block;font-size:11px;font-weight:bold;letter-spacing:.5px;color:#fff;padding:3px 10px;border-radius:11px;margin-bottom:8px}
 .t-ok{background:#2c5f2d}.t-error{background:#c0392b}.t-defer{background:#c9a913;color:#3a3000}.t-measured{background:#e08a1e}
-.spin{display:none;margin:16px 0;color:#666}
-.foot{margin-top:40px;font-size:12px;color:#888;border-top:1px solid #eee;padding-top:16px}
+.card .plain{font-weight:bold;margin-bottom:5px}.card .schol{font-size:13px;color:#555;font-style:italic}
+.spin{display:none;margin:14px 0;color:#666}
+.foot{margin-top:36px;font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px}
 </style></head><body>
 
-<div class="hero">
-  <span class="ar">ترتيل</span>
-  <h1>Tarteel</h1>
-  <div class="sub">Recitation practice — demo</div>
+<div class="hero"><span class="ar">ترتيل</span><h1>Tarteel</h1>
+<div class="sub">Recitation practice — Surah Al-Ikhlas</div></div>
+
+<div class="banner">A practice aid, not a teacher. It measures what it can, flags what it's unsure of, and defers the rest to your teacher. Hafs an Asim.</div>
+
+<div id="verseAr" class="verse-ar"></div>
+<div id="phon" class="phon"></div>
+<div id="trans" class="trans"></div>
+
+<div class="husary">
+  <button id="playH">▶</button>
+  <div class="lbl"><b>Listen first</b> — Sheikh Al-Husary reciting this ayah</div>
 </div>
 
-<div class="banner">
-  A practice tool, not a teacher. It measures what it can, flags what it's
-  unsure of, and defers the rest to your teacher. Hafs an Asim. Surah Al-Ikhlas only.
+<div class="controls">
+  <button class="nav" id="prev">‹</button>
+  <span id="vnum" style="flex:1;text-align:center;font-weight:bold"></span>
+  <button class="nav" id="next">›</button>
 </div>
 
-<div id="verseBox" class="verse"></div>
-<div class="controls">
-  <button class="nav" id="prev">‹ Prev</button>
-  <span id="vnum" style="flex:1;text-align:center"></span>
-  <button class="nav" id="next">Next ›</button>
-</div>
-<div class="controls">
-  <button class="rec" id="rec">● Record</button>
-  <span id="status"></span>
-</div>
-<div class="spin" id="spin">Analysing… (aligning your recitation)</div>
+<div class="controls"><button class="rec" id="rec">● Record</button><span id="status"></span></div>
+<div id="quality"></div>
+<div class="spin" id="spin">Analysing your recitation…</div>
 <div id="results"></div>
 
-<div class="foot">
-  Omar Tanveer Aslam · omartanveeraslam@gmail.com · +34 643 994 740<br>
-  Qalqalah detection validated at 82%. Other measures shown are unvalidated.
-  Not tested on all voices. Defers rather than guesses — by design.
-</div>
+<div class="foot" id="sessionInfo"></div>
+<div class="foot">Omar Tanveer Aslam · omartanveeraslam@gmail.com<br>Qalqalah detection ~85%. Other measures unvalidated. Defers rather than guesses.</div>
 
 <script>
-const VERSES=[
- "قُلْ هُوَ ٱللَّهُ أَحَدٌ",
- "ٱللَّهُ ٱلصَّمَدُ",
- "لَمْ يَلِدْ وَلَمْ يُولَدْ",
- "وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ"
+const V=[
+ {ar:"قُلْ هُوَ ٱللَّهُ أَحَدٌ", ph:"Qul huwa Allāhu aḥad", tr:"Say: He is Allah, the One", h:"112001"},
+ {ar:"ٱللَّهُ ٱلصَّمَدُ", ph:"Allāhu ṣ-ṣamad", tr:"Allah, the Eternal Refuge", h:"112002"},
+ {ar:"لَمْ يَلِدْ وَلَمْ يُولَدْ", ph:"Lam yalid wa lam yūlad", tr:"He neither begets nor is born", h:"112003"},
+ {ar:"وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ", ph:"Wa lam yakun lahu kufuwan aḥad", tr:"Nor is there to Him any equivalent", h:"112004"}
 ];
-let v=1, rec=null, chunks=[];
+let v=1, rec=null, chunks=[], hAudio=null;
 const $=id=>document.getElementById(id);
-function draw(){ $('verseBox').textContent=VERSES[v-1]; $('vnum').textContent='Ayah '+v+' of 4'; $('results').innerHTML=''; }
-$('prev').onclick=()=>{ if(v>1){v--;draw();} };
-$('next').onclick=()=>{ if(v<4){v++;draw();} };
+function draw(){
+  const d=V[v-1];
+  $('verseAr').textContent=d.ar; $('phon').textContent=d.ph; $('trans').textContent='"'+d.tr+'"';
+  $('vnum').textContent='Ayah '+v+' of 4';
+  $('results').innerHTML=''; $('quality').className=''; $('quality').style.display='none';
+}
+$('prev').onclick=()=>{if(v>1){v--;draw();}};
+$('next').onclick=()=>{if(v<4){v++;draw();}};
+
+// Al-Husary playback from everyayah
+$('playH').onclick=()=>{
+  if(hAudio){hAudio.pause();hAudio=null;$('playH').textContent='▶';return;}
+  const code=V[v-1].h;
+  hAudio=new Audio('https://everyayah.com/data/Husary_128kbps/'+code+'.mp3');
+  hAudio.onended=()=>{$('playH').textContent='▶';hAudio=null;};
+  hAudio.play(); $('playH').textContent='❚❚';
+};
 
 $('rec').onclick=async()=>{
-  if(rec && rec.state==='recording'){ rec.stop(); return; }
+  if(rec&&rec.state==='recording'){rec.stop();return;}
   const stream=await navigator.mediaDevices.getUserMedia({audio:true});
   rec=new MediaRecorder(stream); chunks=[];
   rec.ondataavailable=e=>chunks.push(e.data);
   rec.onstop=async()=>{
-    $('rec').classList.remove('on'); $('rec').textContent='● Record';
-    $('spin').style.display='block'; $('results').innerHTML='';
+    $('rec').classList.remove('on');$('rec').textContent='● Record';
+    $('spin').style.display='block';$('results').innerHTML='';$('quality').style.display='none';
     const blob=new Blob(chunks,{type:'audio/webm'});
-    const fd=new FormData(); fd.append('audio',blob,'r.webm'); fd.append('verse',v);
+    const fd=new FormData(); fd.append('audio',blob,'rec.webm'); fd.append('verse',v);
     try{
       const res=await fetch('/analyze',{method:'POST',body:fd});
-      const data=await res.json(); render(data.results);
-    }catch(e){ $('results').innerHTML='<p>Error analysing. Try again.</p>'; }
+      const data=await res.json(); render(data);
+    }catch(e){$('results').innerHTML='<p>Error. Try again.</p>';}
     $('spin').style.display='none';
   };
-  rec.start(); $('rec').classList.add('on'); $('rec').textContent='■ Stop';
+  rec.start();$('rec').classList.add('on');$('rec').textContent='■ Stop';
 };
 
-function render(rs){
-  if(!rs || !rs.length){ $('results').innerHTML='<p>No qalqalah detected in this ayah.</p>'; return; }
+function render(data){
+  const rs=data.results||[];
+  // BIG quality indicator first
+  const q=rs[0]&&rs[0].audio_quality;
+  const qd=$('quality');
+  if(q==='good'){qd.className='good';qd.textContent='✓ Good recording';}
+  else if(q){qd.className='bad';qd.textContent='⚠ Recording issue: '+q.replace('_',' ')+' — try again';}
+  // cards
   $('results').innerHTML=rs.map(r=>{
     const lvl=r.level||'defer';
-    const tag={ok:'CORRECT',error:'CHECK — likely error',defer:'DEFER TO TEACHER',measured:'MEASURED (unvalidated)'}[lvl]||'';
-    return `<div class="card ${lvl}">
-      <span class="tag t-${lvl}">${tag}</span>
+    const tag={ok:'CORRECT',error:'CHECK — likely error',defer:'ASK YOUR TEACHER',measured:'MEASURED'}[lvl]||'';
+    return `<div class="card ${lvl}"><span class="tag t-${lvl}">${tag}</span>
       <div class="plain">${r.plain||''}</div>
-      ${r.scholarly?`<div class="schol">${r.scholarly}</div>`:''}
-    </div>`;
+      ${r.scholarly?`<div class="schol">${r.scholarly}</div>`:''}</div>`;
   }).join('');
+  if(data.session) $('sessionInfo').textContent='session: '+data.session;
 }
 draw();
 </script>

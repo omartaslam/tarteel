@@ -48,6 +48,7 @@ def analyze_verse(path, verse):
         return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":f"align_error:{e}"}]
     frames=aligned[0].tolist(); T=len(frames); dur=len(wav)/16000
     inv={v:k for k,v in vocab.items()}
+    pad=proc.tokenizer.pad_token_id
     # find the LAST 'د' (dal) - the qalqalah position
     dal_id=vocab.get("د")
     dal_frames=[i for i,t in enumerate(frames) if t==dal_id]
@@ -59,13 +60,25 @@ def analyze_verse(path, verse):
     b=max(b, a+0.12)
     y22,_=librosa.load("/tmp/xl.wav",sr=22050)
     f=_feat(y22,22050,a,b)
+    # --- diagnostics: audio quality + full letter alignment ---
+    peak=float(np.abs(wav).max()); level=float(np.sqrt((wav**2).mean()))
+    quality = "good" if (peak>0.1 and peak<0.99 and level>0.02) else \
+              ("too_quiet" if level<=0.02 else "clipping" if peak>=0.99 else "ok")
+    letters=[]
+    prev=None
+    for i,tok in enumerate(frames):
+        if tok!=prev and tok!=pad:
+            letters.append({"c":inv.get(tok,str(tok)),"t":round(i/T*dur,3)})
+        prev=tok
+    diag={"audio_quality":quality,"peak":round(peak,3),"level":round(level,4),
+          "duration":round(dur,2),"letters":letters}
     if f is None:
-        return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"feat_none"}]
+        return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"feat_none",**diag}]
     proba=clf.predict_proba([f])[0][1]; conf=abs(proba-0.5)*2
     verdict="defer" if conf<HI else ("error" if proba>0.5 else "correct")
     return [{"rule":"qalqalah","verse":verse,"verdict":verdict,
              "confidence":round(float(conf),2),"p_error":round(float(proba),2),
-             "dal_start":round(a,3),"dal_end":round(b,3)}]
+             "dal_start":round(a,3),"dal_end":round(b,3),**diag}]
 
 if __name__=="__main__":
     import sys
