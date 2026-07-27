@@ -20,26 +20,27 @@ SOUND = {
 }
 
 # madd targets: (letter, word_en, word_ar, desc, lo, hi, priority)
+# Priorities stay above word_shape (0..) so next-step prefers words first.
 VERSE_ELEMENTS = {
     1: {
-        "madd":[("و","huwa","هُوَ","the uu in huwa",0.10,0.30,20)],
+        "madd":[("و","huwa","هُوَ","the uu in huwa",0.10,0.30,60)],
         "shadda":[("ل","Allāhu","ٱللَّهُ","the doubled L (ll)",30)],
-        "qalqalah_priority": 40,
+        "qalqalah_priority": 70,
     },
     2: {
         "madd":[],
         "shadda":[("ص","aṣ-ṣamad","ٱلصَّمَدُ","the heavy doubled S",20)],
-        "qalqalah_priority": 30,
+        "qalqalah_priority": 70,
     },
     3: {
-        "madd":[("و","yūlad","يُولَدْ","the uu in yūlad",0.10,0.30,30)],
+        "madd":[("و","yūlad","يُولَدْ","the uu in yūlad",0.10,0.30,60)],
         "shadda":[],
-        "qalqalah_priority": 20,
+        "qalqalah_priority": 70,
     },
     4: {
         "madd":[],
         "shadda":[],
-        "qalqalah_priority": 50,
+        "qalqalah_priority": 70,
     },
 }
 
@@ -62,9 +63,11 @@ def build_feedback(verse, letters, qalqalah_result, heard_arabic=None, heard_pho
             )
         )
 
-    # Pronunciation letter swaps (ayah order priorities 0..)
+    # Pronunciation / word-shape (ayah order)
     if heard_arabic:
-        errors.extend(coach.coach_from_heard(verse, heard_arabic))
+        errors.extend(
+            coach.coach_from_heard(verse, heard_arabic, heard_phonetic or "")
+        )
 
     # Madd
     for (letter, wen, war, desc, lo, hi, pri) in spec.get("madd", []):
@@ -130,9 +133,16 @@ def build_feedback(verse, letters, qalqalah_result, heard_arabic=None, heard_pho
             # defer → still give practice tip, lower urgency than clear errors
             tips.append(coach.ahad_bounce_card(verse, priority=qpri + 10))
 
-    errors = sorted(errors, key=lambda x: x.get("priority", 50))
+    errors = sorted(
+        errors,
+        key=lambda x: (
+            0 if (x.get("rule") == "word_shape" and x.get("identity")) else
+            1 if x.get("rule") == "word_shape" else 2,
+            x.get("priority", 50),
+        ),
+    )
     tips = sorted(tips, key=lambda x: x.get("priority", 50))
-    issues = errors + tips  # for next-step pick (errors first)
+    issues = errors + tips  # for next-step pick (word_shape first)
 
     # Journey: all errors → tips → NEXT STEP (first issue again) → goods
     cards = []
