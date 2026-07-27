@@ -35,12 +35,23 @@ def analyze_verse(path, verse):
     proc,model,clf=_load()
     # measure raw level first; if very quiet, apply hard gain before loudnorm
     subprocess.run(["ffmpeg","-i",path,"-ar","16000","-ac","1","/tmp/xl_orig.wav","-y"],capture_output=True)
-    _probe,_=librosa.load("/tmp/xl_orig.wav",sr=16000)
-    _pk=float(np.abs(_probe).max()) if len(_probe) else 0.0
+    _pk=0.0
+    try:
+        if os.path.exists("/tmp/xl_orig.wav"):
+            _probe,_=librosa.load("/tmp/xl_orig.wav",sr=16000)
+            _pk=float(np.abs(_probe).max()) if len(_probe) else 0.0
+    except Exception:
+        _pk=0.0
     gain = "volume=25dB," if _pk < 0.05 else ("volume=12dB," if _pk < 0.15 else "")
-    subprocess.run(["ffmpeg","-i",path,
+    r1=subprocess.run(["ffmpeg","-i",path,
                     "-af",gain+"loudnorm=I=-16:TP=-1.5:LRA=11",
                     "-ar","16000","-ac","1","/tmp/xl.wav","-y"],capture_output=True)
+    if not os.path.exists("/tmp/xl.wav"):
+        # normalization failed - fall back to plain convert
+        subprocess.run(["ffmpeg","-i",path,"-ar","16000","-ac","1","/tmp/xl.wav","-y"],capture_output=True)
+    if not os.path.exists("/tmp/xl.wav"):
+        return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"audio_decode_failed",
+                 "level":"defer","plain":"Could not read the recording. Try again.","scholarly":None}]
     wav,_=librosa.load("/tmp/xl.wav",sr=16000)
     iv=proc(wav,sampling_rate=16000,return_tensors="pt").input_values
     with torch.no_grad():
@@ -69,8 +80,14 @@ def analyze_verse(path, verse):
     f=_feat(y22,22050,a,b)
     # --- diagnostics: audio quality + full letter alignment ---
     # quality from ORIGINAL capture (before normalization)
-    worig,_=librosa.load("/tmp/xl_orig.wav",sr=16000)
-    peak=float(np.abs(worig).max()); rmslev=float(np.sqrt((worig**2).mean()))
+    peak=0.0; rmslev=0.0
+    try:
+        if os.path.exists("/tmp/xl_orig.wav"):
+            worig,_=librosa.load("/tmp/xl_orig.wav",sr=16000)
+            if len(worig):
+                peak=float(np.abs(worig).max()); rmslev=float(np.sqrt((worig**2).mean()))
+    except Exception:
+        pass
     quality = "good" if (peak>0.1 and peak<0.99 and rmslev>0.02) else \
               ("too_quiet" if rmslev<=0.02 else "clipping" if peak>=0.99 else "ok")
     letters=[]
