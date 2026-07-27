@@ -45,11 +45,28 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .focusw{background:#fff3bf;color:#1a1a1a;font-weight:bold;padding:0 4px;border-radius:4px}
 .spin{display:none;margin:14px 0;color:#666}
 .progwrap{display:none;margin:14px 0;padding:14px 16px;background:#f4f7fb;border:1px solid #d0dbe8;border-radius:10px}
-.progwrap.on{display:block}
-.progphase{font-size:15px;font-weight:bold;color:#1a3a5c;margin-bottom:6px}
-.progmeta{font-size:12px;color:#667;margin-bottom:10px}
-.progtrack{height:12px;background:#dde6f0;border-radius:8px;overflow:hidden}
-.progbar{height:100%;width:0%;background:linear-gradient(90deg,#2c5f8f,#1a5fb4);border-radius:8px;transition:width .35s ease}
+.progwrap.on{display:block;position:sticky;top:8px;z-index:30;box-shadow:0 6px 18px rgba(0,0,0,.08);min-height:168px}
+.progphase{font-size:16px;font-weight:bold;color:#1a3a5c;margin-bottom:4px}
+.proghint{font-size:12px;color:#667;margin-bottom:8px;min-height:1.2em}
+.progmeta{font-size:12px;color:#667;margin-bottom:8px}
+.progtrack{height:12px;background:#dde6f0;border-radius:8px;overflow:hidden;margin-bottom:10px}
+.progbar{height:100%;width:0%;background:linear-gradient(90deg,#2c5f8f,#1a5fb4);border-radius:8px;transition:width .45s ease}
+.progsteps{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.progsteps li{font-size:13px;color:#99a;padding:2px 0 2px 22px;position:relative;transition:color .2s}
+.progsteps li::before{content:"○";position:absolute;left:0;top:1px;font-size:12px}
+.progsteps li.done{color:#2c5f2d}
+.progsteps li.done::before{content:"✓"}
+.progsteps li.now{color:#1a5fb4;font-weight:bold}
+.progsteps li.now::before{content:"●"}
+.reveal{opacity:0;transform:translateY(8px);transition:opacity .35s ease, transform .35s ease}
+.reveal.show{opacity:1;transform:none}
+.restbox{margin:12px 0;border:1px solid #e0e4ea;border-radius:10px;background:#fafbfc}
+.restbox>summary{cursor:pointer;padding:12px 14px;font-size:13px;font-weight:bold;color:#5a6a7a;list-style:none}
+.restbox>summary::-webkit-details-marker{display:none}
+.restbox>summary::before{content:"▸ ";color:#1a5fb4}
+.restbox[open]>summary::before{content:"▾ "}
+.restbox .restbody{padding:0 12px 12px}
+#workbench{min-height:120px}
 .heard{background:#eef3f8;border:1px solid #c9d8e8;border-radius:10px;padding:12px 16px;margin:10px 0}
 .heard .hh{font-size:12px;font-weight:bold;color:#2c5f8f;letter-spacing:.5px;margin-bottom:6px}
 .heard .har{font-size:28px;font-family:'Amiri','Traditional Arabic',serif;color:#1a1a1a;margin:6px 0;text-align:right;direction:rtl;line-height:1.6}
@@ -119,13 +136,17 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 
 <div class="controls"><button class="rec" id="rec">● Record</button><span id="status"></span></div>
 <div id="quality"></div>
-<div class="spin" id="spin">Analysing your recitation…</div>
-<div class="progwrap" id="prog">
-  <div class="progphase" id="progPhase">Starting…</div>
-  <div class="progmeta"><span id="progPct">0%</span> · <span id="progTime">0s</span></div>
-  <div class="progtrack"><div class="progbar" id="progBar"></div></div>
+<div id="workbench">
+  <div class="spin" id="spin">Analysing your recitation…</div>
+  <div class="progwrap" id="prog">
+    <div class="progphase" id="progPhase">Starting…</div>
+    <div class="proghint" id="progHint">Stay on this screen — steps fill in as we go.</div>
+    <div class="progmeta"><span id="progPct">0%</span> · <span id="progTime">0s</span></div>
+    <div class="progtrack"><div class="progbar" id="progBar"></div></div>
+    <ul class="progsteps" id="progSteps"></ul>
+  </div>
+  <div id="results"></div>
 </div>
-<div id="results"></div>
 
 <div class="foot" id="sessionInfo"></div>
 <div class="foot">Omar Tanveer Aslam · omartanveeraslam@gmail.com<br>Qalqalah detection ~85%. Other measures unvalidated. Defers rather than guesses.</div>
@@ -328,31 +349,56 @@ $('rec').onclick=async()=>{
   rec.start(250);$('rec').classList.add('on');$('rec').textContent='■ Stop';
 };
 
-function showProg(on, pct, msg, elapsed){
+function showProg(on, pct, msg, elapsed, phase){
   const w=$('prog');
-  if(!on){ w.classList.remove('on'); $('spin').style.display='none'; return; }
-  w.classList.add('on');
+  if(!on){
+    w.classList.remove('on');
+    $('spin').style.display='none';
+    return;
+  }
+  if(!w.classList.contains('on')){
+    w.classList.add('on');
+    drawProgSteps();
+    // Keep the dock in view once — avoid repeated scrolling/jumping
+    try{ w.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){}
+  }
   $('spin').style.display='none';
   if(pct!=null){ $('progBar').style.width=Math.max(0,Math.min(100,pct))+'%'; $('progPct').textContent=Math.round(pct)+'%'; }
   if(msg!=null) $('progPhase').textContent=msg;
   if(elapsed!=null) $('progTime').textContent=Math.round(elapsed)+'s elapsed';
+  const hint=$('progHint');
+  if(hint){
+    if((pct||0) < 15) hint.textContent='Uploading — this is usually quick.';
+    else if((pct||0) < 45) hint.textContent='Listening to your take…';
+    else if((pct||0) < 85) hint.textContent='Checking words and tajweed…';
+    else hint.textContent='Writing your next step…';
+  }
+  markProgSteps(phase, pct);
 }
 
 async function pollJob(job){
   const t0=Date.now();
+  let lastPhase='';
   for(;;){
     const res=await fetch('/analyze/status/'+job);
     const st=await res.json().catch(()=>({}));
     if(!res.ok){
       showProg(false);
-      $('results').innerHTML=`<p>Lost analysis job. Tap header to refresh and try again.</p>`;
+      $('results').innerHTML='<p>Lost analysis job. Tap header to refresh and try again.</p>';
       return;
     }
     const elapsed=st.elapsed!=null?st.elapsed:((Date.now()-t0)/1000);
-    showProg(true, st.pct||0, st.message||'Working…', elapsed);
+    const phase=st.phase||'';
+    if(phase && phase!==lastPhase){
+      lastPhase=phase;
+    }
+    showProg(true, st.pct||0, st.message||'Working…', elapsed, phase);
     if(st.status==='done'){
-      showProg(true, 100, 'Done', elapsed);
-      setTimeout(()=>{ showProg(false); render(st.result||{}); }, 250);
+      showProg(true, 100, 'Done — preparing your next step…', elapsed, 'done');
+      await new Promise(r=>setTimeout(r, 280));
+      await render(st.result||{});
+      // Leave progress visible briefly, then tuck it away without a hard jump
+      setTimeout(()=>showProg(false), 600);
       return;
     }
     if(st.status==='error'){
@@ -360,13 +406,25 @@ async function pollJob(job){
       $('results').innerHTML=`<p>Analysis failed. ${st.error||st.message||'Try again.'}</p>`;
       return;
     }
-    await new Promise(r=>setTimeout(r, 400));
+    await new Promise(r=>setTimeout(r, 350));
   }
 }
 
-function render(data){
+function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+async function revealEl(html){
+  const wrap=document.createElement('div');
+  wrap.className='reveal';
+  wrap.innerHTML=html;
+  $('results').appendChild(wrap);
+  // force layout then animate
+  void wrap.offsetWidth;
+  wrap.classList.add('show');
+  await sleep(220);
+  return wrap;
+}
+
+async function render(data){
   const rs=data.results||[];
-  // Prefer top-level diag (reliable); fall back to card-embedded fields
   const view = (data.heard_arabic!=null || data.audio_quality!=null) ? {
     audio_quality: data.audio_quality,
     heard_arabic: data.heard_arabic,
@@ -384,7 +442,6 @@ function render(data){
   else if(q){qd.className='bad';qd.textContent='⚠ Recording very quiet — hold phone closer, or use Voice Memos';}
   else {qd.className=''; qd.style.display='none';}
 
-  // WHAT I HEARD — literal capture + English-led word compare vs closest ayah
   let heardHtml='';
   if(view.heard_arabic!==undefined){
     const match=view.heard_match||'';
@@ -396,7 +453,7 @@ function render(data){
     if(match==='raw'||match==='empty'){
       note='Showing the literal capture of this take. Could not cleanly match a known ayah.';
     } else if(showMatch || compare){
-      note='Arabic + English phonetics above are what the app heard. Below: each word matched or mismatched against the target (English first).';
+      note='English-first word compare is below — green match, amber close, red different.';
     } else {
       note='Arabic + English phonetics are what the app heard from your voice.';
     }
@@ -439,34 +496,47 @@ function render(data){
       ${r.scholarly?`<div class="schol">${r.scholarly}</div>`:''}</div>`;
   }
 
+  // Clear once, then reveal in calm stages (no giant dump)
+  $('results').innerHTML='';
+  try{ $('prog').scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){}
+
   if(!rs.length){
-    $('results').innerHTML=heardHtml + '<p>No feedback cards returned. Tap the green header to refresh and try again.</p>' + retryHtml;
+    await revealEl(heardHtml + '<p>No feedback cards returned. Tap the green header to refresh and try again.</p>' + retryHtml);
     bindRetry(data);
     if(data.session) $('sessionInfo').textContent='session: '+data.session;
     return;
   }
 
-  // Update practice log (mastery + iterations) then focus UI
   const practice=updatePracticeLog(v, data);
   const logHtml=practiceLogHtml(v, practice);
-
-  // Focus: NEXT STEP → actions → everything else (regression check)
   const nextCards = rs.filter(r => r.level === 'next');
   const rest = rs.filter(r => r.level !== 'next');
-  const restLabel = rest.length
-    ? `<div class="restlbl">Also check — other notes / regressions on this take</div>`
-    : '';
-  $('results').innerHTML =
-    heardHtml +
-    logHtml +
-    nextCards.map(cardHtml).join('') +
-    retryHtml +
-    restLabel +
-    rest.map(cardHtml).join('');
 
+  // 1) What we heard
+  if(heardHtml) await revealEl(heardHtml);
+  // 2) Short practice log (if any)
+  if(logHtml) await revealEl(logHtml);
+  // 3) The one next step — scroll this into view
+  if(nextCards.length){
+    const el=await revealEl(nextCards.map(cardHtml).join(''));
+    try{ el.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){}
+  }
+  // 4) Actions immediately under next step
+  await revealEl(retryHtml);
   bindRetry(data);
   const cl=$('clearLog');
   if(cl) cl.onclick=()=>{ clearPractice(v); cl.textContent='Cleared'; cl.disabled=true; };
+
+  // 5) Everything else tucked away — open only if you want the regression scan
+  if(rest.length){
+    const n=rest.length;
+    const box=`<details class="restbox">
+      <summary>Also check — ${n} other note${n===1?'':'s'} on this take</summary>
+      <div class="restbody">${rest.map(cardHtml).join('')}</div>
+    </details>`;
+    await revealEl(box);
+  }
+
   if(data.session) $('sessionInfo').textContent='session: '+data.session;
 }
 
