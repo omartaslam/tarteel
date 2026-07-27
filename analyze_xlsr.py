@@ -76,7 +76,9 @@ def analyze_verse(path, verse):
     try:
         aligned,_=TAF.forced_align(emissions,targets,blank=proc.tokenizer.pad_token_id)
     except Exception as e:
-        return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":f"align_error:{e}"}]
+        return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":f"align_error:{e}",
+                 "level":"defer","plain":"Could not align the recording to the ayah. Try again.",
+                 **heard_info}]
     frames=aligned[0].tolist(); T=len(frames); dur=len(wav)/16000
     inv={v:k for k,v in vocab.items()}
     pad=proc.tokenizer.pad_token_id
@@ -84,7 +86,9 @@ def analyze_verse(path, verse):
     dal_id=vocab.get("د")
     dal_frames=[i for i,t in enumerate(frames) if t==dal_id]
     if not dal_frames:
-        return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"no_dal_found"}]
+        return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"no_dal_found",
+                 "level":"defer","plain":"Could not find the final dal in the recording.",
+                 **heard_info}]
     a=dal_frames[0]/T*dur; b=(dal_frames[-1]+1)/T*dur
     # XLSR marks letter ONSET, not full duration - widen to capture the
     # qalqalah release burst that follows (classifier trained on ~100ms windows)
