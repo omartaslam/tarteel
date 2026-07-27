@@ -33,7 +33,11 @@ def _feat(y,sr,a,b):
 
 def analyze_verse(path, verse):
     proc,model,clf=_load()
-    subprocess.run(["ffmpeg","-i",path,"-ar","16000","-ac","1","/tmp/xl.wav","-y"],capture_output=True)
+    # measure quality on ORIGINAL (pre-normalization) audio
+    subprocess.run(["ffmpeg","-i",path,"-ar","16000","-ac","1","/tmp/xl_orig.wav","-y"],capture_output=True)
+    subprocess.run(["ffmpeg","-i",path,
+                    "-af","loudnorm=I=-16:TP=-1.5:LRA=11",
+                    "-ar","16000","-ac","1","/tmp/xl.wav","-y"],capture_output=True)
     wav,_=librosa.load("/tmp/xl.wav",sr=16000)
     iv=proc(wav,sampling_rate=16000,return_tensors="pt").input_values
     with torch.no_grad():
@@ -61,24 +65,33 @@ def analyze_verse(path, verse):
     y22,_=librosa.load("/tmp/xl.wav",sr=22050)
     f=_feat(y22,22050,a,b)
     # --- diagnostics: audio quality + full letter alignment ---
-    peak=float(np.abs(wav).max()); level=float(np.sqrt((wav**2).mean()))
-    quality = "good" if (peak>0.1 and peak<0.99 and level>0.02) else \
-              ("too_quiet" if level<=0.02 else "clipping" if peak>=0.99 else "ok")
+    # quality from ORIGINAL capture (before normalization)
+    worig,_=librosa.load("/tmp/xl_orig.wav",sr=16000)
+    peak=float(np.abs(worig).max()); rmslev=float(np.sqrt((worig**2).mean()))
+    quality = "good" if (peak>0.1 and peak<0.99 and rmslev>0.02) else \
+              ("too_quiet" if rmslev<=0.02 else "clipping" if peak>=0.99 else "ok")
     letters=[]
     prev=None
     for i,tok in enumerate(frames):
         if tok!=prev and tok!=pad:
             letters.append({"c":inv.get(tok,str(tok)),"t":round(i/T*dur,3)})
         prev=tok
-    diag={"audio_quality":quality,"peak":round(peak,3),"level":round(level,4),
+    diag={"audio_quality":quality,"peak":round(peak,3),"rms_level":round(rmslev,4),
           "duration":round(dur,2),"letters":letters}
     if f is None:
         return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"feat_none",**diag}]
     proba=clf.predict_proba([f])[0][1]; conf=abs(proba-0.5)*2
     verdict="defer" if conf<HI else ("error" if proba>0.5 else "correct")
-    return [{"rule":"qalqalah","verse":verse,"verdict":verdict,
-             "confidence":round(float(conf),2),"p_error":round(float(proba),2),
-             "dal_start":round(a,3),"dal_end":round(b,3),**diag}]
+    import explanations as ex, elements as el
+    qfb=ex.qalqalah_feedback(verse, verdict, round(float(conf),2))
+    qcard={**qfb,"rule":"qalqalah","verse":verse,
+           "confidence":round(float(conf),2),"p_error":round(float(proba),2),
+           "dal_start":round(a,3),"dal_end":round(b,3)}
+    # full per-element feedback (madd, shadda, words) + qalqalah
+    cards=el.build_feedback(verse, diag["letters"], qcard)
+    # attach diagnostics to the first card so UI/quality still works
+    if cards: cards[0]={**cards[0],**diag}
+    return cards
 
 if __name__=="__main__":
     import sys

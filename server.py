@@ -23,10 +23,7 @@ async def do_analyze(audio: UploadFile, verse: int = Form(...)):
         results = analyze.analyze_verse(path, verse)
     finally:
         os.unlink(path)
-    cards=[]
-    for r in results:
-        fb = ex.qalqalah_feedback(r.get("verse",verse), r["verdict"], r["confidence"])
-        cards.append({**r, **fb})
+    cards = results  # analyze now returns full per-element feedback cards
     # store everything for diagnosis
     sid = storage.save(raw, ext, verse, cards, extra={"filename":audio.filename,
                        "content_type":audio.content_type, "bytes":len(raw)})
