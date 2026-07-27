@@ -44,29 +44,20 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .ayatar{font-size:15px;color:#888;margin-top:4px;font-family:'Amiri','Traditional Arabic',serif;line-height:1.5}
 .focusw{background:#fff3bf;color:#1a1a1a;font-weight:bold;padding:0 4px;border-radius:4px}
 .spin{display:none;margin:14px 0;color:#666}
-.progwrap{display:none;margin:14px 0;padding:14px 16px;background:#f4f7fb;border:1px solid #d0dbe8;border-radius:10px}
-.progwrap.on{display:block;position:sticky;top:8px;z-index:30;box-shadow:0 6px 18px rgba(0,0,0,.08);min-height:168px}
-.progphase{font-size:16px;font-weight:bold;color:#1a3a5c;margin-bottom:4px}
-.proghint{font-size:12px;color:#667;margin-bottom:8px;min-height:1.2em}
-.progmeta{font-size:12px;color:#667;margin-bottom:8px}
-.progtrack{height:12px;background:#dde6f0;border-radius:8px;overflow:hidden;margin-bottom:10px}
-.progbar{height:100%;width:0%;background:linear-gradient(90deg,#2c5f8f,#1a5fb4);border-radius:8px;transition:width .45s ease}
-.progsteps{list-style:none;margin:0;padding:0;display:grid;gap:4px}
-.progsteps li{font-size:13px;color:#99a;padding:2px 0 2px 22px;position:relative;transition:color .2s}
-.progsteps li::before{content:"○";position:absolute;left:0;top:1px;font-size:12px}
-.progsteps li.done{color:#2c5f2d}
-.progsteps li.done::before{content:"✓"}
-.progsteps li.now{color:#1a5fb4;font-weight:bold}
-.progsteps li.now::before{content:"●"}
-.reveal{opacity:0;transform:translateY(8px);transition:opacity .35s ease, transform .35s ease}
-.reveal.show{opacity:1;transform:none}
+.progwrap{display:none;margin:10px 0;padding:8px 10px;background:#f7f9fc;border:1px solid #e3eaf2;border-radius:8px}
+.progwrap.on{display:block}
+.progline{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:13px;color:#445;margin-bottom:6px;min-height:1.2em}
+.progphase{font-weight:normal;color:#334;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.progpct{font-variant-numeric:tabular-nums;color:#667;flex:none}
+.progtrack{height:4px;background:#e2e8f0;border-radius:4px;overflow:hidden}
+.progbar{height:100%;width:0%;background:#6a8fb5;border-radius:4px;transition:width .3s ease}
 .restbox{margin:12px 0;border:1px solid #e0e4ea;border-radius:10px;background:#fafbfc}
 .restbox>summary{cursor:pointer;padding:12px 14px;font-size:13px;font-weight:bold;color:#5a6a7a;list-style:none}
 .restbox>summary::-webkit-details-marker{display:none}
 .restbox>summary::before{content:"▸ ";color:#1a5fb4}
 .restbox[open]>summary::before{content:"▾ "}
 .restbox .restbody{padding:0 12px 12px}
-#workbench{min-height:120px}
+#workbench{min-height:40px}
 .heard{background:#eef3f8;border:1px solid #c9d8e8;border-radius:10px;padding:12px 16px;margin:10px 0}
 .heard .hh{font-size:12px;font-weight:bold;color:#2c5f8f;letter-spacing:.5px;margin-bottom:6px}
 .heard .har{font-size:28px;font-family:'Amiri','Traditional Arabic',serif;color:#1a1a1a;margin:6px 0;text-align:right;direction:rtl;line-height:1.6}
@@ -139,11 +130,11 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 <div id="workbench">
   <div class="spin" id="spin">Analysing your recitation…</div>
   <div class="progwrap" id="prog">
-    <div class="progphase" id="progPhase">Starting…</div>
-    <div class="proghint" id="progHint">Stay on this screen — steps fill in as we go.</div>
-    <div class="progmeta"><span id="progPct">0%</span> · <span id="progTime">0s</span></div>
+    <div class="progline">
+      <span class="progphase" id="progPhase">Starting…</span>
+      <span class="progpct" id="progPct">0%</span>
+    </div>
     <div class="progtrack"><div class="progbar" id="progBar"></div></div>
-    <ul class="progsteps" id="progSteps"></ul>
   </div>
   <div id="results"></div>
 </div>
@@ -167,38 +158,21 @@ const VERSE_WORDS={
   3:['lam','yalid','wa lam','yūlad'],
   4:['wa lam','yakun','lahu','kufuwan','aḥad'],
 };
-const PROG_STEPS=[
-  {id:'queued', label:'Queued'},
-  {id:'start', label:'Start analysis'},
-  {id:'decode', label:'Read your recording'},
-  {id:'normalize', label:'Clean the audio'},
-  {id:'align_model', label:'Match rhythm to the ayah'},
-  {id:'transcribe', label:'Transcribe what you said'},
-  {id:'align', label:'Line up the words'},
-  {id:'tajweed', label:'Check length, doubling, bounce'},
-  {id:'coach', label:'Write your next step'},
-  {id:'done', label:'Done'},
-];
-function drawProgSteps(){
-  const ul=$('progSteps'); if(!ul) return;
-  ul.innerHTML=PROG_STEPS.map(s=>`<li data-id="${s.id}">${s.label}</li>`).join('');
-}
-function markProgSteps(phase, pct){
-  const ul=$('progSteps'); if(!ul) return;
-  let idx=PROG_STEPS.findIndex(s=>s.id===phase);
-  if(idx<0){
-    if((pct||0)>=100) idx=PROG_STEPS.length-1;
-    else if((pct||0)>=90) idx=PROG_STEPS.findIndex(s=>s.id==='coach');
-    else if((pct||0)>=70) idx=PROG_STEPS.findIndex(s=>s.id==='align');
-    else if((pct||0)>=45) idx=PROG_STEPS.findIndex(s=>s.id==='transcribe');
-    else if((pct||0)>=18) idx=PROG_STEPS.findIndex(s=>s.id==='normalize');
-    else idx=0;
+let _progBroughtIntoView=false;
+
+function shortProgMsg(msg, phase, pct){
+  const m=(msg||'').trim();
+  if(m) {
+    // Keep one short line for iPhone
+    return m.replace(/\s+/g,' ').slice(0, 56);
   }
-  [...ul.children].forEach((li,i)=>{
-    li.classList.remove('done','now');
-    if(i<idx) li.classList.add('done');
-    else if(i===idx) li.classList.add('now');
-  });
+  const map={
+    queued:'Uploading…', start:'Starting…', decode:'Reading audio…',
+    normalize:'Cleaning audio…', align_model:'Matching rhythm…',
+    transcribe:'Transcribing…', align:'Lining up words…',
+    tajweed:'Checking tajweed…', coach:'Writing next step…', done:'Done'
+  };
+  return map[phase] || ((pct||0)>=100 ? 'Done' : 'Working…');
 }
 
 function loadPractice(verse){
@@ -357,21 +331,20 @@ $('rec').onclick=async()=>{
     const prac=loadPractice(v);
     fd.append('mastered', JSON.stringify(prac.mastered||[]));
     if(prac.lastFocus) fd.append('last_focus', prac.lastFocus);
-    showProg(true, 2, 'Uploading your recording…', 0, 'queued');
+    showProg(true, 2, 'Uploading…', 0, 'queued');
     try{
       const startRes=await fetch('/analyze/start',{method:'POST',body:fd});
       const startData=await startRes.json().catch(()=>({}));
       if(!startRes.ok || !startData.job){
-        showProg(true, 5, 'Analysing (one-shot mode)…', 0, 'start');
+        showProg(true, 5, 'Analysing…', 0, 'start');
         const res=await fetch('/analyze',{method:'POST',body:fd});
         const data=await res.json().catch(()=>({}));
         if(!res.ok){
           showProg(false);
           $('results').innerHTML=`<p>Server error (${res.status}). ${data.error||'Try again — tap the green header to refresh first.'}</p>`;
         } else {
-          showProg(true, 100, 'Done — preparing your next step…', null, 'done');
-          await render(data);
-          setTimeout(()=>showProg(false), 600);
+          showProg(false);
+          render(data);
         }
       } else {
         await pollJob(startData.job);
@@ -390,31 +363,25 @@ function showProg(on, pct, msg, elapsed, phase){
   if(!on){
     w.classList.remove('on');
     $('spin').style.display='none';
+    _progBroughtIntoView=false;
     return;
   }
-  if(!w.classList.contains('on')){
-    w.classList.add('on');
-    drawProgSteps();
-    // Keep the dock in view once — avoid repeated scrolling/jumping
+  const turningOn=!w.classList.contains('on');
+  w.classList.add('on');
+  $('spin').style.display='none';
+  const p=Math.max(0,Math.min(100, pct==null?0:pct));
+  $('progBar').style.width=p+'%';
+  $('progPct').textContent=Math.round(p)+'%';
+  $('progPhase').textContent=shortProgMsg(msg, phase, p);
+  // Only scroll once when the bar first appears — stops iPhone jumpiness
+  if(turningOn && !_progBroughtIntoView){
+    _progBroughtIntoView=true;
     try{ w.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){}
   }
-  $('spin').style.display='none';
-  if(pct!=null){ $('progBar').style.width=Math.max(0,Math.min(100,pct))+'%'; $('progPct').textContent=Math.round(pct)+'%'; }
-  if(msg!=null) $('progPhase').textContent=msg;
-  if(elapsed!=null) $('progTime').textContent=Math.round(elapsed)+'s elapsed';
-  const hint=$('progHint');
-  if(hint){
-    if((pct||0) < 15) hint.textContent='Uploading — this is usually quick.';
-    else if((pct||0) < 45) hint.textContent='Listening to your take…';
-    else if((pct||0) < 85) hint.textContent='Checking words and tajweed…';
-    else hint.textContent='Writing your next step…';
-  }
-  markProgSteps(phase, pct);
 }
 
 async function pollJob(job){
   const t0=Date.now();
-  let lastPhase='';
   for(;;){
     const res=await fetch('/analyze/status/'+job);
     const st=await res.json().catch(()=>({}));
@@ -424,17 +391,10 @@ async function pollJob(job){
       return;
     }
     const elapsed=st.elapsed!=null?st.elapsed:((Date.now()-t0)/1000);
-    const phase=st.phase||'';
-    if(phase && phase!==lastPhase){
-      lastPhase=phase;
-    }
-    showProg(true, st.pct||0, st.message||'Working…', elapsed, phase);
+    showProg(true, st.pct||0, st.message||'Working…', elapsed, st.phase||'');
     if(st.status==='done'){
-      showProg(true, 100, 'Done — preparing your next step…', elapsed, 'done');
-      await new Promise(r=>setTimeout(r, 280));
-      await render(st.result||{});
-      // Leave progress visible briefly, then tuck it away without a hard jump
-      setTimeout(()=>showProg(false), 600);
+      showProg(false);
+      render(st.result||{});
       return;
     }
     if(st.status==='error'){
@@ -442,24 +402,11 @@ async function pollJob(job){
       $('results').innerHTML=`<p>Analysis failed. ${st.error||st.message||'Try again.'}</p>`;
       return;
     }
-    await new Promise(r=>setTimeout(r, 350));
+    await new Promise(r=>setTimeout(r, 400));
   }
 }
 
-function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
-async function revealEl(html){
-  const wrap=document.createElement('div');
-  wrap.className='reveal';
-  wrap.innerHTML=html;
-  $('results').appendChild(wrap);
-  // force layout then animate
-  void wrap.offsetWidth;
-  wrap.classList.add('show');
-  await sleep(220);
-  return wrap;
-}
-
-async function render(data){
+function render(data){
   const rs=data.results||[];
   const view = (data.heard_arabic!=null || data.audio_quality!=null) ? {
     audio_quality: data.audio_quality,
@@ -489,7 +436,7 @@ async function render(data){
     if(match==='raw'||match==='empty'){
       note='Showing the literal capture of this take. Could not cleanly match a known ayah.';
     } else if(showMatch || compare){
-      note='English-first word compare is below — green match, amber close, red different.';
+      note='English-first word compare below — green match, amber close, red different.';
     } else {
       note='Arabic + English phonetics are what the app heard from your voice.';
     }
@@ -499,7 +446,7 @@ async function render(data){
          ${matchedPh?`<div class="hmatchph">${matchedPh}</div>`:''}
          ${compare||''}</div>`
       : '';
-    heardHtml=`<div class="heard">
+    heardHtml=`<div class="heard" id="heardTop">
       <div class="hh">What the app heard (your voice)</div>
       <div class="har" dir="rtl" lang="ar">${view.heard_arabic||'(unclear)'}</div>
       <div class="hph">${view.heard_phonetic||''}</div>
@@ -532,13 +479,10 @@ async function render(data){
       ${r.scholarly?`<div class="schol">${r.scholarly}</div>`:''}</div>`;
   }
 
-  // Clear once, then reveal in calm stages (no giant dump)
-  $('results').innerHTML='';
-  try{ $('prog').scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){}
-
   if(!rs.length){
-    await revealEl(heardHtml + '<p>No feedback cards returned. Tap the green header to refresh and try again.</p>' + retryHtml);
+    $('results').innerHTML=heardHtml + '<p>No feedback cards returned. Tap the green header to refresh and try again.</p>' + retryHtml;
     bindRetry(data);
+    scrollToHeard();
     if(data.session) $('sessionInfo').textContent='session: '+data.session;
     return;
   }
@@ -547,33 +491,32 @@ async function render(data){
   const logHtml=practiceLogHtml(v, practice);
   const nextCards = rs.filter(r => r.level === 'next');
   const rest = rs.filter(r => r.level !== 'next');
+  const restHtml = rest.length
+    ? `<details class="restbox">
+        <summary>Also check — ${rest.length} other note${rest.length===1?'':'s'} on this take</summary>
+        <div class="restbody">${rest.map(cardHtml).join('')}</div>
+      </details>`
+    : '';
 
-  // 1) What we heard
-  if(heardHtml) await revealEl(heardHtml);
-  // 2) Short practice log (if any)
-  if(logHtml) await revealEl(logHtml);
-  // 3) The one next step — scroll this into view
-  if(nextCards.length){
-    const el=await revealEl(nextCards.map(cardHtml).join(''));
-    try{ el.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){}
-  }
-  // 4) Actions immediately under next step
-  await revealEl(retryHtml);
+  // One paint — no staged reveals (those jumped on iPhone)
+  $('results').innerHTML =
+    heardHtml +
+    logHtml +
+    nextCards.map(cardHtml).join('') +
+    retryHtml +
+    restHtml;
+
   bindRetry(data);
   const cl=$('clearLog');
   if(cl) cl.onclick=()=>{ clearPractice(v); cl.textContent='Cleared'; cl.disabled=true; };
-
-  // 5) Everything else tucked away — open only if you want the regression scan
-  if(rest.length){
-    const n=rest.length;
-    const box=`<details class="restbox">
-      <summary>Also check — ${n} other note${n===1?'':'s'} on this take</summary>
-      <div class="restbody">${rest.map(cardHtml).join('')}</div>
-    </details>`;
-    await revealEl(box);
-  }
-
   if(data.session) $('sessionInfo').textContent='session: '+data.session;
+  scrollToHeard();
+}
+
+function scrollToHeard(){
+  const el=$('heardTop') || $('results');
+  if(!el) return;
+  try{ el.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){}
 }
 
 function bindRetry(data){
