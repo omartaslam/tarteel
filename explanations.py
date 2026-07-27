@@ -23,31 +23,35 @@ QALQALAH_LETTER = {
 }
 
 def qalqalah_feedback(verse, verdict, confidence, p_error=None):
-    letter, name, word = QALQALAH_LETTER.get(verse, ("د","dal","the final letter"))
+    # English-first labels; elements/coaching rewrite the learner-facing cards.
+    en = {1: "aḥad", 2: "aṣ-ṣamad", 3: "yalid", 4: "aḥad"}.get(verse, "the word")
+    ar = {1: "أَحَدٌ", 2: "ٱلصَّمَدُ", 3: "يَلِدْ", 4: "أَحَدٌ"}.get(verse, "")
     if verdict == "correct":
         return {
             "level": "ok",
-            "plain": f"Qalqalah on the {name} ({letter}) in {word} — good.",
+            "plain": (
+                f"On {en} <span class=\"arlight\">({ar})</span>: "
+                f"the final D bounce sounded good."
+            ),
             "scholarly": None,
+            "verdict": "correct",
         }
     if verdict == "error":
         soft = (p_error is not None and confidence < 0.70)
-        tip = (f"The qalqalah bounce on the {name} ({letter}) in {word} "
-               f"isn't clear. On your next try: stop on the {name}, then give it "
-               f"a light echo — like a small bounce off the letter — not a flat stop.")
         return {
             "level": "error",
-            "plain": (("Likely issue — " if soft else "") + tip),
-            "scholarly": f"Qalqalah ({GLOSSARY['qalqalah']}). The letter {letter} "
-                         f"carries sukun at the verse end, so it takes qalqalah kubra "
-                         f"(the stronger bounce at a stop).",
+            "plain": (
+                f"{'Likely: ' if soft else ''}"
+                f"On {en} <span class=\"arlight\">({ar})</span>: "
+                f"the bounce on the final D wasn’t clear."
+            ),
+            "fix": "Stop on the D, then a light echo — not a flat stop.",
+            "scholarly": f"Qalqalah ({GLOSSARY['qalqalah']}).",
             "verdict": "error",
         }
-    # deferred — low confidence both ways
     return {
         "level": "defer",
-        "plain": f"Not sure about the qalqalah on the {name} ({letter}) in {word}. "
-                 f"Check this one with your teacher.",
+        "plain": f"Not sure about the final D bounce on {en} yet.",
         "scholarly": None,
         "verdict": "defer",
     }

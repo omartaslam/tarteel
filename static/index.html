@@ -31,7 +31,11 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .card.measured{background:#fef4e8;border-color:#e08a1e}
 .card .tag{display:inline-block;font-size:11px;font-weight:bold;letter-spacing:.5px;color:#fff;padding:3px 10px;border-radius:11px;margin-bottom:8px}
 .t-ok{background:#2c5f2d}.t-error{background:#c0392b}.t-defer{background:#c9a913;color:#3a3000}.t-measured{background:#e08a1e}
-.card .plain{font-weight:bold;margin-bottom:5px}.card .schol{font-size:13px;color:#555;font-style:italic}
+.card.next{background:#e8f1ff;border-color:#1a5fb4;border-left-width:8px}
+.t-next{background:#1a5fb4}
+.card .fix{font-size:15px;color:#1a1a1a;margin-top:8px;padding:10px 12px;background:rgba(255,255,255,.65);border-radius:8px}
+.card .fix b{color:#1a5fb4}
+.arlight{font-size:.92em;color:#888;font-weight:normal}
 .spin{display:none;margin:14px 0;color:#666}
 .heard{background:#eef3f8;border:1px solid #c9d8e8;border-radius:10px;padding:12px 16px;margin:10px 0}
 .heard .hh{font-size:12px;font-weight:bold;color:#2c5f8f;letter-spacing:.5px;margin-bottom:6px}
@@ -188,9 +192,11 @@ function render(data){
 
   $('results').innerHTML=heardHtml + rs.map(r=>{
     const lvl=r.level||'defer';
-    const tag={ok:'✓ GOOD',error:'CHECK — likely error',defer:'ASK YOUR TEACHER',measured:'MEASURED'}[lvl]||'';
+    const tag=r.tag||({ok:'✓ GOOD',error:'FIX',defer:'ASK YOUR TEACHER',measured:'TIP',next:'NEXT STEP'}[lvl]||'');
+    const fix=r.fix?`<div class="fix"><b>How to fix:</b> ${r.fix}</div>`:'';
     return `<div class="card ${lvl}"><span class="tag t-${lvl}">${tag}</span>
       <div class="plain">${r.plain||''}</div>
+      ${fix}
       ${r.scholarly?`<div class="schol">${r.scholarly}</div>`:''}</div>`;
   }).join('') +
   `<div class="retry">

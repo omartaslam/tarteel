@@ -1,107 +1,139 @@
 """
-Per-element feedback for Al-Ikhlas from the XLSR letter alignment.
-Reports EVERYTHING measurable, plain English, always Arabic letter + English sound.
-Layer 1: uses only the letter timings we already compute (no new training).
+Per-element feedback for Al-Ikhlas.
+English phonetics first; Arabic lightly in brackets.
+Issues are prioritized so UI can show one Next Step at a time.
 """
+import coaching as coach
 
-# letter -> english sound name, for the "ح / throat H" style display
 SOUND = {
     "ق":"qaf (deep K)","ل":"lam (L)","ه":"ha (soft H)","و":"waw (W)",
     "ا":"alif (aa)","ح":"Ha (throat H)","د":"dal (D)","ص":"Sad (heavy S)",
     "م":"meem (M)","ي":"ya (Y)","ن":"noon (N)","ك":"kaf (K)","ف":"fa (F)",
-    "ب":"ba (B)","ت":"ta (T)","ر":"ra (R)","و":"waw (W)","أ":"hamza (glottal)",
+    "ب":"ba (B)","ت":"ta (T)","ر":"ra (R)","أ":"hamza (glottal)",
     "|":"(word break)",
 }
 
-# per-verse: which elements to check, with the correct-recitation expectations
-# madd = elongation; we measure the vowel-carrier gap.
+# madd targets: (letter, word_en, word_ar, desc, lo, hi, priority)
 VERSE_ELEMENTS = {
-    1: {  # قُلْ هُوَ ٱللَّهُ أَحَدٌ
-        "words":["قُلْ / qul","هُوَ / huwa","ٱللَّهُ / Allāhu","أَحَدٌ / ahad"],
-        "madd":[("و","هُوَ / huwa","the 'uu' in huwa",0.10,0.30)],
-        "shadda":[("ل","ٱللَّهُ / Allāhu","the doubled L (ll) in Allah")],
-        "qalqalah":("د","أَحَدٌ / ahad"),
+    1: {
+        "madd":[("و","huwa","هُوَ","the uu in huwa",0.10,0.30,20)],
+        "shadda":[("ل","Allāhu","ٱللَّهُ","the doubled L (ll)",30)],
+        "qalqalah_priority": 40,
     },
-    2: {"words":["ٱللَّهُ / Allāhu","ٱلصَّمَدُ / aṣ-ṣamad"],
-        "madd":[], "shadda":[("ص","ٱلصَّمَدُ / aṣ-ṣamad","the heavy doubled Sad")],
-        "qalqalah":("د","ٱلصَّمَدُ / aṣ-ṣamad")},
-    3: {"words":["لَمْ / lam","يَلِدْ / yalid","وَلَمْ / wa lam","يُولَدْ / yūlad"],
-        "madd":[("و","يُولَدْ / yūlad","the 'uu' in yulad",0.10,0.30)],
-        "shadda":[], "qalqalah":("د","يَلِدْ / yalid")},
-    4: {"words":["وَلَمْ / wa lam","يَكُن / yakun","لَّهُۥ / lahu","كُفُوًا / kufuwan","أَحَدٌ / ahad"],
-        "madd":[], "shadda":[], "qalqalah":("د","أَحَدٌ / ahad")},
+    2: {
+        "madd":[],
+        "shadda":[("ص","aṣ-ṣamad","ٱلصَّمَدُ","the heavy doubled S",20)],
+        "qalqalah_priority": 30,
+    },
+    3: {
+        "madd":[("و","yūlad","يُولَدْ","the uu in yūlad",0.10,0.30,30)],
+        "shadda":[],
+        "qalqalah_priority": 20,
+    },
+    4: {
+        "madd":[],
+        "shadda":[],
+        "qalqalah_priority": 50,
+    },
 }
 
 def build_feedback(verse, letters, qalqalah_result, heard_arabic=None):
-    """letters: [{'c':char,'t':time}]  -> list of feedback cards."""
     spec = VERSE_ELEMENTS.get(verse, {})
-    cards=[]
+    ok_cards = []
+    issues = []
 
-    # 1. Word recognition — what was detected, in order
-    detected=[l for l in letters if l["c"]!="|"]
+    detected = [l for l in letters if l["c"] != "|"]
     if detected:
-        cards.append({
-            "level":"ok",
-            "plain":f"Recitation detected — {len([l for l in letters if l['c']=='|'])+1} words in the right order.",
-            "scholarly":"Word sequence aligned correctly against the expected verse.",
+        nwords = len([l for l in letters if l["c"] == "|"]) + 1
+        ok_cards.append({
+            "level": "ok",
+            "plain": f"Got the word order — about {nwords} words lined up.",
+            "scholarly": None,
         })
 
-    # 1b. Pronunciation coaching from literal ASR vs expected ayah
+    # Pronunciation letter swaps (ayah order priorities 0..)
     if heard_arabic:
-        import coaching as coach
-        cards.extend(coach.coach_from_heard(verse, heard_arabic))
+        issues.extend(coach.coach_from_heard(verse, heard_arabic))
 
-    # 2. Madd (elongation) — measure the vowel-carrier duration
-    for (letter,word,desc,lo,hi) in spec.get("madd",[]):
-        seg=_letter_span(letters,letter)
-        if seg:
-            dur=seg
-            if dur>=lo:
-                cards.append({"level":"ok",
-                    "plain":f"Madd (elongation) on {word} held well — {desc}, ~{dur:.2f}s.",
-                    "scholarly":f"Madd tabii on {letter} / {SOUND.get(letter,letter)}. Natural 2-beat elongation."})
-            else:
-                cards.append({"level":"measured",
-                    "plain":f"Madd on {word} looks short — {desc} held ~{dur:.2f}s, aim a touch longer.",
-                    "scholarly":f"Madd tabii on {letter} / {SOUND.get(letter,letter)}."})
+    # Madd
+    for (letter, wen, war, desc, lo, hi, pri) in spec.get("madd", []):
+        seg = _letter_span(letters, letter)
+        if seg is None:
+            continue
+        if seg >= lo:
+            ok_cards.append({
+                "level": "ok",
+                "plain": (
+                    f"On {wen} <span class=\"arlight\">({war})</span>: "
+                    f"vowel length looked good (~{seg:.2f}s)."
+                ),
+                "scholarly": None,
+            })
+        else:
+            issues.append(coach.madd_short_card(wen, war, seg, pri))
 
-    # 3. Shadda (doubled letter)
-    for (letter,word,desc) in spec.get("shadda",[]):
-        if any(l["c"]==letter for l in letters):
-            cards.append({"level":"ok",
-                "plain":f"Shadda detected on {word} — {desc}.",
-                "scholarly":f"Doubled {letter} / {SOUND.get(letter,letter)} — hold with slight emphasis."})
+    # Shadda
+    for (letter, wen, war, desc, pri) in spec.get("shadda", []):
+        if any(l["c"] == letter for l in letters):
+            ok_cards.append({
+                "level": "ok",
+                "plain": (
+                    f"On {wen} <span class=\"arlight\">({war})</span>: "
+                    f"{desc} came through."
+                ),
+                "scholarly": None,
+            })
 
-    # 4. Qalqalah — from the trained classifier (already computed)
+    # Qalqalah
+    qpri = spec.get("qalqalah_priority", 80)
     if qalqalah_result:
-        cards.append(qalqalah_result)
-        # If classifier is unsure, still give a concrete ahad/dal practice tip
-        if qalqalah_result.get("level") == "defer":
-            import coaching as coach
-            # Avoid duplicate if ASR already flagged ح→ه on ahad
-            already = any(
-                c.get("rule") == "pronunciation" and c.get("expected_letter") in ("ح", "د")
-                and "ahad" in (c.get("word") or "")
-                for c in cards
-            )
-            tip = coach.ahad_practice_tip(verse)
-            if already:
-                # still reinforce the bounce specifically
-                tip = {
-                    **tip,
-                    "plain": (
-                        "Also check the qalqalah bounce on the final dal (د): stop, then a light echo — "
-                        "not a flat cut-off. Hear Al-Husary once, then retry."
-                    ),
-                }
-            cards.append(tip)
+        lvl = qalqalah_result.get("level")
+        if lvl == "ok":
+            ok_cards.append({
+                "level": "ok",
+                "rule": "qalqalah",
+                "plain": qalqalah_result.get("plain"),
+                "scholarly": qalqalah_result.get("scholarly"),
+                "p_error": qalqalah_result.get("p_error"),
+                "confidence": qalqalah_result.get("confidence"),
+                "verdict": "correct",
+            })
+        elif lvl == "error":
+            soft = (qalqalah_result.get("confidence") or 0) < 0.70
+            issues.append(coach.qalqalah_error_card(verse, soft=soft, priority=qpri))
+        else:
+            # defer → still give practice tip, lower urgency than clear errors
+            issues.append(coach.ahad_bounce_card(verse, priority=qpri + 10))
 
+    # NEXT STEP first (one fix), then other issues, then oks
+    cards = []
+    nxt = coach.pick_next_step(issues)
+    if nxt:
+        cards.append(nxt)
+        top_issue = sorted(issues, key=lambda x: x.get("priority", 50))[0]
+        rest = [c for c in sorted(issues, key=lambda x: x.get("priority", 50)) if c is not top_issue]
+        cards.extend(rest)
+    elif not issues:
+        cards.append({
+            "level": "ok",
+            "rule": "next_step",
+            "plain": (
+                "<b>Nice — no clear fixes left on this ayah.</b> "
+                "When you’re happy with it, move to the next ayah."
+            ),
+            "fix": None,
+            "scholarly": None,
+        })
+    else:
+        cards.extend(sorted(issues, key=lambda x: x.get("priority", 50)))
+
+    cards.extend(ok_cards)
     return cards
 
+
 def _letter_span(letters, target):
-    """rough duration a letter occupies = gap to next letter."""
-    for i,l in enumerate(letters):
-        if l["c"]==target:
-            if i+1<len(letters):
-                return round(letters[i+1]["t"]-l["t"],3)
+    for i, l in enumerate(letters):
+        if l["c"] == target:
+            if i + 1 < len(letters):
+                return round(letters[i + 1]["t"] - l["t"], 3)
     return None
