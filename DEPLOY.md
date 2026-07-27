@@ -31,6 +31,9 @@ The XLSR classifier pickle MUST be committed - it's your trained model, not down
 
 ## Notes
     - First build is slow (downloads XLSR + Whisper Quran ASR into image). Later deploys cache it.
+    - Models are downloaded in a Docker layer *before* `COPY . .`, so routine code pushes
+      reuse the cached model layer and only rebuild/push the small app layer (much faster image push).
+    - If you change model IDs or requirements.txt, that big layer rebuilds once.
     - If build OOMs, the model download step needs a bigger build instance.
     - Models load once at startup (warm() in server.py), so requests are fast.
     - "What the app heard" uses whisper-small-quran (tilawah ASR). XLSR is kept for
