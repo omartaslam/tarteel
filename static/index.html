@@ -167,6 +167,39 @@ const VERSE_WORDS={
   3:['lam','yalid','wa lam','yūlad'],
   4:['wa lam','yakun','lahu','kufuwan','aḥad'],
 };
+const PROG_STEPS=[
+  {id:'queued', label:'Queued'},
+  {id:'start', label:'Start analysis'},
+  {id:'decode', label:'Read your recording'},
+  {id:'normalize', label:'Clean the audio'},
+  {id:'align_model', label:'Match rhythm to the ayah'},
+  {id:'transcribe', label:'Transcribe what you said'},
+  {id:'align', label:'Line up the words'},
+  {id:'tajweed', label:'Check length, doubling, bounce'},
+  {id:'coach', label:'Write your next step'},
+  {id:'done', label:'Done'},
+];
+function drawProgSteps(){
+  const ul=$('progSteps'); if(!ul) return;
+  ul.innerHTML=PROG_STEPS.map(s=>`<li data-id="${s.id}">${s.label}</li>`).join('');
+}
+function markProgSteps(phase, pct){
+  const ul=$('progSteps'); if(!ul) return;
+  let idx=PROG_STEPS.findIndex(s=>s.id===phase);
+  if(idx<0){
+    if((pct||0)>=100) idx=PROG_STEPS.length-1;
+    else if((pct||0)>=90) idx=PROG_STEPS.findIndex(s=>s.id==='coach');
+    else if((pct||0)>=70) idx=PROG_STEPS.findIndex(s=>s.id==='align');
+    else if((pct||0)>=45) idx=PROG_STEPS.findIndex(s=>s.id==='transcribe');
+    else if((pct||0)>=18) idx=PROG_STEPS.findIndex(s=>s.id==='normalize');
+    else idx=0;
+  }
+  [...ul.children].forEach((li,i)=>{
+    li.classList.remove('done','now');
+    if(i<idx) li.classList.add('done');
+    else if(i===idx) li.classList.add('now');
+  });
+}
 
 function loadPractice(verse){
   try{
@@ -310,10 +343,10 @@ $('rec').onclick=async()=>{
   rec.onstop=async()=>{
     stream.getTracks().forEach(t=>t.stop());
     $('rec').classList.remove('on');$('rec').textContent='● Record';
-    $('spin').style.display='block';$('results').innerHTML='';$('quality').style.display='none';
+    $('spin').style.display='none';$('results').innerHTML='';$('quality').style.display='none';
     const blob=new Blob(chunks,{type:rec.mimeType||'audio/webm'});
     if(!blob.size){
-      $('spin').style.display='none';
+      showProg(false);
       $('results').innerHTML='<p>No audio captured. Check mic permission and try again.</p>';
       return;
     }
@@ -324,19 +357,22 @@ $('rec').onclick=async()=>{
     const prac=loadPractice(v);
     fd.append('mastered', JSON.stringify(prac.mastered||[]));
     if(prac.lastFocus) fd.append('last_focus', prac.lastFocus);
-    showProg(true, 0, 'Uploading your recording…', 0);
+    showProg(true, 2, 'Uploading your recording…', 0, 'queued');
     try{
       const startRes=await fetch('/analyze/start',{method:'POST',body:fd});
       const startData=await startRes.json().catch(()=>({}));
       if(!startRes.ok || !startData.job){
-        // fallback to one-shot
-        showProg(true, 5, 'Analysing (one-shot mode)…', 0);
+        showProg(true, 5, 'Analysing (one-shot mode)…', 0, 'start');
         const res=await fetch('/analyze',{method:'POST',body:fd});
         const data=await res.json().catch(()=>({}));
-        showProg(false);
         if(!res.ok){
+          showProg(false);
           $('results').innerHTML=`<p>Server error (${res.status}). ${data.error||'Try again — tap the green header to refresh first.'}</p>`;
-        } else { render(data); }
+        } else {
+          showProg(true, 100, 'Done — preparing your next step…', null, 'done');
+          await render(data);
+          setTimeout(()=>showProg(false), 600);
+        }
       } else {
         await pollJob(startData.job);
       }
