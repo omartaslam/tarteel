@@ -30,6 +30,9 @@ The XLSR classifier pickle MUST be committed - it's your trained model, not down
     - Later: point tarteel.co.uk at it via Cloudflare CNAME
 
 ## Notes
-    - First build is slow (downloads 1GB model into image). Later deploys cache it.
+    - First build is slow (downloads XLSR + Whisper Quran ASR into image). Later deploys cache it.
     - If build OOMs, the model download step needs a bigger build instance.
-    - Model loads once at startup (warm() in server.py), so requests are fast.
+    - Models load once at startup (warm() in server.py), so requests are fast.
+    - "What the app heard" uses whisper-small-quran (tilawah ASR). XLSR is kept for
+      forced-alignment / qalqalah only — its free CTC decode is unreliable on Quranic audio.
+    - Prefer a plan with >= 4GB RAM (both models resident).

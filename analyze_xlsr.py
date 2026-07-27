@@ -6,6 +6,7 @@ Replaces the MFA path in analyze.py.
 import torch, librosa, subprocess, os, pickle, numpy as np
 import torchaudio.functional as TAF
 from transformers import Wav2Vec2ForCTC, AutoProcessor
+import transcribe_quran as tq
 
 MID = "jonatasgrosman/wav2vec2-large-xlsr-53-arabic"
 CLF = os.path.join(os.path.dirname(__file__), "models", "qalqalah_clf_xlsr.pkl")
@@ -20,6 +21,8 @@ def _load():
         _proc=AutoProcessor.from_pretrained(MID)
         _model=Wav2Vec2ForCTC.from_pretrained(MID); _model.eval()
         _clf=pickle.load(open(CLF,"rb"))
+    # Quran Whisper for accurate "what I heard" (XLSR free-CTC is unreliable on tilawah)
+    tq._load()
     return _proc,_model,_clf
 
 HI=0.70
@@ -59,11 +62,13 @@ def analyze_verse(path, verse):
     with torch.no_grad():
         logits=model(iv).logits
         emissions=torch.log_softmax(logits,dim=-1)
-    # ALSO decode what the model literally heard (transcription mode) - shown to user
+    # Accurate Quran ASR for the transparency panel (not XLSR free-CTC — that
+    # yields garbage on tilawah even when forced-alignment feedback is correct).
     try:
-        heard=proc.decode(torch.argmax(logits[0],dim=-1))
-    except Exception:
-        heard=""
+        heard_info=tq.transcribe_path("/tmp/xl.wav", verse=verse)
+    except Exception as e:
+        heard_info={"heard_arabic":"","heard_phonetic":"","heard_raw":"",
+                    "heard_match":f"error:{e}","heard_verse":None}
     vocab=proc.tokenizer.get_vocab()
     text=VTEXT[verse]
     ids=[vocab[c] for c in text.replace(" ","|") if c in vocab]
@@ -105,12 +110,13 @@ def analyze_verse(path, verse):
         if tok!=prev and tok!=pad:
             letters.append({"c":inv.get(tok,str(tok)),"t":round(i/T*dur,3)})
         prev=tok
-    # phonetic transliteration of what the model heard (Arabic letters -> english sounds)
-    import elements as _el
-    heard_ph=" ".join(_el.SOUND.get(c,c).split(" (")[0] for c in heard if c.strip() and c!=" ")
     diag={"audio_quality":quality,"peak":round(peak,3),"rms_level":round(rmslev,4),
           "duration":round(dur,2),"letters":letters,
-          "heard_arabic":heard,"heard_phonetic":heard_ph}
+          "heard_arabic":heard_info.get("heard_arabic",""),
+          "heard_phonetic":heard_info.get("heard_phonetic",""),
+          "heard_raw":heard_info.get("heard_raw",""),
+          "heard_match":heard_info.get("heard_match",""),
+          "heard_verse":heard_info.get("heard_verse")}
     if f is None:
         return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"feat_none",**diag}]
     proba=clf.predict_proba([f])[0][1]; conf=abs(proba-0.5)*2

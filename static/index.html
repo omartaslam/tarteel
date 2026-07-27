@@ -35,8 +35,8 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .spin{display:none;margin:14px 0;color:#666}
 .heard{background:#eef3f8;border:1px solid #c9d8e8;border-radius:10px;padding:12px 16px;margin:10px 0}
 .heard .hh{font-size:12px;font-weight:bold;color:#2c5f8f;letter-spacing:.5px;margin-bottom:6px}
-.heard .har{font-size:24px;font-family:'Amiri',serif;color:#1a1a1a;margin:4px 0}
-.heard .hph{font-size:15px;color:#2c5f8f;font-style:italic}
+.heard .har{font-size:28px;font-family:'Amiri','Traditional Arabic',serif;color:#1a1a1a;margin:6px 0;text-align:right;direction:rtl;line-height:1.6}
+.heard .hph{font-size:16px;color:#2c5f8f;font-style:italic;margin:4px 0}
 .heard .hnote{font-size:12px;color:#888;margin-top:6px}
 .retry{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
 .rbtn{background:#2c5f2d;color:#fff;flex:1;min-width:150px}
@@ -103,20 +103,37 @@ $('playH').onclick=()=>{
 
 $('rec').onclick=async()=>{
   if(rec&&rec.state==='recording'){rec.stop();return;}
+  // Prefer raw-ish capture: AGC on (helps quiet iPhone mics), no browser
+  // noise suppression that can eat consonants / qalqalah bursts.
   const stream=await navigator.mediaDevices.getUserMedia({audio:{
-    autoGainControl:true, echoCancellation:false, noiseSuppression:false}});
+    autoGainControl:true,
+    echoCancellation:false,
+    noiseSuppression:false,
+    channelCount:1,
+  }});
   let mime='';
-  for(const m of ['audio/mp4','audio/webm;codecs=opus','audio/webm']){
-    if(MediaRecorder.isTypeSupported(m)){mime=m;break;}
+  // iOS Safari: audio/mp4. Desktop Chrome: opus webm.
+  for(const m of ['audio/mp4','audio/aac','audio/webm;codecs=opus','audio/webm']){
+    if(window.MediaRecorder && MediaRecorder.isTypeSupported(m)){mime=m;break;}
   }
-  rec = mime ? new MediaRecorder(stream,{mimeType:mime}) : new MediaRecorder(stream);
+  const opts = mime ? {mimeType:mime, audioBitsPerSecond:128000} : {audioBitsPerSecond:128000};
+  try { rec = new MediaRecorder(stream, opts); }
+  catch(e){ rec = mime ? new MediaRecorder(stream,{mimeType:mime}) : new MediaRecorder(stream); }
   chunks=[];
-  rec.ondataavailable=e=>chunks.push(e.data);
+  rec.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
   rec.onstop=async()=>{
+    stream.getTracks().forEach(t=>t.stop());
     $('rec').classList.remove('on');$('rec').textContent='● Record';
     $('spin').style.display='block';$('results').innerHTML='';$('quality').style.display='none';
     const blob=new Blob(chunks,{type:rec.mimeType||'audio/webm'});
-    const ext=(rec.mimeType||'').includes('mp4')?'m4a':'webm';
+    if(!blob.size){
+      $('spin').style.display='none';
+      $('results').innerHTML='<p>No audio captured. Check mic permission and try again.</p>';
+      return;
+    }
+    const mt=(rec.mimeType||'');
+    const ext = mt.includes('mp4')||mt.includes('aac')||mt.includes('m4a') ? 'm4a'
+              : mt.includes('ogg') ? 'ogg' : 'webm';
     const fd=new FormData(); fd.append('audio',blob,'rec.'+ext); fd.append('verse',v);
     try{
       const res=await fetch('/analyze',{method:'POST',body:fd});
@@ -124,7 +141,8 @@ $('rec').onclick=async()=>{
     }catch(e){$('results').innerHTML='<p>Error. Try again.</p>';}
     $('spin').style.display='none';
   };
-  rec.start();$('rec').classList.add('on');$('rec').textContent='■ Stop';
+  // timeslice keeps chunks flowing (helps some mobile browsers)
+  rec.start(250);$('rec').classList.add('on');$('rec').textContent='■ Stop';
 };
 
 function render(data){
@@ -135,14 +153,18 @@ function render(data){
   if(q==='good'||q==='ok'){qd.className='good';qd.textContent='✓ Good recording';}
   else if(q){qd.className='bad';qd.textContent='⚠ Recording very quiet — hold phone closer, or use Voice Memos';}
 
-  // WHAT I HEARD — transparency panel
+  // WHAT I HEARD — transparency panel (Arabic + English phonetics)
   let heardHtml='';
   if(qcard&&qcard.heard_arabic!==undefined){
+    const match=qcard.heard_match||'';
+    const note = match==='raw'
+      ? 'Could not match a known ayah cleanly — showing raw capture. Try again closer to the mic.'
+      : 'Compare with the ayah above. Arabic and English phonetics should match what you recited.';
     heardHtml=`<div class="heard">
       <div class="hh">What the app heard</div>
-      <div class="har" dir="rtl">${qcard.heard_arabic||'(unclear)'}</div>
+      <div class="har" dir="rtl" lang="ar">${qcard.heard_arabic||'(unclear)'}</div>
       <div class="hph">${qcard.heard_phonetic||''}</div>
-      <div class="hnote">Compare with the ayah above. Large differences may mean the recording wasn't clear.</div>
+      <div class="hnote">${note}</div>
     </div>`;
   }
 
