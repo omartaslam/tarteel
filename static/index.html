@@ -34,6 +34,8 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .t-ok{background:#2c5f2d}.t-error{background:#c0392b}.t-defer{background:#c9a913;color:#3a3000}.t-measured{background:#e08a1e}
 .card.next{background:#e8f1ff;border-color:#1a5fb4;border-left-width:8px}
 .t-next{background:#1a5fb4}
+.card.next.regression,.card.regression{background:#fdecea;border-color:#c0392b;border-left-width:8px}
+.t-regression{background:#c0392b}
 .card .fix{font-size:15px;color:#1a1a1a;margin-top:8px;padding:10px 12px;background:rgba(255,255,255,.65);border-radius:8px}
 .card .fix b{color:#1a5fb4}
 .arlight{font-size:.92em;color:#888;font-weight:normal}
@@ -79,6 +81,13 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .wohitbad{background:#f5c6c6;color:#7a1d13;font-weight:bold;padding:0 4px;border-radius:4px}
 .retry{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
 .restlbl{font-size:12px;font-weight:bold;letter-spacing:.4px;color:#6a7a8a;margin:18px 0 6px;text-transform:uppercase}
+.plog{background:#f7f8fa;border:1px solid #e0e4ea;border-radius:10px;padding:10px 12px;margin:10px 0 14px;font-size:13px}
+.plog .plh{font-size:11px;font-weight:bold;letter-spacing:.4px;color:#6a7a8a;margin-bottom:6px;text-transform:uppercase}
+.plog .pli{margin:4px 0;color:#333;line-height:1.35}
+.plog .pli .ok{color:#2c5f2d;font-weight:bold}
+.plog .pli .bad{color:#c0392b;font-weight:bold}
+.plog .pmast{margin-top:8px;font-size:12px;color:#667}
+.plog button{font-size:12px;padding:4px 10px;margin-top:8px;background:#eee;color:#444}
 .rbtn{background:#2c5f2d;color:#fff;flex:1;min-width:150px}
 .notebox{display:flex;gap:8px;margin:10px 0}
 .notebox input{flex:1;padding:10px;border:1px solid #ccc;border-radius:8px;font-family:inherit;font-size:14px}
@@ -130,6 +139,113 @@ const V=[
 ];
 let v=1, rec=null, chunks=[], hAudio=null;
 const $=id=>document.getElementById(id);
+const PRACTICE_STORE='tarteel_practice_v1';
+const VERSE_WORDS={
+  1:['qul','huwa','Allāhu','aḥad'],
+  2:['Allāhu','aṣ-ṣamad'],
+  3:['lam','yalid','wa lam','yūlad'],
+  4:['wa lam','yakun','lahu','kufuwan','aḥad'],
+};
+
+function loadPractice(verse){
+  try{
+    const all=JSON.parse(localStorage.getItem(PRACTICE_STORE)||'{}');
+    const st=all[String(verse)]||{};
+    return {
+      mastered: Array.isArray(st.mastered)?st.mastered:[],
+      iterations: Array.isArray(st.iterations)?st.iterations:[],
+      lastFocus: st.lastFocus||null,
+    };
+  }catch(e){ return {mastered:[], iterations:[], lastFocus:null}; }
+}
+function savePractice(verse, st){
+  try{
+    const all=JSON.parse(localStorage.getItem(PRACTICE_STORE)||'{}');
+    all[String(verse)]=st;
+    localStorage.setItem(PRACTICE_STORE, JSON.stringify(all));
+  }catch(e){}
+}
+function clearPractice(verse){
+  savePractice(verse, {mastered:[], iterations:[], lastFocus:null});
+}
+function prettyKey(k){
+  if(!k) return '—';
+  const p=String(k).split(':');
+  if(p[0]==='word_shape') return p[2] ? (p[1]+' '+p[2]) : (p[1]+' shape');
+  if(p[0]==='pronunciation') return p[1]+(p[2]?(' '+p[2]):'');
+  if(p[0]==='madd') return p[1]+' length';
+  if(p[0]==='qalqalah') return p[1]+' bounce';
+  if(p[0]==='shadda') return p[1]+' doubling';
+  return k;
+}
+function updatePracticeLog(verse, data){
+  const st=loadPractice(verse);
+  const rs=data.results||[];
+  const issueKeys=[...new Set(
+    rs.filter(r=>r.level==='error'||r.level==='measured')
+      .map(r=>r.key).filter(Boolean)
+  )];
+  const issueSet=new Set(issueKeys);
+  const mastered=new Set(st.mastered||[]);
+
+  // Focus pass: last next-step skill no longer an issue → mastered
+  let focusPassed=false;
+  if(st.lastFocus && !issueSet.has(st.lastFocus)){
+    mastered.add(st.lastFocus);
+    focusPassed=true;
+  }
+  // Implicit mastery: words with no word_shape issue this take
+  for(const w of (VERSE_WORDS[verse]||[])){
+    const hasShape=[...issueSet].some(k=>k===('word_shape:'+w) || k.startsWith('word_shape:'+w+':'));
+    if(!hasShape){
+      mastered.add('word_shape:'+w);
+      if(w.toLowerCase()==='huwa') mastered.add('word_shape:huwa:ف→و');
+    }
+  }
+  // Ok cards mark related skills mastered
+  for(const r of rs.filter(x=>x.level==='ok' && x.key)){
+    mastered.add(r.key);
+  }
+
+  const next=rs.find(r=>r.level==='next');
+  const nextKey=next && next.key || null;
+  st.iterations.push({
+    t: Date.now(),
+    session: data.session||'',
+    heard: data.heard_phonetic||'',
+    focus: st.lastFocus,
+    focusPassed,
+    nextKey,
+    regression: !!(next && next.regression),
+    issueKeys,
+  });
+  if(st.iterations.length>30) st.iterations=st.iterations.slice(-30);
+  st.mastered=[...mastered];
+  st.lastFocus=nextKey;
+  savePractice(verse, st);
+  return st;
+}
+function practiceLogHtml(verse, st){
+  if(!st || (!(st.iterations||[]).length && !(st.mastered||[]).length)) return '';
+  const rows=(st.iterations||[]).slice(-8).map((it,i,arr)=>{
+    const n=(st.iterations.length - arr.length)+i+1;
+    const heard=(it.heard||'').slice(0,42);
+    let mark='';
+    if(it.regression) mark='<span class="bad">regression</span>';
+    else if(it.focusPassed) mark='<span class="ok">focus ✓</span>';
+    const focus=it.focus?prettyKey(it.focus):'—';
+    const nxt=it.nextKey?prettyKey(it.nextKey):'—';
+    return `<div class="pli">#${n} ${heard||'(take)'} · was <b>${focus}</b> → next <b>${nxt}</b> ${mark}</div>`;
+  }).join('');
+  const mast=(st.mastered||[]).slice(0,12).map(prettyKey).join(' · ') || 'none yet';
+  return `<div class="plog" id="plog">
+    <div class="plh">Practice log — ayah ${verse} (this device)</div>
+    ${rows||'<div class="pli">No iterations yet.</div>'}
+    <div class="pmast">Wins to protect: ${mast}</div>
+    <button type="button" id="clearLog">Clear log for this ayah</button>
+  </div>`;
+}
+
 function draw(){
   const d=V[v-1];
   $('verseAr').textContent=d.ar; $('phon').textContent=d.ph; $('trans').textContent='"'+d.tr+'"';
@@ -184,6 +300,7 @@ $('rec').onclick=async()=>{
     const ext = mt.includes('mp4')||mt.includes('aac')||mt.includes('m4a') ? 'm4a'
               : mt.includes('ogg') ? 'ogg' : 'webm';
     const fd=new FormData(); fd.append('audio',blob,'rec.'+ext); fd.append('verse',v);
+    fd.append('mastered', JSON.stringify(loadPractice(v).mastered||[]));
     showProg(true, 0, 'Uploading your recording…', 0);
     try{
       const startRes=await fetch('/analyze/start',{method:'POST',body:fd});
@@ -307,10 +424,13 @@ function render(data){
 
   function cardHtml(r){
     const lvl=r.level||'defer';
+    const isReg=!!(r.regression || r.tag==='REGRESSION');
     const tag=r.tag||({ok:'✓ GOOD',error:'FIX',defer:'ASK YOUR TEACHER',measured:'TIP',next:'NEXT STEP'}[lvl]||'');
+    const tagClass=isReg ? 'regression' : lvl;
+    const cardClass=isReg && lvl==='next' ? 'next regression' : lvl;
     const sec=r.section||'';
     const fix=r.fix?`<div class="fix"><b>How to fix:</b> ${r.fix}</div>`:'';
-    return `<div class="card ${lvl}"><span class="tag t-${lvl}">${tag}</span>
+    return `<div class="card ${cardClass}"><span class="tag t-${tagClass}">${tag}</span>
       ${sec}
       <div class="plain">${r.plain||''}</div>
       ${fix}
@@ -324,20 +444,27 @@ function render(data){
     return;
   }
 
-  // Focus journey: NEXT STEP → retry actions → everything else (regression check)
+  // Update practice log (mastery + iterations) then focus UI
+  const practice=updatePracticeLog(v, data);
+  const logHtml=practiceLogHtml(v, practice);
+
+  // Focus: NEXT STEP → actions → everything else (regression check)
   const nextCards = rs.filter(r => r.level === 'next');
   const rest = rs.filter(r => r.level !== 'next');
   const restLabel = rest.length
-    ? `<div class="restlbl">Also check — other notes on this take</div>`
+    ? `<div class="restlbl">Also check — other notes / regressions on this take</div>`
     : '';
   $('results').innerHTML =
     heardHtml +
+    logHtml +
     nextCards.map(cardHtml).join('') +
     retryHtml +
     restLabel +
     rest.map(cardHtml).join('');
 
   bindRetry(data);
+  const cl=$('clearLog');
+  if(cl) cl.onclick=()=>{ clearPractice(v); cl.textContent='Cleared'; cl.disabled=true; };
   if(data.session) $('sessionInfo').textContent='session: '+data.session;
 }
 

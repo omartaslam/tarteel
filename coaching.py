@@ -454,6 +454,7 @@ def _card(
     return {
         "level": "error",
         "rule": rule,
+        "key": f"{rule}:{word_en}:{hc}→{ec}",
         "priority": priority,
         "verse": verse,
         "word_en": word_en,
@@ -484,6 +485,7 @@ def word_shape_card(
             f"want {tip['want']} <span class=\"arlight\">({tip['ar'][1]})</span>."
         )
         fix = tip["fix"]
+        key = f"word_shape:{word_en}:{tip['ar'][0]}→{tip['ar'][1]}"
     else:
         plain = (
             f"On <b>{word_en}</b> <span class=\"arlight\">({word_ar})</span>: "
@@ -493,9 +495,11 @@ def word_shape_card(
             f"Say <b>{word_en}</b> slowly so a listener can tell which word it is. "
             f"Don’t chase fine letter detail yet — word shape and order come first."
         )
+        key = f"word_shape:{word_en}"
     return {
         "level": "error",
         "rule": "word_shape",
+        "key": key,
         "priority": priority,
         "verse": verse,
         "word_en": word_en,
@@ -600,6 +604,7 @@ def madd_short_card(verse: int, word_en: str, word_ar: str, dur: float, priority
     return {
         "level": "measured",
         "rule": "madd",
+        "key": f"madd:{word_en}",
         "priority": priority,
         "verse": verse,
         "word_en": word_en,
@@ -623,6 +628,7 @@ def ahad_bounce_card(verse: int, priority: int = 90) -> dict:
     return {
         "level": "measured",
         "rule": "qalqalah_practice",
+        "key": f"qalqalah:{en}",
         "priority": priority,
         "verse": verse,
         "word_en": en,
@@ -649,6 +655,7 @@ def qalqalah_error_card(verse: int, soft: bool = False, priority: int = 85) -> d
     return {
         "level": "error",
         "rule": "qalqalah",
+        "key": f"qalqalah:{en}",
         "priority": priority,
         "verse": verse,
         "word_en": en,
@@ -665,8 +672,20 @@ def qalqalah_error_card(verse: int, soft: bool = False, priority: int = 85) -> d
     }
 
 
-def pick_next_step(issue_cards: list[dict]) -> dict | None:
-    """First fix: word_shape before letter/madd/qalqalah."""
+def _issue_sort_key(c: dict):
+    if c.get("rule") == "word_shape":
+        tier = 0 if c.get("identity") else 1
+    else:
+        tier = 2
+    return (tier, c.get("priority", 50))
+
+
+def pick_next_step(issue_cards: list[dict], mastered: list[str] | None = None) -> dict | None:
+    """
+    One focus at a time.
+    If a previously-mastered skill is broken again, that regression wins
+    (move backwards to move forwards).
+    """
     actionable = [
         c for c in issue_cards
         if c.get("level") in ("error", "measured") and c.get("fix")
@@ -674,24 +693,33 @@ def pick_next_step(issue_cards: list[dict]) -> dict | None:
     if not actionable:
         return None
 
-    def sort_key(c):
-        # 0: word identity (F→W, B→W) · 1: other word_shape · 2: letter/madd/etc.
-        if c.get("rule") == "word_shape":
-            tier = 0 if c.get("identity") else 1
-        else:
-            tier = 2
-        return (tier, c.get("priority", 50))
-
-    actionable.sort(key=sort_key)
-    top = dict(actionable[0])
+    mastered_set = {m for m in (mastered or []) if m}
+    regressions = [c for c in actionable if c.get("key") and c["key"] in mastered_set]
+    pool = regressions if regressions else actionable
+    pool = sorted(pool, key=_issue_sort_key)
+    top = dict(pool[0])
+    is_reg = bool(regressions) and top.get("key") in mastered_set
     top["level"] = "next"
     top["rule"] = "next_step"
-    top["tag"] = "NEXT STEP"
+    top["tag"] = "REGRESSION" if is_reg else "NEXT STEP"
+    top["regression"] = is_reg
+    top["key"] = top.get("key")  # keep stable key for the practice log
     n_left = len(actionable)
-    top["steps_remaining"] = n_left
-    top["plain"] = (
-        f"<b>Practice this one thing next</b> "
-        f"<span class=\"arlight\">({n_left} fix{'es' if n_left != 1 else ''} to go on this ayah)</span><br>"
-        + top.get("plain", "")
-    )
+    n_reg = len(regressions)
+    if is_reg:
+        head = (
+            f"<b>Regression — fix this before moving on</b> "
+            f"<span class=\"arlight\">(you had it right earlier · "
+            f"{n_reg} regression{'s' if n_reg != 1 else ''} · "
+            f"{n_left} issue{'s' if n_left != 1 else ''} on this take)</span><br>"
+        )
+    else:
+        head = (
+            f"<b>Practice this one thing next</b> "
+            f"<span class=\"arlight\">({n_left} fix{'es' if n_left != 1 else ''} "
+            f"to go on this ayah)</span><br>"
+        )
+    # strip any prior head if re-picking
+    body = top.get("plain", "")
+    top["plain"] = head + body
     return top

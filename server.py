@@ -1,5 +1,5 @@
 """Tarteel demo backend — XLSR pipeline + session storage for diagnostics."""
-import os, tempfile, time, uuid, threading
+import os, tempfile, time, uuid, threading, json
 from fastapi import FastAPI, UploadFile, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
@@ -16,6 +16,20 @@ _JOBS_LOCK = threading.Lock()
 @app.on_event("startup")
 def warm():
     analyze._load()
+
+
+def _parse_mastered(raw) -> list:
+    if not raw:
+        return []
+    if isinstance(raw, list):
+        return [str(x) for x in raw if x]
+    try:
+        data = json.loads(raw)
+        if isinstance(data, list):
+            return [str(x) for x in data if x]
+    except Exception:
+        pass
+    return []
 
 
 def _diag_from_cards(cards):
@@ -40,7 +54,7 @@ def _set_job(jid, **kw):
         _JOBS[jid] = job
 
 
-def _run_job(jid, path, ext, raw, verse, filename, content_type):
+def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None):
     t0 = time.time()
 
     def on_progress(pct, phase, msg):
@@ -55,10 +69,18 @@ def _run_job(jid, path, ext, raw, verse, filename, content_type):
 
     try:
         on_progress(2, "start", "Starting analysis…")
-        cards = analyze.analyze_verse(path, verse, on_progress=on_progress) or []
+        cards = analyze.analyze_verse(
+            path, verse, on_progress=on_progress, mastered=mastered or [],
+        ) or []
         sid = storage.save(
             raw, ext, verse, cards,
-            extra={"filename": filename, "content_type": content_type, "bytes": len(raw), "job": jid},
+            extra={
+                "filename": filename,
+                "content_type": content_type,
+                "bytes": len(raw),
+                "job": jid,
+                "mastered": mastered or [],
+            },
         )
         diag = _diag_from_cards(cards)
         _set_job(
@@ -88,7 +110,11 @@ def _run_job(jid, path, ext, raw, verse, filename, content_type):
 
 
 @app.post("/analyze/start")
-async def analyze_start(audio: UploadFile, verse: int = Form(...)):
+async def analyze_start(
+    audio: UploadFile,
+    verse: int = Form(...),
+    mastered: str = Form(""),
+):
     raw = await audio.read()
     ext = (audio.filename or "audio.webm").split(".")[-1].lower()
     if ext not in ("webm", "m4a", "wav", "ogg", "mp4", "mp3"):
@@ -97,6 +123,7 @@ async def analyze_start(audio: UploadFile, verse: int = Form(...)):
         tmp.write(raw)
         path = tmp.name
     jid = uuid.uuid4().hex[:12]
+    mastered_list = _parse_mastered(mastered)
     _set_job(
         jid,
         status="queued",
@@ -109,7 +136,7 @@ async def analyze_start(audio: UploadFile, verse: int = Form(...)):
     )
     threading.Thread(
         target=_run_job,
-        args=(jid, path, ext, raw, verse, audio.filename, audio.content_type),
+        args=(jid, path, ext, raw, verse, audio.filename, audio.content_type, mastered_list),
         daemon=True,
     ).start()
     return {"job": jid}
@@ -131,24 +158,30 @@ def analyze_status(jid: str):
     }
     if job.get("status") == "done":
         out["result"] = job.get("result")
-        # drop heavy result from memory after first successful fetch
     if job.get("status") == "error":
         out["error"] = job.get("error") or job.get("message")
     return JSONResponse(out)
 
 
 @app.post("/analyze")
-async def do_analyze(audio: UploadFile, verse: int = Form(...)):
+async def do_analyze(
+    audio: UploadFile,
+    verse: int = Form(...),
+    mastered: str = Form(""),
+):
     """Legacy one-shot analyze (still used as fallback)."""
     raw = await audio.read()
     ext = (audio.filename or "audio.webm").split(".")[-1].lower()
     if ext not in ("webm", "m4a", "wav", "ogg", "mp4", "mp3"):
         ext = "webm"
+    mastered_list = _parse_mastered(mastered)
     with tempfile.NamedTemporaryFile(suffix="." + ext, delete=False) as tmp:
         tmp.write(raw)
         path = tmp.name
     try:
-        results = await run_in_threadpool(analyze.analyze_verse, path, verse)
+        results = await run_in_threadpool(
+            analyze.analyze_verse, path, verse, None, mastered_list,
+        )
     except Exception as e:
         return JSONResponse({"error": str(e), "results": [], "verse": verse}, status_code=500)
     finally:
@@ -159,7 +192,12 @@ async def do_analyze(audio: UploadFile, verse: int = Form(...)):
     cards = results or []
     sid = storage.save(
         raw, ext, verse, cards,
-        extra={"filename": audio.filename, "content_type": audio.content_type, "bytes": len(raw)},
+        extra={
+            "filename": audio.filename,
+            "content_type": audio.content_type,
+            "bytes": len(raw),
+            "mastered": mastered_list,
+        },
     )
     diag = _diag_from_cards(cards)
     return JSONResponse({"verse": verse, "results": cards, "session": sid, **diag})
@@ -189,12 +227,11 @@ def batch():
 
 @app.post("/note")
 async def add_note(session: str = Form(...), note: str = Form(...)):
-    import json as _j
     p = os.path.join(storage.STORE, session, "data.json")
     if os.path.exists(p):
-        d = _j.load(open(p, encoding="utf-8"))
+        d = json.load(open(p, encoding="utf-8"))
         d["note"] = note
-        _j.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
         return {"ok": True}
     return JSONResponse({"error": "not found"}, status_code=404)
 

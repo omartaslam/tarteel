@@ -44,7 +44,7 @@ def _feat(y,sr,a,b):
     rms=librosa.feature.rms(y=s,hop_length=128)[0]
     return np.concatenate([mf.mean(1),mf.std(1),[rms.min(),rms.max(),rms.max()-rms.min(),len(s)/sr]])
 
-def analyze_verse(path, verse, on_progress=None):
+def analyze_verse(path, verse, on_progress=None, mastered=None):
     def prog(pct, phase, msg):
         if on_progress:
             try: on_progress(pct, phase, msg)
@@ -171,6 +171,7 @@ def analyze_verse(path, verse, on_progress=None):
             verse, diag["letters"], qcard,
             heard_arabic=heard_ar,
             heard_phonetic=heard_ph,
+            mastered=mastered,
         )
         if cards: cards[0]={**cards[0],**diag}
         prog(100, "done", "Done")
