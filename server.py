@@ -28,6 +28,7 @@ def _diag_from_cards(cards):
         "heard_match": d.get("heard_match", ""),
         "matched_arabic": d.get("matched_arabic", ""),
         "matched_phonetic": d.get("matched_phonetic", ""),
+        "compare_html": d.get("compare_html", ""),
         "rms_level": d.get("rms_level"),
     }
 

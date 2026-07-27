@@ -92,6 +92,16 @@ def analyze_verse(path, verse, on_progress=None):
             heard_info={"heard_arabic":"","heard_phonetic":"","heard_raw":"",
                         "heard_match":f"error:{e}","heard_verse":None,
                         "matched_arabic":"","matched_phonetic":""}
+        # Always attach English-led word compare when we have a target ayah
+        try:
+            import coaching as _coach_early
+            heard_info["compare_html"] = _coach_early.compare_html(
+                verse,
+                heard_info.get("heard_arabic") or heard_info.get("heard_raw") or "",
+                heard_info.get("heard_phonetic") or "",
+            )
+        except Exception:
+            heard_info["compare_html"] = ""
         prog(70, "align", "Lining up letters to the expected ayah…")
         vocab=proc.tokenizer.get_vocab()
         text=VTEXT[verse]
@@ -132,15 +142,18 @@ def analyze_verse(path, verse, on_progress=None):
             if tok!=prev and tok!=pad:
                 letters.append({"c":inv.get(tok,str(tok)),"t":round(i/T*dur,3)})
             prev=tok
+        heard_ar = heard_info.get("heard_arabic","") or heard_info.get("heard_raw","")
+        heard_ph = heard_info.get("heard_phonetic","")
         diag={"audio_quality":quality,"peak":round(peak,3),"rms_level":round(rmslev,4),
               "duration":round(dur,2),"letters":letters,
               "heard_arabic":heard_info.get("heard_arabic",""),
-              "heard_phonetic":heard_info.get("heard_phonetic",""),
+              "heard_phonetic":heard_ph,
               "heard_raw":heard_info.get("heard_raw",""),
               "heard_match":heard_info.get("heard_match",""),
               "heard_verse":heard_info.get("heard_verse"),
               "matched_arabic":heard_info.get("matched_arabic",""),
-              "matched_phonetic":heard_info.get("matched_phonetic","")}
+              "matched_phonetic":heard_info.get("matched_phonetic",""),
+              "compare_html": heard_info.get("compare_html","")}
         if f is None:
             return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"feat_none",**diag}]
         proba=clf.predict_proba([f])[0][1]; conf=abs(proba-0.5)*2
@@ -156,7 +169,8 @@ def analyze_verse(path, verse, on_progress=None):
                "dal_start":round(a,3),"dal_end":round(b,3)}
         cards=el.build_feedback(
             verse, diag["letters"], qcard,
-            heard_arabic=diag.get("heard_arabic") or diag.get("heard_raw"),
+            heard_arabic=heard_ar,
+            heard_phonetic=heard_ph,
         )
         if cards: cards[0]={**cards[0],**diag}
         prog(100, "done", "Done")

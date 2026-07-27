@@ -1,7 +1,13 @@
 """
 Per-element feedback for Al-Ikhlas.
 English phonetics first; Arabic lightly in brackets.
-Issues are prioritized so UI can show one Next Step at a time.
+
+Card order (learner journey):
+  1. All error cards
+  2. Tip cards (measured / practice)
+  3. NEXT STEP = first error repeated (reinforcement)
+  4. (UI inserts retry controls here)
+  5. Good cards — each self-standing with full ayah + highlight
 """
 import coaching as coach
 
@@ -37,23 +43,28 @@ VERSE_ELEMENTS = {
     },
 }
 
-def build_feedback(verse, letters, qalqalah_result, heard_arabic=None):
+
+def build_feedback(verse, letters, qalqalah_result, heard_arabic=None, heard_phonetic=None):
     spec = VERSE_ELEMENTS.get(verse, {})
     ok_cards = []
-    issues = []
+    errors = []
+    tips = []
 
     detected = [l for l in letters if l["c"] != "|"]
     if detected:
         nwords = len([l for l in letters if l["c"] == "|"]) + 1
-        ok_cards.append({
-            "level": "ok",
-            "plain": f"Got the word order — about {nwords} words lined up.",
-            "scholarly": None,
-        })
+        ok_cards.append(
+            coach.word_order_card(
+                verse,
+                heard_arabic or "",
+                heard_phonetic or "",
+                nwords,
+            )
+        )
 
     # Pronunciation letter swaps (ayah order priorities 0..)
     if heard_arabic:
-        issues.extend(coach.coach_from_heard(verse, heard_arabic))
+        errors.extend(coach.coach_from_heard(verse, heard_arabic))
 
     # Madd
     for (letter, wen, war, desc, lo, hi, pri) in spec.get("madd", []):
@@ -63,22 +74,30 @@ def build_feedback(verse, letters, qalqalah_result, heard_arabic=None):
         if seg >= lo:
             ok_cards.append({
                 "level": "ok",
+                "rule": "madd",
+                "word_en": wen,
+                "word_ar": war,
+                "section": coach.section_html(verse, wen),
                 "plain": (
-                    f"On {wen} <span class=\"arlight\">({war})</span>: "
+                    f"On <b>{wen}</b> <span class=\"arlight\">({war})</span>: "
                     f"vowel length looked good (~{seg:.2f}s)."
                 ),
                 "scholarly": None,
             })
         else:
-            issues.append(coach.madd_short_card(verse, wen, war, seg, pri))
+            tips.append(coach.madd_short_card(verse, wen, war, seg, pri))
 
     # Shadda
     for (letter, wen, war, desc, pri) in spec.get("shadda", []):
         if any(l["c"] == letter for l in letters):
             ok_cards.append({
                 "level": "ok",
+                "rule": "shadda",
+                "word_en": wen,
+                "word_ar": war,
+                "section": coach.section_html(verse, wen),
                 "plain": (
-                    f"On {wen} <span class=\"arlight\">({war})</span>: "
+                    f"On <b>{wen}</b> <span class=\"arlight\">({war})</span>: "
                     f"{desc} came through."
                 ),
                 "scholarly": None,
@@ -88,10 +107,16 @@ def build_feedback(verse, letters, qalqalah_result, heard_arabic=None):
     qpri = spec.get("qalqalah_priority", 80)
     if qalqalah_result:
         lvl = qalqalah_result.get("level")
+        q_en = "aḥad"
+        if verse == 2:
+            q_en = "aṣ-ṣamad"
+        elif verse == 3:
+            q_en = "yalid"
         if lvl == "ok":
             ok_cards.append({
                 "level": "ok",
                 "rule": "qalqalah",
+                "section": coach.section_html(verse, q_en),
                 "plain": qalqalah_result.get("plain"),
                 "scholarly": qalqalah_result.get("scholarly"),
                 "p_error": qalqalah_result.get("p_error"),
@@ -100,23 +125,31 @@ def build_feedback(verse, letters, qalqalah_result, heard_arabic=None):
             })
         elif lvl == "error":
             soft = (qalqalah_result.get("confidence") or 0) < 0.70
-            issues.append(coach.qalqalah_error_card(verse, soft=soft, priority=qpri))
+            errors.append(coach.qalqalah_error_card(verse, soft=soft, priority=qpri))
         else:
             # defer → still give practice tip, lower urgency than clear errors
-            issues.append(coach.ahad_bounce_card(verse, priority=qpri + 10))
+            tips.append(coach.ahad_bounce_card(verse, priority=qpri + 10))
 
-    # NEXT STEP first (one fix), then other issues, then oks
+    errors = sorted(errors, key=lambda x: x.get("priority", 50))
+    tips = sorted(tips, key=lambda x: x.get("priority", 50))
+    issues = errors + tips  # for next-step pick (errors first)
+
+    # Journey: all errors → tips → NEXT STEP (first issue again) → goods
     cards = []
+    cards.extend(errors)
+    cards.extend(tips)
+
     nxt = coach.pick_next_step(issues)
     if nxt:
         cards.append(nxt)
-        top_issue = sorted(issues, key=lambda x: x.get("priority", 50))[0]
-        rest = [c for c in sorted(issues, key=lambda x: x.get("priority", 50)) if c is not top_issue]
-        cards.extend(rest)
     elif not issues:
+        line = coach.AYAH_LINE.get(verse) or {}
+        keys = line.get("key") or [""]
         cards.append({
-            "level": "ok",
+            "level": "next",
             "rule": "next_step",
+            "tag": "NEXT STEP",
+            "section": coach.section_html(verse, keys[0]),
             "plain": (
                 "<b>Nice — no clear fixes left on this ayah.</b> "
                 "When you’re happy with it, move to the next ayah."
@@ -124,8 +157,6 @@ def build_feedback(verse, letters, qalqalah_result, heard_arabic=None):
             "fix": None,
             "scholarly": None,
         })
-    else:
-        cards.extend(sorted(issues, key=lambda x: x.get("priority", 50)))
 
     cards.extend(ok_cards)
     return cards

@@ -57,6 +57,26 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .heard .hmatchar{font-size:18px;font-family:'Amiri','Traditional Arabic',serif;color:#555;margin:4px 0;text-align:right;direction:rtl}
 .heard .hmatchph{font-size:14px;color:#6a7a8a;font-style:italic}
 .heard .hnote{font-size:12px;color:#888;margin-top:6px}
+.cmpwrap{margin-top:10px;padding-top:8px;border-top:1px dashed #c9d8e8}
+.cmpbox{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.cmprow{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #e2e8f0}
+.cmprow.cmpok{border-color:#9ccc9c;background:#f3faf3}
+.cmprow.cmpnear{border-color:#e6c26a;background:#fffaf0}
+.cmprow.cmpbad{border-color:#e8a0a0;background:#fdf4f4}
+.cmplbl{display:block;font-size:10px;font-weight:bold;letter-spacing:.4px;color:#889;text-transform:uppercase;margin-bottom:2px}
+.cmpyou,.cmptgt{font-size:15px;line-height:1.35}
+.cmpbadge{font-size:11px;font-weight:bold;padding:3px 8px;border-radius:10px;background:#ccc;color:#fff;text-transform:uppercase}
+.cmpok .cmpbadge{background:#2c5f2d}
+.cmpnear .cmpbadge{background:#c9a913;color:#3a3000}
+.cmpbad .cmpbadge{background:#c0392b}
+.worow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.wochip{font-size:13px;padding:5px 9px;border-radius:8px;border:1px solid #ccc;background:#fff}
+.wochip.wook{border-color:#9ccc9c;background:#eef7ee;color:#1b5e20}
+.wochip.wonear{border-color:#e6c26a;background:#fff8e6;color:#7a5a00}
+.wochip.wobad{border-color:#e8a0a0;background:#fdecea;color:#7a1d13}
+.wohitok{background:#d9f0d9;color:#1b5e20;font-weight:bold;padding:0 4px;border-radius:4px}
+.wohitnear{background:#fff3bf;color:#7a5a00;font-weight:bold;padding:0 4px;border-radius:4px}
+.wohitbad{background:#f5c6c6;color:#7a1d13;font-weight:bold;padding:0 4px;border-radius:4px}
 .retry{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
 .rbtn{background:#2c5f2d;color:#fff;flex:1;min-width:150px}
 .notebox{display:flex;gap:8px;margin:10px 0}
@@ -235,6 +255,7 @@ function render(data){
     heard_match: data.heard_match,
     matched_arabic: data.matched_arabic,
     matched_phonetic: data.matched_phonetic,
+    compare_html: data.compare_html,
   } : (rs.find(r=>r.audio_quality) || {});
 
   const q=view.audio_quality;
@@ -243,25 +264,27 @@ function render(data){
   else if(q){qd.className='bad';qd.textContent='⚠ Recording very quiet — hold phone closer, or use Voice Memos';}
   else {qd.className=''; qd.style.display='none';}
 
-  // WHAT I HEARD — literal capture of your voice (Arabic + English phonetics)
+  // WHAT I HEARD — literal capture + English-led word compare vs closest ayah
   let heardHtml='';
   if(view.heard_arabic!==undefined){
     const match=view.heard_match||'';
     const matchedAr=(view.matched_arabic||'').trim();
     const matchedPh=(view.matched_phonetic||'').trim();
+    const compare=(view.compare_html||'').trim();
     const showMatch = matchedAr && (match==='exact'||match==='close');
     let note;
     if(match==='raw'||match==='empty'){
       note='Showing the literal capture of this take. Could not cleanly match a known ayah.';
-    } else if(showMatch){
-      note='Arabic + English phonetics above are what the app heard from your voice. Closest ayah match is shown below for comparison.';
+    } else if(showMatch || compare){
+      note='Arabic + English phonetics above are what the app heard. Below: each word matched or mismatched against the target (English first).';
     } else {
       note='Arabic + English phonetics are what the app heard from your voice.';
     }
-    const matchBlock = showMatch
+    const matchBlock = (showMatch || compare)
       ? `<div class="hmatch"><div class="hmatchlbl">Closest ayah match</div>
-         <div class="hmatchar" dir="rtl" lang="ar">${matchedAr}</div>
-         <div class="hmatchph">${matchedPh}</div></div>`
+         ${matchedAr?`<div class="hmatchar" dir="rtl" lang="ar">${matchedAr}</div>`:''}
+         ${matchedPh?`<div class="hmatchph">${matchedPh}</div>`:''}
+         ${compare||''}</div>`
       : '';
     heardHtml=`<div class="heard">
       <div class="hh">What the app heard (your voice)</div>
@@ -272,13 +295,16 @@ function render(data){
     </div>`;
   }
 
-  if(!rs.length){
-    $('results').innerHTML=heardHtml + '<p>No feedback cards returned. Tap the green header to refresh and try again.</p>';
-    if(data.session) $('sessionInfo').textContent='session: '+data.session;
-    return;
-  }
+  const retryHtml=`<div class="retry">
+     <button id="hearRight" class="rbtn">▷ Hear it right — Al-Husary</button>
+     <button id="tryAgain" class="rbtn">↻ Try this ayah again</button>
+   </div>
+   <div class="notebox">
+     <input id="noteInput" placeholder="Label this take (e.g. 'did qalqalah right')" />
+     <button id="saveNote" class="rbtn">Save note</button>
+   </div>`;
 
-  $('results').innerHTML=heardHtml + rs.map(r=>{
+  function cardHtml(r){
     const lvl=r.level||'defer';
     const tag=r.tag||({ok:'✓ GOOD',error:'FIX',defer:'ASK YOUR TEACHER',measured:'TIP',next:'NEXT STEP'}[lvl]||'');
     const sec=r.section||'';
@@ -288,16 +314,29 @@ function render(data){
       <div class="plain">${r.plain||''}</div>
       ${fix}
       ${r.scholarly?`<div class="schol">${r.scholarly}</div>`:''}</div>`;
-  }).join('') +
-  `<div class="retry">
-     <button id="hearRight" class="rbtn">▷ Hear it right — Al-Husary</button>
-     <button id="tryAgain" class="rbtn">↻ Try this ayah again</button>
-   </div>
-   <div class="notebox">
-     <input id="noteInput" placeholder="Label this take (e.g. 'did qalqalah right')" />
-     <button id="saveNote" class="rbtn">Save note</button>
-   </div>`;
+  }
 
+  if(!rs.length){
+    $('results').innerHTML=heardHtml + '<p>No feedback cards returned. Tap the green header to refresh and try again.</p>' + retryHtml;
+    bindRetry(data);
+    if(data.session) $('sessionInfo').textContent='session: '+data.session;
+    return;
+  }
+
+  // Journey: errors + tips + next step → retry controls → good cards
+  const before = rs.filter(r => r.level !== 'ok');
+  const goods = rs.filter(r => r.level === 'ok');
+  $('results').innerHTML =
+    heardHtml +
+    before.map(cardHtml).join('') +
+    retryHtml +
+    goods.map(cardHtml).join('');
+
+  bindRetry(data);
+  if(data.session) $('sessionInfo').textContent='session: '+data.session;
+}
+
+function bindRetry(data){
   const hr=$('hearRight'); if(hr) hr.onclick=()=>$('playH').click();
   const ta=$('tryAgain'); if(ta) ta.onclick=()=>{$('results').innerHTML='';$('quality').style.display='none';$('rec').click();};
   const sn=$('saveNote'); if(sn) sn.onclick=async()=>{
@@ -306,8 +345,6 @@ function render(data){
     await fetch('/note',{method:'POST',body:fd});
     sn.textContent='Saved ✓'; sn.disabled=true;
   };
-
-  if(data.session) $('sessionInfo').textContent='session: '+data.session;
 }
 draw();
 
