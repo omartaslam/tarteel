@@ -424,11 +424,13 @@ def evaluate_drill(
     verse: int,
     heard_arabic: str,
     heard_phonetic: str = "",
+    acoustic: dict | None = None,
 ) -> dict:
     """
     Score syllable micro-drills (Qu / ul) without full-word ayah alignment.
 
-    Qu: pass only on back ق. Middle ك fails with coaching (analyse this take).
+    Qu: hybrid ASR + acoustic cluster (male correct-ق vs middle-ك corpus).
+      PASS only if ASR ق and acoustic agrees; FAIL on ASR ك; DEFER when unsure.
     Returns passed/cards plus display_* for the UI (onset only — not Whisper's
     full-word guess like كل/Kul when the drill is Qu alone).
     """
@@ -459,24 +461,64 @@ def evaluate_drill(
         )
 
     if drill == "qu":
-        # First syllable of Qul: MUST be back ق (qaf). Middle ك (kaf) fails.
-        # Analyse this take — do not treat ك as a pass.
-        has_q = "ق" in letters
-        has_k = "ك" in letters or bool(
-            re.search(r"(^|[^a-z])(k|c)(oo|u|o|a|ull)", ph)
-        ) or ph_compact.startswith(("ku", "coo", "cul", "kol", "ko", "kull", "kul"))
-        if has_q:
-            return {
+        # Hybrid: ASR letters + acoustic distance to male ق / ك corpus clusters.
+        import qu_acoustic as qa
+
+        decision = qa.decide(heard_arabic or "", heard_phonetic or "", acoustic)
+        fail_key = "drill:qu:ق"
+        verdict = decision.get("verdict")
+        has_q = bool(decision.get("asr_q"))
+        has_k = bool(decision.get("asr_k"))
+
+        if verdict == "pass":
+            out = {
                 "passed": True,
                 "cards": [],
                 "display_arabic": "قُ",
                 "display_phonetic": "Qu",
                 "compare_html": _drill_compare("Qu", "قُ", "Qu", "قُ", True),
                 "heard_match": "drill",
+                "qu_decision": decision,
             }
-        # Stable key so mastery / last-focus doesn't thrash across onset vs kaf variants.
-        fail_key = "drill:qu:ق"
-        if has_k:
+            return out
+
+        if verdict == "defer":
+            plain = decision.get("plain") or (
+                "Not confident enough to lock Qu yet — try again or ask a teacher."
+            )
+            card = {
+                "level": "defer",
+                "rule": "drill",
+                "key": fail_key,
+                "priority": 5,
+                "verse": verse,
+                "word_en": "Qu",
+                "word_ar": "قُ",
+                "section": section_html(verse, "qul"),
+                "plain": plain,
+                "fix": (
+                    "Say only <b>Qu</b> (قُ) — deep back Q + short “u”. "
+                    "Listen to the correct sample, then try one short Qu."
+                ),
+                "scholarly": None,
+                "heard_letter": "?",
+                "expected_letter": "ق",
+                "qu_decision": decision,
+            }
+            disp_ar = "قُ" if has_q else ("كُ" if has_k else "(unclear)")
+            disp_ph = "Qu" if has_q else ("Ku" if has_k else "—")
+            return {
+                "passed": False,
+                "cards": [card],
+                "display_arabic": disp_ar,
+                "display_phonetic": disp_ph,
+                "compare_html": _drill_compare(disp_ph, disp_ar, "Qu", "قُ", False),
+                "heard_match": "drill",
+                "qu_decision": decision,
+            }
+
+        # fail — middle ك or unclear onset
+        if has_k or decision.get("reason") == "acoustic_kaf":
             tip = {
                 "heard": "a middle K (kaf) — like English “cool/cull”",
                 "want": "a deep back Q (qaf) — hollow / further back",
@@ -489,6 +531,7 @@ def evaluate_drill(
             }
             card = _card(5, verse, "Qu", "قُ", tip, "ك", "ق", rule="drill")
             card["key"] = fail_key
+            card["qu_decision"] = decision
             return {
                 "passed": False,
                 "cards": [card],
@@ -496,9 +539,14 @@ def evaluate_drill(
                 "display_phonetic": "Ku",
                 "compare_html": _drill_compare("Ku", "كُ", "Qu", "قُ", False),
                 "heard_match": "drill",
+                "qu_decision": decision,
             }
         tip = {
-            "heard": "almost nothing clear" if not (letters or ph.strip()) else "something without a clear Q onset",
+            "heard": (
+                "almost nothing clear"
+                if not (letters or ph.strip())
+                else "something without a clear Q onset"
+            ),
             "want": "a short Qu (قُ) — deep Q + “u” only",
             "fix": (
                 "Say only <b>Qu</b> — deep back Q + short “u”. "
@@ -508,6 +556,7 @@ def evaluate_drill(
         }
         card = _card(5, verse, "Qu", "قُ", tip, "?", "ق", rule="drill")
         card["key"] = fail_key
+        card["qu_decision"] = decision
         return {
             "passed": False,
             "cards": [card],
@@ -515,6 +564,7 @@ def evaluate_drill(
             "display_phonetic": "—",
             "compare_html": _drill_compare("—", "(unclear)", "Qu", "قُ", False),
             "heard_match": "drill",
+            "qu_decision": decision,
         }
 
     if drill == "ul":
@@ -1020,7 +1070,7 @@ def pick_next_step(
     """
     actionable = [
         c for c in issue_cards
-        if c.get("level") in ("error", "measured") and c.get("fix")
+        if c.get("level") in ("error", "measured", "defer") and c.get("fix")
     ]
     if not actionable:
         return None

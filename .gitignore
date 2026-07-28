@@ -1,0 +1,4 @@
+data/qu_corpus/raw/
+.venv/
+__pycache__/
+sessions/

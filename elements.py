@@ -52,6 +52,7 @@ def build_feedback(
     mastered=None,
     last_focus=None,
     stage_id=None,
+    qu_acoustic=None,
 ):
     spec = VERSE_ELEMENTS.get(verse, {})
     stage = stg.get_stage(verse, stage_id)
@@ -69,10 +70,15 @@ def build_feedback(
     # Syllable micro-drills: Qu / ul — do not score against full ayah words.
     if drill:
         ev = coach.evaluate_drill(
-            drill, verse, heard_arabic or "", heard_phonetic or ""
+            drill,
+            verse,
+            heard_arabic or "",
+            heard_phonetic or "",
+            acoustic=qu_acoustic if drill == "qu" else None,
         )
         errors.extend(ev.get("cards") or [])
-        blocking = [c for c in errors if c.get("level") == "error"]
+        # defer blocks advance (no false lock) but still feeds next-step coaching
+        blocking = [c for c in errors if c.get("level") in ("error", "defer")]
         stage_passed = bool(ev.get("passed")) and not blocking
         miss_words: list[str] = []
         regress_to = None
@@ -101,6 +107,8 @@ def build_feedback(
             "matched_arabic": "",
             "matched_phonetic": "",
         }
+        if ev.get("qu_decision"):
+            disp["qu_decision"] = ev["qu_decision"]
         if cards:
             cards[0] = {**cards[0], **disp}
         return cards

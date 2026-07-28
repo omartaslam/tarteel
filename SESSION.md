@@ -1,39 +1,30 @@
 # Tarteel — session handoff
 
-Last updated: 2026-07-28 (Qu acoustic probe — did **not** ship)
+Last updated: 2026-07-28 (Qu acoustic corpus cluster — hybrid gate)
 
-## Stable marker (do not regress)
+## Stable Qu detection baseline
 - **Tag / file:** `stable-qu-detection` / `STABLE.md`
-- **Commit / build:** `e6878cde0424`
-- Successful Qu lock (session `20260728-092902-94fcca`). **ق passes, ك fails** via ASR letters. No ك-as-pass.
+- **Commit:** `e6878cde0424` — first successful Qu lock; no ك-as-pass.
 
-## Live UI (on main)
-- Qu hint no longer says “No L yet”
-- Yellow-mark Qu/قُ on ayah lines
-- Build at last check: see `/health`
+## Qu acoustic v1 (this deploy)
+Hybrid gate on Qu drill only:
 
-## Qu acoustic v1 — probe result (2026-07-28)
-Tried to add throat-level ق vs ك (not Whisper letters):
+1. **Acoustic cluster** trained on adult male EveryAyah Qul onsets (correct ق) vs middle-ك / Kul clips (`data/qu_corpus/`, model `models/qu_qaf_cluster.pkl`).
+2. **PASS** only if ASR shows ق **and** acoustic matches the correct cluster.
+3. **FAIL** if ASR shows ك (never lock Qu on kaf).
+4. **DEFER** (clear reason, no lock) if ASR ق but acoustic unsure / disagrees.
 
-| Approach | Result on Omar + bench takes |
-|---|---|
-| MFCC/spectral logistic clf | LOO ~55%; **swapped** Omar good Qu ↔ Ku |
-| XLSR frame ق/ك mass | Tiny probs; ratios unreliable on short Qu |
-| Forced-align قل vs كل margin | **Omar’s correct Qu scored toward ك** |
+False lock is worse than an occasional defer. Ul / later stages unchanged.
 
-**Decision: do not ship.** Would regress stable Qu locks / trust. Product stays ASR letter gate until we have enough labeled Qu/Ku takes (many phones/voices) for a real place-of-articulation model.
+## UI (already on main)
+- No “No L yet” on Qu; yellow-mark Qu/قُ on ayah lines.
 
-### Trust policy (agreed)
-- Quran: no room for false “locked” passes.
-- When truly unsure → defer to teacher (clear reason).
-- Do not defer constantly — but **false pass is worse than defer**.
-- Student + teacher must be able to trust a pass.
-
-### Next data needed for real acoustic Qu
-~30+ labeled short Qu takes per class (correct back-ق, incorrect middle-ك), same phone + others, before replacing ASR gate.
-
-## Stages (ayah 1)
-Qu (قُ) → ul → Qul → … · store `tarteel_practice_v6`
+## Retest checklist
+1. Hard-refresh (tap green header).
+2. Qu: your middle-K → fail.
+3. Qu: incorrect ك sample → fail.
+4. Qu: your good back-ق → lock → ul (or defer if unsure — try again).
+5. Confirm `/health` build matches this deploy.
 
 ## Stack
-Railway from `main`. Hard-refresh after deploy.
+Railway from `main`. Practice store `tarteel_practice_v6`.
