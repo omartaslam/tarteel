@@ -539,8 +539,18 @@ def evaluate_drill(
                 "compare_html": _drill_compare("ul", "ـُلْ", "ul", "ـُلْ", True),
                 "heard_match": "drill",
             }
+        # Honest fail: if ASR only caught the onset, say so — don't invent an L.
+        onset_only = ("ق" in letters or "ك" in letters) and "ل" not in letters
         tip = {
-            "heard": "something without a clear L ending",
+            "heard": (
+                "the first letter only — no L ending yet"
+                if onset_only
+                else (
+                    "almost nothing clear"
+                    if not (letters or ph.strip())
+                    else "something without a clear L ending"
+                )
+            ),
             "want": "just “ul” (u + L)",
             "fix": (
                 "Say only <b>ul</b> — short “u”, then a clear L. "

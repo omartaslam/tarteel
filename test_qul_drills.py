@@ -69,6 +69,38 @@ def test_ul_pass_on_lam():
     assert ev["passed"] is True
 
 
+def test_ul_pass_on_whisper_variants():
+    for ar, ph in [("قُلْ", "Qul"), ("كل", "Kul"), ("ول", "ul"), ("ـُل", "ool")]:
+        ev = coach.evaluate_drill("ul", 1, ar, ph)
+        assert ev["passed"] is True, (ar, ph)
+        assert ev["display_phonetic"] == "ul"
+
+
+def test_ul_fail_without_l():
+    for ar, ph in [("قُ", "Qu"), ("كُ", "ku"), ("ا", "ah"), ("", "")]:
+        ev = coach.evaluate_drill("ul", 1, ar, ph)
+        assert ev["passed"] is False, (ar, ph)
+
+
+def test_build_feedback_ul_advances_to_qul():
+    cards = build_feedback(
+        1, [], None, heard_arabic="ل", heard_phonetic="ul", stage_id="ul"
+    )
+    assert cards[0].get("stage_passed") is True
+    assert cards[0].get("stage_action") == "advance"
+    assert cards[0].get("next_stage_id") == "qul"
+
+
+def test_build_feedback_ul_stays_on_qu_onset():
+    cards = build_feedback(
+        1, [], None, heard_arabic="قُ", heard_phonetic="Qu", stage_id="ul"
+    )
+    assert cards[0].get("stage_passed") is False
+    assert cards[0].get("stage_action") == "stay"
+    plain = (cards[0].get("plain") or "") + (cards[0].get("fix") or "")
+    assert "L" in plain or "l" in plain.lower()
+
+
 def test_build_feedback_qu_kaf_stays():
     cards = build_feedback(
         1, [], None, heard_arabic="كُل", heard_phonetic="Kul", stage_id="qu"

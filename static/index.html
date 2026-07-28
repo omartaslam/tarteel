@@ -128,10 +128,10 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .foot{margin-top:36px;font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px}
 </style></head><body>
 
-<div class="hero" id="hardRefresh" title="Tap to hard-refresh and clear practice history">
+<div class="hero" id="hardRefresh" title="Tap to refresh; confirm to also clear practice history">
   <span class="ar">ترتيل</span><h1>Tarteel</h1>
   <div class="sub">Recitation practice — Surah Al-Ikhlas</div>
-  <div class="hint">Tap header to refresh + clear practice history</div>
+  <div class="hint">Tap header to refresh (asks before clearing history)</div>
 </div>
 
 <div class="banner">A practice aid for beginners — lock one piece at a time, then join. Not a teacher. Hafs an Asim.</div>
@@ -1003,10 +1003,13 @@ $('clearHistory').onclick=()=>{
   flashBuildNote('Practice history cleared. Starting at stage 1.');
 };
 
-// Hard refresh for iOS/testing — wipe practice history + bust cache
+// Hard refresh for iOS/testing — cache-bust; clear history only if confirmed
 $('hardRefresh').onclick=()=>{
-  clearAllPractice();
-  try{ localStorage.removeItem(BUILD_STORE); }catch(e){}
+  const wipe=confirm('Clear practice history on this device, then refresh?\n\nCancel = refresh only (keep locked stages).');
+  if(wipe){
+    clearAllPractice();
+    try{ localStorage.removeItem(BUILD_STORE); }catch(e){}
+  }
   const u=new URL(location.href);
   u.searchParams.set('v', String(Date.now()));
   location.replace(u.toString());
