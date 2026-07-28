@@ -66,22 +66,46 @@ AYAH_LINE = {
 }
 
 
-def section_html(verse: int, word_en: str) -> str:
-    """English-phonetic ayah line with the focus word highlighted; Arabic light under it."""
+def section_html(verse: int, word_en: str, *, highlight: str | None = None) -> str:
+    """English-phonetic ayah line with the focus word highlighted; Arabic light under it.
+
+    highlight='qu'|'ul' marks only that part inside Qul (syllable rescue).
+    Do not treat 'qu' as a hit on full 'qul' via substring — that mixed Qul/Qu copy.
+    """
     line = AYAH_LINE.get(verse)
     if not line:
         return ""
+    hl = (highlight or "").lower().strip()
     target = (word_en or "").lower().replace("ā", "a").replace("ḥ", "h").replace("ṣ", "s")
+
     ph_parts = []
     ar_parts = []
     for ph, ar, key in zip(line["ph"], line["ar"], line["key"]):
         k = key.lower().replace("ā", "a").replace("ḥ", "h").replace("ṣ", "s")
-        hit = (
-            k == target
-            or k.split()[-1] == target
-            or target in k
-            or k in target
-        )
+        # Syllable marks inside first word (Qul)
+        if hl == "qu" and k == "qul":
+            # Qu + l  /  قُ + لْ
+            ph_parts.append(f'<span class="focusw">Qu</span>{ph[2:] if len(ph) > 2 else ""}')
+            ar_parts.append(
+                f'<span class="focusw">{ar[:2] if len(ar) >= 2 else ar}</span>'
+                f'{ar[2:] if len(ar) > 2 else ""}'
+            )
+            continue
+        if hl == "ul" and k == "qul":
+            ph_parts.append(
+                f'{ph[:1] if ph else ""}'
+                f'<span class="focusw">{ph[1:] if len(ph) > 1 else ph}</span>'
+            )
+            ar_parts.append(
+                f'{ar[:1] if ar else ""}'
+                f'<span class="focusw">{ar[1:] if len(ar) > 1 else ar}</span>'
+            )
+            continue
+
+        hit = k == target or k.split()[-1] == target
+        # Allow multi-word targets (e.g. "qul huwa") without prefix false-positives
+        if not hit and " " in target:
+            hit = k in target.split() or target in k
         if hit:
             ph_parts.append(f'<span class="focusw">{ph}</span>')
             ar_parts.append(f'<span class="focusw">{ar}</span>')
@@ -360,13 +384,27 @@ FIX = {
 FIX.update({k: dict(v) for k, v in WORD_IDENTITY.items()})
 
 
-def compare_html(verse: int, heard_arabic: str, heard_phonetic: str = "") -> str:
-    """English-first ayah lines with yellow marker on mismatched words."""
+def compare_html(
+    verse: int,
+    heard_arabic: str,
+    heard_phonetic: str = "",
+    stage_words: list[str] | None = None,
+) -> str:
+    """English-first compare with yellow on mismatched words.
+
+    If stage_words is set (e.g. ['qul']), only those stage words appear as
+    Target — never paint the whole ayah yellow when the learner said one word.
+    """
     expected = EXPECTED.get(verse) or []
     line = AYAH_LINE.get(verse) or {"ph": [], "ar": []}
     heard_words = [w for w in normalize_ar(heard_arabic or "").split() if w]
     you_phs = _heard_phonetics(heard_arabic, heard_phonetic)
     aligned = _align_words(heard_words, expected, you_phs)
+    allow = (
+        {(w or "").lower() for w in stage_words}
+        if stage_words is not None
+        else None
+    )
 
     bad_heard: set[int] = set()
     used_heard: set[int] = set()
@@ -374,6 +412,8 @@ def compare_html(verse: int, heard_arabic: str, heard_phonetic: str = "") -> str
     n_bad = 0
     for exp_i, (heard_w, exp_bare, en, ar, dist, you_ph, widxs) in enumerate(aligned):
         if not exp_bare:
+            continue
+        if allow is not None and (en or "").lower() not in allow:
             continue
         target_ph = line["ph"][exp_i] if exp_i < len(line["ph"]) else (en or "")
         target_ar = line["ar"][exp_i] if exp_i < len(line["ar"]) else (ar or "")
@@ -400,14 +440,23 @@ def compare_html(verse: int, heard_arabic: str, heard_phonetic: str = "") -> str
 
     if not tgt_parts:
         return ""
-    note = (
-        "Yellow marker = word needs work · unmarked = match"
-        if n_bad
-        else "All words lined up with the target"
-    )
+    if allow is not None:
+        note = (
+            "Yellow = this stage word needs work · unmarked = match"
+            if n_bad
+            else "This stage word lined up with the target"
+        )
+        lbl = "Heard vs target (this stage)"
+    else:
+        note = (
+            "Yellow marker = word needs work · unmarked = match"
+            if n_bad
+            else "All words lined up with the target"
+        )
+        lbl = "Heard vs target (English first)"
     return (
         '<div class="cmpwrap">'
-        '<div class="hmatchlbl">Heard vs target (English first)</div>'
+        f'<div class="hmatchlbl">{lbl}</div>'
         f'<div class="cmpline"><span class="cmplbl">You</span> '
         f'<span class="cmplinetxt">{" ".join(you_parts) if you_parts else "—"}</span></div>'
         f'<div class="cmpline"><span class="cmplbl">Target</span> '
@@ -611,9 +660,9 @@ def evaluate_qu_qul_bridge(
             "verse": verse,
             "word_en": "Qu",
             "word_ar": "قُ",
-            "section": section_html(verse, "qul"),
+            "section": section_html(verse, "qul", highlight="qu"),
             "plain": (
-                "<b>Ask a teacher.</b> After 3 Qul tries and 3 Qu syllable tries "
+                "<b>Ask a teacher.</b> After 3 full-word Qul tries and 3 Qu-only tries "
                 "I still didn’t hear a clear back ق. "
                 "Please check your Q with a teacher before we continue."
             ),
@@ -652,12 +701,14 @@ def evaluate_qu_qul_bridge(
         "?", "ق", rule="drill",
     )
     card["key"] = fail_key
-    more = f"Syllable rescue — try {n} of 3." + (
+    card["section"] = section_html(verse, "qul", highlight="qu")
+    more = f"Syllable rescue — say only <b>Qu</b> (not full Qul). Try {n} of 3." + (
         f" {left} left." if left else " Last syllable try."
     )
     card["plain"] = (card.get("plain") or "") + f"<br><br><b>{more}</b>"
     card["fix"] = (
-        "Say only <b>Qu</b> (قُ). I’m listening for a deep back ق — middle ك still fails."
+        "Say only <b>Qu</b> (قُ) — deep back ق + short “u”. Stop. "
+        "Do <b>not</b> say the full word Qul. Middle ك still fails."
     )
     card["bridge"] = {
         "mode": "syllable",
@@ -737,6 +788,14 @@ def _card(
         f"heard {tip['heard']} <span class=\"arlight\">({har})</span>, "
         f"want {tip['want']} <span class=\"arlight\">({ear})</span>."
     )
+    hl = None
+    sec_word = word_en
+    if rule == "drill" and (word_en or "").lower() == "qu":
+        hl = "qu"
+        sec_word = "qul"
+    elif rule == "drill" and (word_en or "").lower() == "ul":
+        hl = "ul"
+        sec_word = "qul"
     return {
         "level": "error",
         "rule": rule,
@@ -745,7 +804,7 @@ def _card(
         "verse": verse,
         "word_en": word_en,
         "word_ar": word_ar,
-        "section": section_html(verse, word_en),
+        "section": section_html(verse, sec_word, highlight=hl),
         "plain": plain,
         "fix": tip["fix"],
         "scholarly": None,

@@ -100,14 +100,21 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
                         "matched_arabic":"","matched_phonetic":""}
         if cancel_check and cancel_check():
             raise AnalysisCancelled()
-        # Always attach English-led word compare when we have a target ayah
+        # Stage-scoped compare: only current stage words (not whole ayah yellow)
         try:
             import coaching as _coach_early
-            heard_info["compare_html"] = _coach_early.compare_html(
-                verse,
-                heard_info.get("heard_arabic") or heard_info.get("heard_raw") or "",
-                heard_info.get("heard_phonetic") or "",
-            )
+            import stages as _stg_early
+            _st = _stg_early.get_stage(verse, stage_id) if stage_id else None
+            _sw = list((_st or {}).get("words") or []) if _st else None
+            if _st and _st.get("drill"):
+                heard_info["compare_html"] = ""  # drill path sets its own compare
+            else:
+                heard_info["compare_html"] = _coach_early.compare_html(
+                    verse,
+                    heard_info.get("heard_arabic") or heard_info.get("heard_raw") or "",
+                    heard_info.get("heard_phonetic") or "",
+                    stage_words=_sw if _sw is not None else None,
+                )
         except Exception:
             heard_info["compare_html"] = ""
         prog(70, "align", "Lining up letters to the expected ayah…")

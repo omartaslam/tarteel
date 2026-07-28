@@ -154,6 +154,50 @@ def test_build_feedback_qul_qaf_skips_to_huwa():
     assert "ul" in (cards[0].get("lock_also") or [])
 
 
+def test_qul_near_without_qaf_does_not_pass():
+    """Shape-near garbage/ط must not lock Qul — stable gate needs ق."""
+    for ar, ph in [("طل", "Ṭl"), ("لل", "ll")]:
+        cards = build_feedback(
+            1, [], None, heard_arabic=ar, heard_phonetic=ph, stage_id="qul"
+        )
+        assert cards[0].get("stage_passed") is False, (ar, ph)
+        assert any("need_ق" in (c.get("key") or "") for c in cards)
+
+
+def test_compare_html_stage_only_marks_qul_not_whole_ayah():
+    """One-word Qul fail must not yellow the entire ayah as 'needs work'."""
+    html = coach.compare_html(1, "كل", "Kull", stage_words=["qul"])
+    assert 'class="marky">Qul</span>' in html
+    assert 'class="marky">قُلْ</span>' in html or "قُلْ" in html
+    # Other ayah words must not appear as yellow targets
+    low = html.lower()
+    assert "huwa" not in low
+    assert "allāhu" not in low and "allahu" not in low
+    assert "aḥad" not in low and "ahad" not in low
+    assert "this stage" in low
+
+
+def test_compare_html_full_ayah_still_shows_all_words():
+    html = coach.compare_html(1, "كل", "Kull", stage_words=None)
+    assert "huwa" in html.lower() or "Huwa" in html
+    assert "Qul" in html
+
+
+def test_qu_section_highlights_onset_not_full_qul():
+    html = coach.section_html(1, "qul", highlight="qu")
+    assert 'focusw">Qu</span>' in html or ">Qu</span>" in html
+    # Must not wrap the entire English Qul as one focus span
+    assert '<span class="focusw">Qul</span>' not in html
+
+
+def test_syllable_rescue_copy_says_qu_not_qul_only():
+    ev = coach.evaluate_qu_qul_bridge(1, "كُ", "ku", attempt=2)
+    plain = (ev["cards"][0].get("plain") or "") + (ev["cards"][0].get("fix") or "")
+    assert "only" in plain.lower() and "Qu" in plain
+    assert "not full Qul" in plain or "not</b> say the full word Qul" in plain
+    assert 'highlight' in str(ev["cards"][0].get("section")) or "focusw\">Qu" in (ev["cards"][0].get("section") or "")
+
+
 def test_qul_again_on_huwa_is_wrong_stage_not_mystery_miss():
     """After Qul locks, re-saying Qul must not look like a broken huwa."""
     cards = build_feedback(

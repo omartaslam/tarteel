@@ -265,8 +265,8 @@ const VERSE_WORDS={
 const STAGE_WORD_CLIPS={
   1:{
     qul:'/samples/stage_qul_husary.mp3',
-    qu:'/samples/stage_qul_husary.mp3',
-    ul:'/samples/stage_qul_husary.mp3',
+    qu:'/samples/stage_qu_husary.mp3',
+    ul:'/samples/stage_ul_husary.mp3',
     huwa:'/samples/stage_huwa_husary.mp3',
     allahu:'/samples/stage_allahu_husary.mp3',
     ahad:'/samples/stage_ahad_husary.mp3',
@@ -284,9 +284,10 @@ function stagePlayHtml(stageId, say, btnId){
   const src=(STAGE_WORD_CLIPS[v]||{})[stageId];
   if(!src || !say) return '';
   const id=btnId?` id="${btnId}"`:'';
+  const kind=(stageId==='qu'||stageId==='ul') ? 'this syllable' : 'this word';
   return `<div class="stageplay">
     <button type="button"${id} data-stage="${stageId}" aria-label="Play ${say}"></button>
-    <div class="splbl"><b>Hear only ${say}</b><span>Al-Husary · this word</span></div>
+    <div class="splbl"><b>Hear only ${say}</b><span>Al-Husary · ${kind}</span></div>
   </div>`;
 }
 function playStageWordClip(stageId, btn){
@@ -516,13 +517,17 @@ function renderStageBox(stOverride){
   }).join('');
   const onQul = (v===1 && cur.id==='qul');
   const onQu = (v===1 && cur.id==='qu');
+  const onUl = (v===1 && cur.id==='ul');
   const wordFails = qulWordFailCount(st);
   const sylFails = st.syllableFails || quSyllableFailCount(st);
-  const showQafKaf = onQul || onQu || (v===1 && cur.id==='ul');
+  // On Qu/ul: Hear only Qu/ul is the teaching play. Keep ق vs ك bench as secondary.
+  const showQafKaf = onQul || onQu || onUl;
   const samp = showQafKaf ? `
     <div class="sampbox">
-      <div class="samplbl">Hear the difference — back ق vs middle ك</div>
-      <p class="sampnote">Correct is deeper / more hollow (back ق). Incorrect is middle ك — the app must fail that.</p>
+      <div class="samplbl">Also compare — back ق vs middle ك</div>
+      <p class="sampnote">${onQu||onUl
+        ? 'You are on a syllable now — use <b>Hear only</b> above first. These are full-word references.'
+        : 'Correct is deeper / more hollow (back ق). Incorrect is middle ك — the app must fail that.'}</p>
       <div class="samprow">
         <div class="samp ok">
           <button type="button" data-samp="/samples/bench_correct_qaf_qul_minshawi.mp3" aria-label="Play correct Qul"></button>
@@ -538,15 +543,19 @@ function renderStageBox(stOverride){
   if(onQul){
     const left=Math.max(0, 3-wordFails);
     modeNote = `<div class="bridgebox"><p class="bt"><b>Word first</b> — up to 3 tries at full <b>Qul</b>. `
-      + (left? `${left} left before we break it into Qu + ul.` : `Next miss moves you to syllable rescue.`)
+      + (left? `${left} left before we break it into Qu + ul.` : `Next miss moves you to syllable rescue (Qu only).`)
       + `</p></div>`;
   } else if(onQu && st.syllableExhausted){
     modeNote = `<div class="bridgebox"><p class="bt"><b>Ask a teacher</b> to check your deep Q before continuing.</p></div>`;
   } else if(onQu && st.syllableRescue){
     const left=Math.max(0, 3-sylFails);
-    modeNote = `<div class="bridgebox"><p class="bt"><b>Syllable rescue</b> — try ${Math.min(3,sylFails+1)} of 3 on <b>Qu</b>. `
+    modeNote = `<div class="bridgebox"><p class="bt"><b>Syllable rescue</b> — say only <b>Qu</b> (not full Qul). Try ${Math.min(3,sylFails+1)} of 3. `
       + (left? `${left} left, then ask a teacher.` : `Last try — then ask a teacher if it still misses.`)
       + `</p></div>`;
+  } else if(onQu){
+    modeNote = `<div class="bridgebox"><p class="bt">Say only <b>Qu</b> — deep back Q + short “u”. Not the full word Qul.</p></div>`;
+  } else if(onUl){
+    modeNote = `<div class="bridgebox"><p class="bt">Say only <b>ul</b> — short u + clear L. No Q/K onset.</p></div>`;
   }
   const modeLbl = onQul ? ' · word first' : (onQu && st.syllableRescue ? ' · syllable rescue' : '');
   const wordPlay = stagePlayHtml(cur.id, cur.say_en, 'playStageCurrent');
@@ -1131,6 +1140,11 @@ function render(data){
   const fromIdx=Math.max(0, ladder.findIndex(s=>s.id===from));
   const stageN=fromIdx+1;
   const clipSrc=(STAGE_WORD_CLIPS[v]||{})[to];
+  // LIVE stage after practice update (fixes Qul→Qu rescue still saying Try Qul / no Qu play)
+  const liveId = practice.stageId || curStageName;
+  const liveObj = ladder.find(s=>s.id===liveId) || curStageObj;
+  const liveSay = liveObj ? liveObj.say_en : curSay;
+  const enteredRescue = !didAdvance && from==='qul' && liveId==='qu';
 
   let advanceBanner='';
   if(didAdvance){
@@ -1142,19 +1156,26 @@ function render(data){
       <div class="an">Fresh start on this piece — listen to <b>only ${say}</b>, then record.</div>
       ${clipSrc?stagePlayHtml(to, say, 'playStageWord'):''}
     </div>`;
+  } else if(enteredRescue){
+    flashBuildNote('Word tries used — now say only Qu.');
+    advanceBanner=`<div class="advbanner failbanner" id="advanceBanner">
+      <div class="al">Syllable rescue · not full Qul</div>
+      <div class="as">Say: Qu</div>
+      <div class="aa" dir="rtl" lang="ar">قُ</div>
+      <div class="an">Three word tries used. Now say <b>only Qu</b> — deep back Q + short “u”. Stop. Listen first.</div>
+      ${stagePlayHtml('qu', 'Qu', 'playStageWord')}
+    </div>`;
   }
 
-  // On fail: keep coaching cards; retry is stage-specific (not full ayah).
-  // Hear only the word you're drilling now — "Hear only huwa" is on the green clear banner after Qul locks.
-  const curClipId = curStageName;
-  const failHear = !didAdvance ? stagePlayHtml(curClipId, curSay, 'playFocusWord') : '';
+  // Fail path: Hear only + Try for the LIVE stage
+  const failHear = !didAdvance ? stagePlayHtml(liveId, liveSay, 'playFocusWord') : '';
   const retryHtml=didAdvance
     ? `<div class="retry">
          <button id="tryAgain" class="rbtn">● Record ${say}</button>
        </div>`
     : `<div class="retry">
-         ${failHear}
-         <button id="tryAgain" class="rbtn">↻ Try ${curSay} again</button>
+         ${enteredRescue ? '' : failHear}
+         <button id="tryAgain" class="rbtn">↻ Try ${liveSay} again</button>
        </div>
        <div class="notebox">
          <input id="noteInput" placeholder="Label this take (optional)" />
@@ -1162,8 +1183,7 @@ function render(data){
        </div>`;
 
   const logHtml=practiceLogHtml(v, practice);
-  // On advance, the green banner is the hero — hide duplicate blue NEXT card.
-  const nextCards = didAdvance
+  const nextCards = (didAdvance || enteredRescue)
     ? []
     : rs.filter(r => r.level === 'next');
   const rest = rs.filter(r => r.level !== 'next');
@@ -1177,17 +1197,17 @@ function render(data){
   $('results').innerHTML =
     advanceBanner +
     heardHtml +
-    (didAdvance ? '' : logHtml) +
+    (didAdvance || enteredRescue ? '' : logHtml) +
     nextCards.map(cardHtml).join('') +
     retryHtml +
-    (didAdvance ? logHtml : '') +
+    (didAdvance || enteredRescue ? logHtml : '') +
     restHtml;
 
-  bindRetry(data, {didAdvance, say, stageId:to});
+  bindRetry(data, {didAdvance: didAdvance || enteredRescue, say: liveSay, stageId: liveId});
   bindClearLog();
   bindHeardAudio();
   if(data.session) $('sessionInfo').textContent='session: '+data.session;
-  if(didAdvance){
+  if(didAdvance || enteredRescue){
     const ab=$('advanceBanner') || $('stageBox');
     if(ab) try{ ab.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){}
   } else {

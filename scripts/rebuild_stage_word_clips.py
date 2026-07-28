@@ -24,6 +24,8 @@ OUT = ROOT / "static/samples"
 # Seconds into SRC — chosen so ASR hears the full word clearly.
 WINDOWS = {
     "qul": (0.72, 1.28),
+    "qu": (0.72, 1.12),    # Qu onset for syllable rescue — Hear only Qu
+    "ul": (1.05, 1.32),    # ul ending model for syllable rescue
     "huwa": (1.15, 1.95),   # was 0.5s mid-cut → garbled; must cover full هُوَ
     "allahu": (1.95, 3.60),
     "ahad": (3.40, 4.75),

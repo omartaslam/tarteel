@@ -270,6 +270,36 @@ def build_feedback(
             regress_to = None
 
     stage_passed = not blocking and not miss_words
+
+    # Qul lock requires Arabic ق in this take (same stable gate as Qu drill).
+    # Shape-near without ق (طل, garbled Whisper, etc.) must NOT skip to huwa.
+    needs_qaf = (stage or {}).get("id") == "qul" or (
+        {(w or "").lower() for w in (stage_words or [])} == {"qul"}
+    )
+    if stage_passed and needs_qaf and "ق" not in (heard_arabic or ""):
+        stage_passed = False
+        q_err = coach._card(
+            5,
+            verse,
+            "qul",
+            "قُلْ",
+            {
+                "heard": "no clear back Q (qaf) in this take",
+                "want": "Arabic Qul with deep back ق",
+                "fix": (
+                    "Say the full word <b>Qul</b>. I need to hear back <b>ق</b> — "
+                    "a close shape without ق does not lock."
+                ),
+                "ar": ("?", "ق"),
+            },
+            "?",
+            "ق",
+            rule="pronunciation",
+        )
+        q_err["key"] = "pronunciation:qul:need_ق"
+        errors.insert(0, q_err)
+        blocking = [c for c in errors if _blocks_stage(c)]
+
     return _finish_stage_cards(
         verse=verse,
         stage=stage,

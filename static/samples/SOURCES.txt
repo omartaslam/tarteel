@@ -34,10 +34,14 @@ What success looks like when you play these into Tarteel on Ku/Qul:
 # Teaching rule: each clip must contain the WHOLE word (pad + fade). Never mid-word chops.
 # Verified windows (ASR hears target clearly):
 #   qul   0.72–1.28  → قُلْ
-#   huwa  1.15–1.95  → هُوَ   (old 0.5s mid-cut was clipped / unusable for teaching)
+#   qu    0.72–1.12  → Qu onset (syllable rescue Hear only)
+#   ul    1.05–1.32  → ul ending model
+#   huwa  1.15–1.95  → هُوَ
 #   allahu 1.95–3.60 → اللَّهُ
 #   ahad  3.40–4.75  → أَحَدٌ
 stage_qul_husary.mp3
+stage_qu_husary.mp3
+stage_ul_husary.mp3
 stage_huwa_husary.mp3
 stage_allahu_husary.mp3
 stage_ahad_husary.mp3
