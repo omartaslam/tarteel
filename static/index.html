@@ -69,6 +69,9 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .heard .hmatchar{font-size:18px;font-family:'Amiri','Traditional Arabic',serif;color:#555;margin:4px 0;text-align:right;direction:rtl}
 .heard .hmatchph{font-size:14px;color:#6a7a8a;font-style:italic}
 .heard .hnote{font-size:12px;color:#888;margin-top:6px}
+.heard .hplay{margin-top:10px;padding-top:8px;border-top:1px dashed #c9d8e8}
+.heard .hplaylbl{font-size:11px;font-weight:700;letter-spacing:.4px;color:#6a7a8a;margin-bottom:6px;text-transform:uppercase}
+.heard .hplay audio{width:100%;height:36px}
 .cmpwrap{margin-top:10px;padding-top:8px;border-top:1px dashed #c9d8e8}
 .cmpline{display:grid;grid-template-columns:56px 1fr;gap:10px;align-items:baseline;margin-top:6px}
 .cmpline.arline{grid-template-columns:1fr;margin-top:4px}
@@ -817,11 +820,18 @@ function render(data){
          ${matchedPh?`<div class="hmatchph">${matchedPh}</div>`:''}
          ${compare||''}</div>`
       : '';
+    const playBlock = data.session
+      ? `<div class="hplay">
+          <div class="hplaylbl">Your recording — play back &amp; compare to the text above</div>
+          <audio id="heardAudio" controls preload="metadata" playsinline src="/sessions/${data.session}/audio"></audio>
+        </div>`
+      : '';
     heardHtml=`<div class="heard" id="heardTop">
       <div class="hh">What the app heard (your voice)</div>
       <div class="har" dir="rtl" lang="ar">${view.heard_arabic||'(unclear)'}</div>
       <div class="hph">${view.heard_phonetic||''}</div>
       ${matchBlock}
+      ${playBlock}
       <div class="hnote">${note}</div>
     </div>`;
   }
