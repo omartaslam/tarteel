@@ -1,3 +1,5 @@
+Full handover (scholar summary + P0 + deploy): see `HANDOVER.md`.
+
 # Tarteel — session handoff
 
 Last updated: 2026-07-28 (QUAL English cue for ق; stage compare; Qu rescue play)
