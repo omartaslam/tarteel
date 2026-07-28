@@ -17,7 +17,8 @@ STAGES = {
             "say_en": "Qul",
             "say_ar": "قُلْ",
             "hint": (
-                "Say the full word <b>Qul</b> — deep back Q, not middle K. "
+                "Say the full word <b>Qul</b> (قُلْ). English sound cue: <b>QUAL</b> "
+                "like the start of <b>quality</b> — not “cull/cool”. "
                 "Three tries here; if stuck we’ll break it into Qu + ul."
             ),
             "words": ["qul"],
@@ -29,8 +30,8 @@ STAGES = {
             "say_en": "Qu",
             "say_ar": "قُ",
             "hint": (
-                "Syllable rescue — only Qu: deep back Q + short “u”. "
-                "Not English / middle K. Yellow mark on the ayah shows where you are."
+                "Syllable rescue — only Qu (قُ). English cue: <b>QUA</b> like <b>quality</b>, "
+                "not “coo/cu”. Yellow mark on the ayah shows where you are."
             ),
             "words": [],
             "idxs": [0],

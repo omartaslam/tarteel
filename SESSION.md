@@ -1,6 +1,6 @@
 # Tarteel — session handoff
 
-Last updated: 2026-07-28 (Qu rescue play + Qul needs ق; multi-voice detect)
+Last updated: 2026-07-28 (QUAL English cue for ق; stage compare; Qu rescue play)
 
 ## Live tester care
 Mom is testing production. **Do not wipe practice on deploy or header tap.**
@@ -9,6 +9,9 @@ Clear only via explicit “Clear practice history” button.
 ## Freeze rule
 **Qu letter gate unchanged:** ASR ق pass / ك fail.
 **Qul lock also requires ق** in the take — shape-near without ق does not advance.
+
+## English cue for ق (learner discovery)
+Written word stays **Qul** (قُلْ). Teaching cue is **QUAL** / **QUA** like **quality** — not “Qul/cull/cool” (those map to middle ك).
 
 ## Pedagogy (ayah 1) — word first
 1. **Qul** ×3 → pass with ق → **huwa** (locks qu+ul).

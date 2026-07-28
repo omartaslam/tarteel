@@ -285,10 +285,10 @@ def build_feedback(
             "قُلْ",
             {
                 "heard": "no clear back Q (qaf) in this take",
-                "want": "Arabic Qul with deep back ق",
+                "want": "Arabic Qul — English cue <b>QUAL</b> like <b>quality</b>",
                 "fix": (
-                    "Say the full word <b>Qul</b>. I need to hear back <b>ق</b> — "
-                    "a close shape without ق does not lock."
+                    "Say the full word <b>Qul</b> (قُلْ). Think <b>QUAL</b> like the start of "
+                    "<b>quality</b> — not “cull/cool”. I need to hear back <b>ق</b>."
                 ),
                 "ar": ("?", "ق"),
             },

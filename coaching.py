@@ -316,13 +316,14 @@ WORD_IDENTITY = {
 FIX = {
     ("ك", "ق"): {
         "heard": "an English K (like “cull” / “cool”)",
-        "want": "Arabic Qul — deep Q, not English K or G",
+        "want": "Arabic ق — say it like English <b>QUAL</b> (start of “quality”), not “Qul/cull”",
         "fix": (
-            "Say only the word <b>Qul</b> (not “Gul”, not “Kull”).<br>"
+            "The written word is <b>Qul</b> (قُلْ). The English sound cue is <b>QUAL</b> — "
+            "like the opening of <b>quality</b> / <b>quad</b>, not “cull” or “cool”.<br>"
             "1) Tip of tongue rests on the back of your bottom front teeth.<br>"
-            "2) English “cool/cull” hits too far forward — that’s what we’re hearing now.<br>"
-            "3) For <b>Qul</b>, make the first letter deeper: soft-gargle place in the throat, short dry pop, then “ul”.<br>"
-            "4) One short word: <b>Qul</b>. Stop."
+            "2) English “Qul/cull/cool” hits too far forward (middle ك) — that’s what we’re hearing.<br>"
+            "3) Make the first letter like <b>QUAL</b>: deeper / hollower in the throat, short dry pop, then finish the L.<br>"
+            "4) One short word. Stop."
         ),
         "ar": ("ك", "ق"),
     },
@@ -529,11 +530,11 @@ def evaluate_drill(
         if has_k:
             tip = {
                 "heard": "a middle K (kaf) — like English “cool/cull”",
-                "want": "a deep back Q (qaf) — hollow / further back",
+                "want": "back ق — English cue <b>QUA</b> (as in “quality”), not “coo/cu”",
                 "fix": (
-                    "Say only <b>Qu</b> (قُ) — not English K.<br>"
-                    "Middle K is too far forward. Soft-gargle place in the throat: "
-                    "short dry pop + “u”. Stop there."
+                    "Say only the onset <b>Qu</b> (قُ). English cue: <b>QUA</b> like the start of "
+                    "<b>quality</b> — not “coo”, “cu”, or “cool”.<br>"
+                    "Middle K is too far forward. Deeper / hollower throat place, short dry pop + “u”. Stop there."
                 ),
                 "ar": ("ك", "ق"),
             }
@@ -553,10 +554,10 @@ def evaluate_drill(
                 if not (letters or ph.strip())
                 else "something without a clear Q onset"
             ),
-            "want": "a short Qu (قُ) — deep Q + “u” only",
+            "want": "short Qu (قُ) — English cue <b>QUA</b> (as in “quality”)",
             "fix": (
-                "Say only <b>Qu</b> — deep back Q + short “u”. "
-                "Stop after the short u."
+                "Say only <b>Qu</b> — think <b>QUA</b> like <b>quality</b>, not “coo/cu”. "
+                "Deep back ق + short “u”. Stop after the short u."
             ),
             "ar": ("?", "ق"),
         }
@@ -694,8 +695,8 @@ def evaluate_qu_qul_bridge(
         5, verse, "Qu", "قُ",
         {
             "heard": "no clear back Q",
-            "want": "deep back Q",
-            "fix": "Say only <b>Qu</b> — deep back Q + short “u”.",
+            "want": "QUA like quality",
+            "fix": "Say only <b>Qu</b> — English cue <b>QUA</b> like <b>quality</b>, not “coo”.",
             "ar": ("?", "ق"),
         },
         "?", "ق", rule="drill",
@@ -707,8 +708,9 @@ def evaluate_qu_qul_bridge(
     )
     card["plain"] = (card.get("plain") or "") + f"<br><br><b>{more}</b>"
     card["fix"] = (
-        "Say only <b>Qu</b> (قُ) — deep back ق + short “u”. Stop. "
-        "Do <b>not</b> say the full word Qul. Middle ك still fails."
+        "Say only <b>Qu</b> (قُ). English cue: <b>QUA</b> like <b>quality</b> — "
+        "not “coo/cull”. Deep back ق + short “u”. Stop. "
+        "Do <b>not</b> say the full word yet. Middle ك still fails."
     )
     card["bridge"] = {
         "mode": "syllable",
@@ -1193,15 +1195,15 @@ def describe_skill(key: str | None, card: dict | None = None) -> str:
         if rule == "pronunciation":
             hc, ec = card.get("heard_letter"), card.get("expected_letter")
             if hc == "ك" and ec == "ق":
-                return f"the back Q (not middle K) in {wen}"
+                return f"QUAL (deep ق), not cull/cool — in {wen}"
             if hc == "ه" and ec == "ح":
                 return f"the strong Ḥ in {wen}"
             return f"the letter detail in {wen}"
         if rule == "drill":
             hc, ec = card.get("heard_letter"), card.get("expected_letter")
             if hc == "ك" and ec == "ق":
-                return "the back Q in Qu (not middle K)"
-            return "the Qu onset (back Q)"
+                return "QUA like quality (not coo/cull) in Qu"
+            return "Qu onset — QUA like quality"
         if rule in ("madd",):
             return f"the vowel length in {wen}"
         if rule in ("qalqalah", "qalqalah_practice"):
@@ -1226,7 +1228,7 @@ def describe_skill(key: str | None, card: dict | None = None) -> str:
         wen = _tw(rest[0]) if rest else "this word"
         swap = rest[1] if len(rest) > 1 else ""
         if swap == "ك→ق":
-            return f"the back Q (not middle K) in {wen}"
+            return f"QUAL (deep ق), not cull/cool — in {wen}"
         if swap == "ه→ح":
             return f"the strong Ḥ in {wen}"
         return f"the letter detail in {wen}"

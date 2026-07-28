@@ -223,8 +223,8 @@ const AYAH_WORDS={
 // Beginner ladder — keep in sync with stages.py
 const STAGE_LADDER={
   1:[
-    {id:'qul', title:'Qul', say_en:'Qul', say_ar:'قُلْ', hint:'Say the full word Qul — deep back Q, not middle K. Three tries here; if stuck we’ll break it into Qu + ul.', idxs:[0]},
-    {id:'qu', title:'Qu', say_en:'Qu', say_ar:'قُ', hint:'Syllable rescue — only Qu: deep back Q + short “u”. Not English / middle K. Yellow mark on the ayah shows where you are.', idxs:[0], highlight:'qu'},
+    {id:'qul', title:'Qul', say_en:'Qul', say_ar:'قُلْ', hint:'Say the full word Qul (قُلْ). English cue: <b>QUAL</b> like <b>quality</b> — not “cull/cool”. Three tries here; if stuck we’ll break it into Qu + ul.', idxs:[0]},
+    {id:'qu', title:'Qu', say_en:'Qu', say_ar:'قُ', hint:'Syllable rescue — only Qu. English cue: <b>QUA</b> like <b>quality</b>, not “coo/cu”. Yellow mark on the ayah shows where you are.', idxs:[0], highlight:'qu'},
     {id:'ul', title:'ul', say_en:'ul', say_ar:'ـُلْ', hint:'Only the ending: “ul” — short u + clear L. Yellow mark on the ayah shows where you are.', idxs:[0], highlight:'ul'},
     {id:'huwa', title:'huwa', say_en:'huwa', say_ar:'هُوَ', hint:'Say only huwa — round the lips for the W.', idxs:[1]},
     {id:'qul_huwa', title:'Qul huwa', say_en:'Qul huwa', say_ar:'قُلْ هُوَ', hint:'Join the two words you locked.', idxs:[0,1]},
@@ -553,7 +553,7 @@ function renderStageBox(stOverride){
       + (left? `${left} left, then ask a teacher.` : `Last try — then ask a teacher if it still misses.`)
       + `</p></div>`;
   } else if(onQu){
-    modeNote = `<div class="bridgebox"><p class="bt">Say only <b>Qu</b> — deep back Q + short “u”. Not the full word Qul.</p></div>`;
+    modeNote = `<div class="bridgebox"><p class="bt">Say only <b>Qu</b> — English cue <b>QUA</b> like <b>quality</b>, not “coo”. Not the full word Qul.</p></div>`;
   } else if(onUl){
     modeNote = `<div class="bridgebox"><p class="bt">Say only <b>ul</b> — short u + clear L. No Q/K onset.</p></div>`;
   }
@@ -1162,7 +1162,7 @@ function render(data){
       <div class="al">Syllable rescue · not full Qul</div>
       <div class="as">Say: Qu</div>
       <div class="aa" dir="rtl" lang="ar">قُ</div>
-      <div class="an">Three word tries used. Now say <b>only Qu</b> — deep back Q + short “u”. Stop. Listen first.</div>
+      <div class="an">Three word tries used. Now say <b>only Qu</b> — English cue <b>QUA</b> like <b>quality</b>. Stop. Listen first.</div>
       ${stagePlayHtml('qu', 'Qu', 'playStageWord')}
     </div>`;
   }
