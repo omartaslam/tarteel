@@ -578,33 +578,30 @@ def evaluate_qu_qul_bridge(
     heard_phonetic: str = "",
     attempt: int = 1,
 ) -> dict:
-    """Qul bridge when isolated Qu is stuck.
+    """Syllable-rescue Qu attempts after word-first Qul failed.
 
-    Same stable gate: ASR ق passes (lock Qu → ul), ك fails. Never pass on kaf.
-    attempt is 1..6 (two rounds of 3). The 6th miss → tutor defer.
+    Same stable gate: ASR ق passes, ك fails. Never pass on kaf.
+    attempt is 1..3. The 3rd miss → tutor defer.
     """
     try:
         n = int(attempt)
     except (TypeError, ValueError):
         n = 1
-    n = max(1, min(6, n))
+    n = max(1, min(3, n))
     ev = evaluate_drill("qu", verse, heard_arabic or "", heard_phonetic or "")
-    round_n = 1 if n <= 3 else 2
-    try_in_round = n if n <= 3 else n - 3
-    left_in_round = 3 - try_in_round
+    left = 3 - n
 
     if ev.get("passed"):
         out = dict(ev)
         out["bridge"] = {
-            "mode": "qul",
+            "mode": "syllable",
             "attempt": n,
-            "round": round_n,
             "verdict": "pass",
         }
         return out
 
     fail_key = "drill:qu:ق"
-    if n >= 6:
+    if n >= 3:
         card = {
             "level": "defer",
             "rule": "drill",
@@ -616,21 +613,20 @@ def evaluate_qu_qul_bridge(
             "word_ar": "قُ",
             "section": section_html(verse, "qul"),
             "plain": (
-                "<b>Ask a teacher.</b> After 6 Qul tries I still didn’t hear a clear "
-                "back ق (only middle ك or unclear). "
+                "<b>Ask a teacher.</b> After 3 Qul tries and 3 Qu syllable tries "
+                "I still didn’t hear a clear back ق. "
                 "Please check your Q with a teacher before we continue."
             ),
             "fix": (
                 "Pause here. A teacher can confirm the deep back Q. "
-                "Come back to Qu when they say you’re ready — we won’t fake a lock."
+                "Come back when they say you’re ready — we won’t fake a lock."
             ),
             "scholarly": None,
             "heard_letter": (ev.get("cards") or [{}])[0].get("heard_letter") or "?",
             "expected_letter": "ق",
             "bridge": {
-                "mode": "qul",
+                "mode": "syllable",
                 "attempt": n,
-                "round": 2,
                 "verdict": "tutor",
             },
         }
@@ -649,31 +645,25 @@ def evaluate_qu_qul_bridge(
         5, verse, "Qu", "قُ",
         {
             "heard": "no clear back Q",
-            "want": "deep back Q in Qul",
-            "fix": "Say <b>Qul</b> — listen for deep ق, not middle K.",
+            "want": "deep back Q",
+            "fix": "Say only <b>Qu</b> — deep back Q + short “u”.",
             "ar": ("?", "ق"),
         },
         "?", "ق", rule="drill",
     )
     card["key"] = fail_key
-    more = (
-        f"Qul bridge — round {round_n}, try {try_in_round} of 3."
-        + (f" {left_in_round} left in this round." if left_in_round else " That was the last try this round.")
+    more = f"Syllable rescue — try {n} of 3." + (
+        f" {left} left." if left else " Last syllable try."
     )
-    if n == 3:
-        more += " Next: one more round of 3 Qul tries."
     card["plain"] = (card.get("plain") or "") + f"<br><br><b>{more}</b>"
     card["fix"] = (
-        "Say the full word <b>Qul</b> (قُلْ). "
-        "I’m listening for a deep back ق at the start — middle ك still fails. "
-        "If I hear ق, Qu locks and you move to <b>ul</b>."
+        "Say only <b>Qu</b> (قُ). I’m listening for a deep back ق — middle ك still fails."
     )
     card["bridge"] = {
-        "mode": "qul",
+        "mode": "syllable",
         "attempt": n,
-        "round": round_n,
         "verdict": "fail",
-        "left_in_round": left_in_round,
+        "left": left,
     }
     return {
         "passed": False,

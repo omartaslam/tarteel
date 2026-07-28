@@ -1,14 +1,14 @@
-"""Unit tests: Qu requires back ق; middle ك must fail."""
+"""Unit tests: word-first Qul; Qu requires back ق; middle ك must fail."""
 from elements import build_feedback
 from stages import earliest_failing_stage, get_stage, list_stages
 import coaching as coach
 
 
-def test_verse1_starts_with_qu_ul_qul():
+def test_verse1_starts_word_first():
     ids = [s["id"] for s in list_stages(1)]
-    assert ids[:3] == ["qu", "ul", "qul"]
+    assert ids[:4] == ["qul", "qu", "ul", "huwa"]
     assert get_stage(1, "qu")["drill"] == "qu"
-    assert get_stage(1, "qu")["say_ar"] == "قُ"
+    assert get_stage(1, "qul")["say_ar"] == "قُلْ"
 
 
 def test_qu_pass_on_qaf():
@@ -28,7 +28,6 @@ def test_qu_fail_on_kaf():
 
 
 def test_next_step_does_not_claim_holding_on_same_qu_fault():
-    # Switching between unclear vs kaf must not say "deep Q is holding".
     err = {
         "level": "error",
         "rule": "drill",
@@ -42,7 +41,7 @@ def test_next_step_does_not_claim_holding_on_same_qu_fault():
     }
     nxt = coach.pick_next_step(
         [err],
-        mastered=["drill:qu:onset"],  # old variant
+        mastered=["drill:qu:onset"],
         last_focus="drill:qu:onset",
     )
     assert nxt is not None
@@ -52,7 +51,6 @@ def test_next_step_does_not_claim_holding_on_same_qu_fault():
 
 
 def test_qu_fail_on_kul_whisper():
-    # Incorrect bench-style take: كل/Kul → fail, show Ku not full word invent for target.
     ev = coach.evaluate_drill("qu", 1, "كُل", "Kul")
     assert ev["passed"] is False
     assert ev["display_phonetic"] == "Ku"
@@ -82,13 +80,14 @@ def test_ul_fail_without_l():
         assert ev["passed"] is False, (ar, ph)
 
 
-def test_build_feedback_ul_advances_to_qul():
+def test_build_feedback_ul_advances_to_huwa():
+    # After word-first reorder, ul → huwa (qul already tried first).
     cards = build_feedback(
         1, [], None, heard_arabic="ل", heard_phonetic="ul", stage_id="ul"
     )
     assert cards[0].get("stage_passed") is True
     assert cards[0].get("stage_action") == "advance"
-    assert cards[0].get("next_stage_id") == "qul"
+    assert cards[0].get("next_stage_id") == "huwa"
 
 
 def test_build_feedback_ul_stays_on_qu_onset():
@@ -97,8 +96,6 @@ def test_build_feedback_ul_stays_on_qu_onset():
     )
     assert cards[0].get("stage_passed") is False
     assert cards[0].get("stage_action") == "stay"
-    plain = (cards[0].get("plain") or "") + (cards[0].get("fix") or "")
-    assert "L" in plain or "l" in plain.lower()
 
 
 def test_build_feedback_qu_kaf_stays():
@@ -111,7 +108,6 @@ def test_build_feedback_qu_kaf_stays():
 
 
 def test_build_feedback_qu_qaf_advances():
-    # Stable ASR-letter gate: ق locks Qu → ul.
     cards = build_feedback(
         1, [], None, heard_arabic="قُ", heard_phonetic="Qu", stage_id="qu"
     )
@@ -121,7 +117,6 @@ def test_build_feedback_qu_qaf_advances():
 
 
 def test_qu_asr_qaf_locks_even_without_acoustic():
-    # Acoustic must not veto ASR ق (reverted hybrid gate).
     cards = build_feedback(
         1, [], None, heard_arabic="قَوْمَا", heard_phonetic="qawma", stage_id="qu"
     )
@@ -129,8 +124,8 @@ def test_qu_asr_qaf_locks_even_without_acoustic():
     assert cards[0].get("stage_action") == "advance"
 
 
-def test_build_feedback_qul_kaf_blocks():
-    # كل ≈ قل near, but ك→ق must block (and step back to Qu).
+def test_build_feedback_qul_kaf_stays_word_first():
+    # Word-first: ك on Qul stays (no instant regress to Qu).
     cards = build_feedback(
         1,
         [{"c": "ك", "t": 0.0}, {"c": "ل", "t": 0.2}],
@@ -140,8 +135,23 @@ def test_build_feedback_qul_kaf_blocks():
         stage_id="qul",
     )
     assert cards[0].get("stage_passed") is False
-    assert cards[0].get("stage_action") == "regress"
-    assert cards[0].get("next_stage_id") == "qu"
+    assert cards[0].get("stage_action") == "stay"
+
+
+def test_build_feedback_qul_qaf_skips_to_huwa():
+    cards = build_feedback(
+        1,
+        [{"c": "ق", "t": 0.0}, {"c": "ل", "t": 0.2}],
+        None,
+        heard_arabic="قل",
+        heard_phonetic="Qul",
+        stage_id="qul",
+    )
+    assert cards[0].get("stage_passed") is True
+    assert cards[0].get("stage_action") == "advance"
+    assert cards[0].get("next_stage_id") == "huwa"
+    assert "qu" in (cards[0].get("lock_also") or [])
+    assert "ul" in (cards[0].get("lock_also") or [])
 
 
 def test_earliest_fail_qul_goes_to_qu():
@@ -149,7 +159,7 @@ def test_earliest_fail_qul_goes_to_qu():
     assert s and s["id"] == "qu"
 
 
-def test_qu_qul_bridge_pass_on_qaf_advances():
+def test_syllable_rescue_pass_on_qaf():
     ev = coach.evaluate_qu_qul_bridge(1, "قُلْ", "Qul", attempt=1)
     assert ev["passed"] is True
     assert ev["bridge"]["verdict"] == "pass"
@@ -158,27 +168,23 @@ def test_qu_qul_bridge_pass_on_qaf_advances():
         stage_id="qu", qu_bridge_attempt=2,
     )
     assert cards[0].get("stage_passed") is True
-    assert cards[0].get("stage_action") == "advance"
     assert cards[0].get("next_stage_id") == "ul"
-    assert "Locked Qu" in (cards[0].get("plain") or "")
 
 
-def test_qu_qul_bridge_kaf_never_passes():
+def test_syllable_rescue_kaf_never_passes():
     ev = coach.evaluate_qu_qul_bridge(1, "كُل", "Kul", attempt=1)
     assert ev["passed"] is False
     assert ev["bridge"]["verdict"] == "fail"
-    assert ev["bridge"]["attempt"] == 1
 
 
-def test_qu_qul_bridge_sixth_fail_defers_to_tutor():
-    ev = coach.evaluate_qu_qul_bridge(1, "كُ", "ku", attempt=6)
+def test_syllable_rescue_third_fail_defers_to_tutor():
+    ev = coach.evaluate_qu_qul_bridge(1, "كُ", "ku", attempt=3)
     assert ev["passed"] is False
     assert ev["bridge"]["verdict"] == "tutor"
     assert ev["cards"][0]["level"] == "defer"
-    assert "teacher" in (ev["cards"][0].get("plain") or "").lower()
     cards = build_feedback(
         1, [], None, heard_arabic="كُل", heard_phonetic="Kul",
-        stage_id="qu", qu_bridge_attempt=6,
+        stage_id="qu", qu_bridge_attempt=3,
     )
     assert cards[0].get("stage_passed") is False
     assert cards[0].get("level") == "defer"

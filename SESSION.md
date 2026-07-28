@@ -1,38 +1,27 @@
 # Tarteel — session handoff
 
-Last updated: 2026-07-28 (Qul bridge for stuck Qu)
+Last updated: 2026-07-28 (word-first Qul; live tester care)
 
-## Freeze rule (this cycle)
-**Do not change Qu letter gate** (ASR ق pass / ك fail). Tag: `stable-qu-detection`.
+## Live tester care
+Mom is testing production. **Do not wipe practice on deploy or header tap.**
+- Header = refresh only (progress kept)
+- Deploy = keep `tarteel_practice_v7` progress
+- Clear only via explicit “Clear practice history” button
 
-## Qul bridge (escape hatch)
-After **3 isolated Qu fails**, UI offers **Try full Qul**:
-1. Round 1 — up to 3 Qul takes. Any take with ASR **ق** → **lock Qu → ul**.
-2. Round 2 — 3 more. Same rule.
-3. If all 6 miss → **ASK A TEACHER** defer (no fake lock).
+## Freeze rule
+**Qu letter gate unchanged:** ASR ق pass / ك fail. Tag: `stable-qu-detection`.
 
-Middle ك never unlocks. Green header always clears history + refreshes (no confirm — iPhone blocks it).
+## Pedagogy (ayah 1) — word first
+1. **Qul** (full word) — up to **3** tries. Pass with ق → lock qul (+qu,+ul) → **huwa**.
+2. After 3 word fails → **syllable rescue**: Qu (×3) → ul → huwa.
+3. After 3 Qu syllable fails → **ASK A TEACHER** (no fake lock).
 
-## Current focus
-Omar: tap green header → record. On Qu lock, stage box must switch to **ul** (not huwa yet).
-If STAGE CLEAR but prompt stuck, hard-refresh and say — that was a client UI bug (fixing).
+Same pattern to roll out to later words/ayat once proven.
 
-Reply `chk log` after the batch.
-
-## Pause point (Omar on break — resume here)
-- Live build had Qu→ul visibility fix (`42e3832`).
-- Still on ayah 1 Qu gate / bridge; ul+ not proven end-to-end yet.
-- Usage ~40% month — stay blocker-only.
-
-## Backlog (later — do not burn usage now)
-- **Pedagogy flip (Omar):** starting Qul as Qu+ul syllables made it harder.
-  Preferred order: **3 attempts on full word first** → if stuck, **2nd set of 3 on syllables** → then **tutor defer**.
-  Once that pattern works on Qul, **roll the same pattern out to the rest of the ayat**.
-- If a Qul take clearly has both **ق** and **L**, skip Qu+ul → start at **huwa**.
-- Progress UI: **~17% sits stuck for a few seconds, then jumps** — smooth/phase timing.
-
-## Next after Qu locks (via Qu or bridge)
-`ul` → `qul` → … ayah 1 full → ayahs 2–4 smoke.
+## Backlog (later)
+- If Qul take has both ق and L clearly, already skips to huwa (done on word pass).
+- Progress UI: ~17% stall then jump.
+- Apply word-first ×3 → syllables ×3 → defer across rest of surah.
 
 ## Stack
-Railway from `main`. Practice store `tarteel_practice_v7`.
+Railway from `main`. Practice store `tarteel_practice_v7` (do not bump without need).

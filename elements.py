@@ -243,24 +243,13 @@ def build_feedback(
 
     blocking = [c for c in errors if _blocks_stage(c)]
 
-    # If a join stage breaks an earlier locked word, step back.
+    # Word-first Qul: stay on Qul when ك — do NOT auto-drop to Qu on first miss.
+    # Client moves to syllable rescue (Qu) only after 3 word fails.
     regress_to = None
     if miss_words and stage and len(stage.get("words") or []) > 1:
         regress_to = stg.earliest_failing_stage(verse, miss_words)
         if regress_to and regress_to.get("id") == stage.get("id"):
             regress_to = None
-
-    # Full Qul with middle ك → step back to Qu onset drill.
-    if (
-        not regress_to
-        and stage
-        and stage.get("id") == "qul"
-        and any(
-            c.get("heard_letter") == "ك" and c.get("expected_letter") == "ق"
-            for c in blocking
-        )
-    ):
-        regress_to = stg.get_stage(verse, "qu")
 
     stage_passed = not blocking and not miss_words
     return _finish_stage_cards(
@@ -305,6 +294,9 @@ def _finish_stage_cards(
     cards.extend(tips)
 
     nxt_stage = stg.next_stage(verse, (stage or {}).get("id")) if stage_passed else None
+    # Word-first: locking full Qul skips syllable rescue → huwa.
+    if stage_passed and (stage or {}).get("id") == "qul":
+        nxt_stage = stg.get_stage(verse, "huwa")
     say = (stage or {}).get("say_en") or focus_word or "this"
     say_ar = (stage or {}).get("say_ar") or ""
 
@@ -351,6 +343,9 @@ def _finish_stage_cards(
             "stage_id": nxt_stage["id"],
             "stage_action": "advance",
             "stage": stage_info,
+            "lock_also": (
+                ["qu", "ul"] if (stage or {}).get("id") == "qul" else []
+            ),
         })
     elif stage_passed and not nxt_stage:
         cards.append({

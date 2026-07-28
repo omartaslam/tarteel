@@ -10,14 +10,26 @@ from __future__ import annotations
 # word_idxs: indices into EXPECTED[verse]
 STAGES = {
     1: [
-        # Micro-drills: Qu (back ق) → ul → join Qul. Middle ك fails — analyse each take.
+        # Word-first: full Qul ×3, then syllable rescue (Qu → ul), then tutor defer.
+        {
+            "id": "qul",
+            "title": "Qul",
+            "say_en": "Qul",
+            "say_ar": "قُلْ",
+            "hint": (
+                "Say the full word <b>Qul</b> — deep back Q, not middle K. "
+                "Three tries here; if stuck we’ll break it into Qu + ul."
+            ),
+            "words": ["qul"],
+            "idxs": [0],
+        },
         {
             "id": "qu",
             "title": "Qu",
             "say_en": "Qu",
             "say_ar": "قُ",
             "hint": (
-                "Only Qu: deep back Q + short “u”. "
+                "Syllable rescue — only Qu: deep back Q + short “u”. "
                 "Not English / middle K. Yellow mark on the ayah shows where you are."
             ),
             "words": [],
@@ -37,15 +49,6 @@ STAGES = {
             "drill": "ul",
             "focus_word": "qul",
             "highlight": "ul",
-        },
-        {
-            "id": "qul",
-            "title": "Qul",
-            "say_en": "Qul",
-            "say_ar": "قُلْ",
-            "hint": "Join Qu + ul. Keep the deep back Q — middle K fails.",
-            "words": ["qul"],
-            "idxs": [0],
         },
         {
             "id": "huwa",

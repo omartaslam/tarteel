@@ -138,10 +138,10 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .foot{margin-top:36px;font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px}
 </style></head><body>
 
-<div class="hero" id="hardRefresh" title="Tap to clear practice history and hard-refresh">
+<div class="hero" id="hardRefresh" title="Tap to hard-refresh (keeps practice progress)">
   <span class="ar">ترتيل</span><h1>Tarteel</h1>
   <div class="sub">Recitation practice — Surah Al-Ikhlas</div>
-  <div class="hint">Tap header to clear history + refresh</div>
+  <div class="hint">Tap header to refresh (progress kept)</div>
 </div>
 
 <div class="banner">A practice aid for beginners — lock one piece at a time, then join. Not a teacher. Hafs an Asim.</div>
@@ -207,9 +207,9 @@ const AYAH_WORDS={
 // Beginner ladder — keep in sync with stages.py
 const STAGE_LADDER={
   1:[
-    {id:'qu', title:'Qu', say_en:'Qu', say_ar:'قُ', hint:'Only Qu: deep back Q + short “u”. Not English / middle K. Yellow mark on the ayah shows where you are.', idxs:[0], highlight:'qu'},
+    {id:'qul', title:'Qul', say_en:'Qul', say_ar:'قُلْ', hint:'Say the full word Qul — deep back Q, not middle K. Three tries here; if stuck we’ll break it into Qu + ul.', idxs:[0]},
+    {id:'qu', title:'Qu', say_en:'Qu', say_ar:'قُ', hint:'Syllable rescue — only Qu: deep back Q + short “u”. Not English / middle K. Yellow mark on the ayah shows where you are.', idxs:[0], highlight:'qu'},
     {id:'ul', title:'ul', say_en:'ul', say_ar:'ـُلْ', hint:'Only the ending: “ul” — short u + clear L. Yellow mark on the ayah shows where you are.', idxs:[0], highlight:'ul'},
-    {id:'qul', title:'Qul', say_en:'Qul', say_ar:'قُلْ', hint:'Join Qu + ul. Keep the deep back Q — middle K fails.', idxs:[0]},
     {id:'huwa', title:'huwa', say_en:'huwa', say_ar:'هُوَ', hint:'Say only huwa — round the lips for the W.', idxs:[1]},
     {id:'qul_huwa', title:'Qul huwa', say_en:'Qul huwa', say_ar:'قُلْ هُوَ', hint:'Join the two words you locked.', idxs:[0,1]},
     {id:'allahu', title:'Allāhu', say_en:'Allāhu', say_ar:'ٱللَّهُ', hint:'Say only Allāhu — hold the doubled L.', idxs:[2]},
@@ -385,16 +385,16 @@ function loadPractice(verse){
       lastFocus: st.lastFocus||null,
       stageId: st.stageId || defaultStage,
       lockedStages: Array.isArray(st.lockedStages)?st.lockedStages:[],
-      quBridgeActive: !!st.quBridgeActive,
-      quBridgeFails: Math.max(0, Math.min(6, Number(st.quBridgeFails)||0)),
-      quBridgeExhausted: !!st.quBridgeExhausted,
+      syllableRescue: !!st.syllableRescue,
+      syllableFails: Math.max(0, Math.min(3, Number(st.syllableFails)||0)),
+      syllableExhausted: !!st.syllableExhausted,
     };
   }catch(e){
     const ladder=STAGE_LADDER[verse]||[];
     return {
       mastered:[], iterations:[], lastFocus:null,
       stageId:ladder[0]?ladder[0].id:null, lockedStages:[],
-      quBridgeActive:false, quBridgeFails:0, quBridgeExhausted:false,
+      syllableRescue:false, syllableFails:0, syllableExhausted:false,
     };
   }
 }
@@ -410,15 +410,20 @@ function clearPractice(verse){
   savePractice(verse, {
     mastered:[], iterations:[], lastFocus:null,
     stageId:ladder[0]?ladder[0].id:null, lockedStages:[],
-    quBridgeActive:false, quBridgeFails:0, quBridgeExhausted:false,
+    syllableRescue:false, syllableFails:0, syllableExhausted:false,
   });
 }
 function clearAllPractice(){
   try{ localStorage.removeItem(PRACTICE_STORE); }catch(e){}
 }
-function quIsolationFailCount(st){
+function qulWordFailCount(st){
   return (st.iterations||[]).filter(it=>
-    it.stage==='qu' && it.stageAction==='stay' && !it.bridge
+    it.stage==='qul' && it.stageAction==='stay'
+  ).length;
+}
+function quSyllableFailCount(st){
+  return (st.iterations||[]).filter(it=>
+    it.stage==='qu' && it.stageAction==='stay' && it.syllableRescue
   ).length;
 }
 function currentStage(verse, stOverride){
@@ -441,16 +446,11 @@ function renderStageBox(stOverride){
     else if(locked.has(s.id) || i<idx) cls+=' done';
     return `<span class="${cls}">${s.title}</span>`;
   }).join('');
+  const onQul = (v===1 && cur.id==='qul');
   const onQu = (v===1 && cur.id==='qu');
-  const bridgeOn = onQu && st.quBridgeActive && !st.quBridgeExhausted;
-  const bridgeFails = st.quBridgeFails||0;
-  const nextAttempt = Math.min(6, bridgeFails+1);
-  const roundN = nextAttempt<=3 ? 1 : 2;
-  const tryInRound = nextAttempt<=3 ? nextAttempt : nextAttempt-3;
-  const isolationFails = quIsolationFailCount(st);
-  const offerBridge = onQu && !bridgeOn && !st.quBridgeExhausted;
-  const strongOffer = isolationFails >= 3;
-  const showQafKaf = onQu || (v===1 && cur.id==='qul') || bridgeOn;
+  const wordFails = qulWordFailCount(st);
+  const sylFails = st.syllableFails || quSyllableFailCount(st);
+  const showQafKaf = onQul || onQu || (v===1 && cur.id==='ul');
   const samp = showQafKaf ? `
     <div class="sampbox">
       <div class="samplbl">Hear the difference — back ق vs middle ك</div>
@@ -466,54 +466,30 @@ function renderStageBox(stOverride){
         </div>
       </div>
     </div>` : '';
-  let sayEn = cur.say_en;
-  let sayAr = cur.say_ar;
-  let hint = cur.hint;
-  let bridgeHtml = '';
-  if(bridgeOn){
-    sayEn = 'Qul';
-    sayAr = 'قُلْ';
-    hint = `Qul bridge — round ${roundN}, try ${tryInRound} of 3 (attempt ${nextAttempt}/6). I’m listening for a deep back ق. If I hear it, Qu locks → ul. Middle ك still fails.`;
-    bridgeHtml = `<div class="bridgebox"><p class="bt">Bridge mode: say the <b>full word Qul</b>. Same ق rule — no fake locks.</p>
-      <button type="button" class="bridgebtn secondary" id="exitBridge">Back to isolated Qu</button></div>`;
-  } else if(offerBridge){
-    const msg = strongOffer
-      ? 'Stuck on isolated Qu? Try the full word <b>Qul</b> — up to 2 rounds of 3. A clear back ق unlocks you to <b>ul</b>.'
-      : 'Optional: try full <b>Qul</b> instead (2×3 tries). Clear back ق still required to unlock <b>ul</b>.';
-    bridgeHtml = `<div class="bridgebox"><p class="bt">${msg}</p>
-      <button type="button" class="bridgebtn" id="startBridge">Try full Qul (3 + 3 tries)</button></div>`;
-  } else if(onQu && st.quBridgeExhausted){
-    bridgeHtml = `<div class="bridgebox"><p class="bt"><b>Ask a teacher</b> to check your deep Q before continuing. You can still retry isolated Qu anytime.</p></div>`;
+  let modeNote = '';
+  if(onQul){
+    const left=Math.max(0, 3-wordFails);
+    modeNote = `<div class="bridgebox"><p class="bt"><b>Word first</b> — up to 3 tries at full <b>Qul</b>. `
+      + (left? `${left} left before we break it into Qu + ul.` : `Next miss moves you to syllable rescue.`)
+      + `</p></div>`;
+  } else if(onQu && st.syllableExhausted){
+    modeNote = `<div class="bridgebox"><p class="bt"><b>Ask a teacher</b> to check your deep Q before continuing.</p></div>`;
+  } else if(onQu && st.syllableRescue){
+    const left=Math.max(0, 3-sylFails);
+    modeNote = `<div class="bridgebox"><p class="bt"><b>Syllable rescue</b> — try ${Math.min(3,sylFails+1)} of 3 on <b>Qu</b>. `
+      + (left? `${left} left, then ask a teacher.` : `Last try — then ask a teacher if it still misses.`)
+      + `</p></div>`;
   }
+  const modeLbl = onQul ? ' · word first' : (onQu && st.syllableRescue ? ' · syllable rescue' : '');
   box.innerHTML=`
-    <div class="staglbl">Beginner path — stage ${idx+1} of ${ladder.length}${bridgeOn?' · Qul bridge':''}</div>
-    <div class="stagsay">Say: ${sayEn}</div>
-    <div class="stagar" dir="rtl" lang="ar">${sayAr}</div>
-    <div class="staghint">${hint}</div>
+    <div class="staglbl">Beginner path — stage ${idx+1} of ${ladder.length}${modeLbl}</div>
+    <div class="stagsay">Say: ${cur.say_en}</div>
+    <div class="stagar" dir="rtl" lang="ar">${cur.say_ar}</div>
+    <div class="staghint">${cur.hint}</div>
     <div class="stagsteps">${chips}</div>
-    ${bridgeHtml}
+    ${modeNote}
     ${samp}`;
   if(showQafKaf) bindSampleButtons(box);
-  const sb=$('startBridge');
-  if(sb) sb.onclick=()=>{
-    const prac=loadPractice(v);
-    prac.quBridgeActive=true;
-    prac.quBridgeFails=0;
-    prac.quBridgeExhausted=false;
-    savePractice(v, prac);
-    flashBuildNote('Qul bridge on — say full Qul. ق unlocks Qu → ul.');
-    paintAyahFocus();
-    renderStageBox();
-  };
-  const eb=$('exitBridge');
-  if(eb) eb.onclick=()=>{
-    const prac=loadPractice(v);
-    prac.quBridgeActive=false;
-    savePractice(v, prac);
-    flashBuildNote('Back to isolated Qu.');
-    paintAyahFocus();
-    renderStageBox();
-  };
 }
 let _sampAudio=null;
 function stopSampleAudio(){
@@ -556,7 +532,7 @@ function flashBuildNote(msg){
   el.style.display='block';
   setTimeout(()=>{ el.style.display='none'; }, 5000);
 }
-/** Wipe device practice log when a new deploy is detected. */
+/** Record build id — do NOT wipe practice on deploy (live testers). */
 async function syncBuildAndMaybeReset(){
   try{
     try{
@@ -571,10 +547,8 @@ async function syncBuildAndMaybeReset(){
     const build=(h && h.build) ? String(h.build) : '';
     if(!build) return;
     const prev=localStorage.getItem(BUILD_STORE)||'';
-    const hadPractice=!!localStorage.getItem(PRACTICE_STORE);
-    if((prev && prev!==build) || (!prev && hadPractice)){
-      clearAllPractice();
-      flashBuildNote('New build — practice history cleared on this device. Fresh start.');
+    if(prev && prev!==build){
+      flashBuildNote('App updated — your practice progress on this device was kept.');
     }
     localStorage.setItem(BUILD_STORE, build);
   }catch(e){}
@@ -623,6 +597,8 @@ function updatePracticeLog(verse, data){
 
   if((action==='advance' || stageMeta.stage_passed===true) && curStage){
     locked.add(curStage);
+    const also=stageMeta.lock_also || next.lock_also || [];
+    for(const id of also){ if(id) locked.add(id); }
     const dest=nextStageId || curStage;
     st.stageId=dest;
   } else if(action==='regress' && nextStageId){
@@ -638,7 +614,7 @@ function updatePracticeLog(verse, data){
   const bridgeInfo = (rs.find(r=>r.bridge) || {}).bridge
     || (stageMeta && stageMeta.bridge)
     || null;
-  const wasBridge = !!(st.quBridgeActive || bridgeInfo);
+  const wasSyllable = !!(st.syllableRescue || (bridgeInfo && bridgeInfo.mode==='syllable'));
   const advanced = action==='advance' || stageMeta.stage_passed===true;
   st.iterations.push({
     t: Date.now(),
@@ -651,30 +627,46 @@ function updatePracticeLog(verse, data){
     stageAction: advanced ? 'advance' : action,
     regression: action==='regress' || !!(next && next.regression),
     issueKeys,
-    bridge: wasBridge,
+    syllableRescue: wasSyllable || (curStage==='qu' && !!st.syllableRescue),
   });
   if(st.iterations.length>30) st.iterations=st.iterations.slice(-30);
   st.mastered=[...mastered];
   st.lockedStages=[...locked];
   st.lastFocus=(advanced||action==='complete') ? null : nextKey;
 
-  // Qul bridge bookkeeping (Qu stage only)
-  if(curStage==='qu'){
+  // Word-first → syllable rescue → tutor defer (ayah 1 Qul path)
+  if(curStage==='qul'){
     if(advanced){
-      st.quBridgeActive=false;
-      st.quBridgeFails=0;
-      st.quBridgeExhausted=false;
-    } else if(bridgeInfo){
-      const att=Number(bridgeInfo.attempt)||st.quBridgeFails||0;
-      st.quBridgeFails=Math.max(0, Math.min(6, att));
-      if(bridgeInfo.verdict==='tutor'){
-        st.quBridgeExhausted=true;
-        st.quBridgeActive=false;
-      } else if(st.quBridgeFails>=6){
-        st.quBridgeExhausted=true;
-        st.quBridgeActive=false;
+      st.syllableRescue=false;
+      st.syllableFails=0;
+      st.syllableExhausted=false;
+    } else if(!advanced){
+      const wf=qulWordFailCount(st);
+      if(wf>=3 && !st.syllableRescue){
+        st.syllableRescue=true;
+        st.syllableFails=0;
+        st.syllableExhausted=false;
+        st.stageId='qu';
+        flashBuildNote('Word tries used — syllable rescue: say only Qu.');
       }
     }
+  } else if(curStage==='qu'){
+    if(advanced){
+      st.syllableFails=0;
+    } else if(st.syllableRescue || bridgeInfo){
+      const att=bridgeInfo && bridgeInfo.attempt!=null
+        ? Number(bridgeInfo.attempt)
+        : (st.syllableFails||0)+1;
+      st.syllableRescue=true;
+      st.syllableFails=Math.max(0, Math.min(3, att));
+      if((bridgeInfo && bridgeInfo.verdict==='tutor') || st.syllableFails>=3){
+        st.syllableExhausted=true;
+      }
+    }
+  } else if(advanced && (curStage==='ul' || curStage==='huwa')){
+    st.syllableRescue=false;
+    st.syllableFails=0;
+    st.syllableExhausted=false;
   }
 
   savePractice(verse, st);
@@ -721,9 +713,8 @@ function paintAyahFocus(stOverride){
   const {st, cur}=currentStage(v, stOverride);
   const words=AYAH_WORDS[v];
   const idxs=new Set((cur && cur.idxs) || []);
-  const bridgeOn = cur && cur.id==='qu' && st.quBridgeActive && !st.quBridgeExhausted;
-  // In Qul bridge, yellow-mark the whole first word (Qul), not just Qu.
-  const hl = bridgeOn ? null : (cur && cur.highlight);
+  const bridgeOn = false; // word-first flow; no Qu→Qul bridge overlay
+  const hl = cur && cur.highlight;
   if(!words || !idxs.size){
     $('verseAr').textContent=d.ar;
     $('phon').textContent=d.ph;
@@ -857,8 +848,9 @@ $('rec').onclick=async()=>{
     fd.append('locked_stages', JSON.stringify(prac.lockedStages||[]));
     if(prac.lastFocus) fd.append('last_focus', prac.lastFocus);
     if(prac.stageId) fd.append('stage_id', prac.stageId);
-    if(prac.stageId==='qu' && prac.quBridgeActive && !prac.quBridgeExhausted){
-      const attempt=Math.min(6, (prac.quBridgeFails||0)+1);
+    // Syllable rescue on Qu: count toward tutor defer after 3
+    if(prac.stageId==='qu' && prac.syllableRescue && !prac.syllableExhausted){
+      const attempt=Math.min(3, (prac.syllableFails||0)+1);
       fd.append('qu_bridge_attempt', String(attempt));
     }
     const myGen=_pollGen;
@@ -1138,10 +1130,8 @@ $('clearHistory').onclick=()=>{
   flashBuildNote('Practice history cleared. Starting at stage 1.');
 };
 
-// Hard refresh for iOS/testing — always wipe practice + bust cache (no confirm; iPhone blocks it)
+// Hard refresh for iOS — cache-bust only. Do not wipe practice (live testers).
 $('hardRefresh').onclick=()=>{
-  clearAllPractice();
-  try{ localStorage.removeItem(BUILD_STORE); }catch(e){}
   const u=new URL(location.href);
   u.searchParams.set('v', String(Date.now()));
   location.replace(u.toString());
