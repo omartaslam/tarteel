@@ -364,7 +364,9 @@ function stagePlayHtml(stageId, say, btnId){
   const src=(STAGE_WORD_CLIPS[v]||{})[stageId];
   if(!src || !say) return '';
   const id=btnId?` id="${btnId}"`:'';
-  const kind=(stageId==='qu'||stageId==='ul') ? 'this syllable only' : 'this word only';
+  const kind=(stageId==='qu'||stageId==='ul') ? 'this syllable only'
+    : (stageId==='full'||stageId==='qul_huwa'||stageId==='qul_huwa_allahu') ? 'this step'
+    : 'this word only';
   return `<div class="stageplay" data-role="hear-only">
     <button type="button"${id} data-stage="${stageId}" aria-label="Play ${say}"></button>
     <div class="splbl"><b>2 · Hear only ${say}</b><span>Al-Husary · ${kind}</span></div>
