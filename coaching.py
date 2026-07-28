@@ -196,7 +196,7 @@ def _align_words(
     """
     Partial / merged-word alignment.
     Treat heard letters as a stream so 'Kulhu' can cover Qul + huwa.
-    Returns (heard_letters|None, exp_bare, en, ar, dist, you_ph).
+    Returns (heard_letters|None, exp_bare, en, ar, dist, you_ph, heard_word_idxs).
     """
     stream: list[tuple[str, int]] = []
     for wi, w in enumerate(heard_words):
@@ -208,7 +208,7 @@ def _align_words(
     for exp_bare, en, ar in expected:
         e = exp_bare
         if pos >= len(stream):
-            out.append((None, exp_bare, en, ar, 99, "—"))
+            out.append((None, exp_bare, en, ar, 99, "—", []))
             continue
 
         best = None  # (sort_key, dist, start, end)
@@ -226,12 +226,12 @@ def _align_words(
                     best = (key, d, start, end)
 
         if best is None:
-            out.append((None, exp_bare, en, ar, 99, "—"))
+            out.append((None, exp_bare, en, ar, 99, "—", []))
             continue
 
         _, d, start, end = best
         if d > max(2, len(e)):
-            out.append((None, exp_bare, en, ar, d, "—"))
+            out.append((None, exp_bare, en, ar, d, "—", []))
             continue
 
         chunk = "".join(c for c, _ in stream[start:end])
@@ -248,7 +248,7 @@ def _align_words(
                 _romanize("".join(heard_words[i] for i in widxs))
                 if widxs else _romanize(chunk)
             )
-        out.append((chunk, exp_bare, en, ar, d, you_ph))
+        out.append((chunk, exp_bare, en, ar, d, you_ph, widxs))
         pos = end
 
     return out
@@ -355,37 +355,60 @@ FIX.update({k: dict(v) for k, v in WORD_IDENTITY.items()})
 
 
 def compare_html(verse: int, heard_arabic: str, heard_phonetic: str = "") -> str:
+    """English-first ayah lines with yellow marker on mismatched words."""
     expected = EXPECTED.get(verse) or []
     line = AYAH_LINE.get(verse) or {"ph": [], "ar": []}
     heard_words = [w for w in normalize_ar(heard_arabic or "").split() if w]
     you_phs = _heard_phonetics(heard_arabic, heard_phonetic)
+    aligned = _align_words(heard_words, expected, you_phs)
 
-    rows = []
-    for exp_i, (heard_w, exp_bare, en, ar, dist, you_ph) in enumerate(
-        _align_words(heard_words, expected, you_phs)
-    ):
+    bad_heard: set[int] = set()
+    used_heard: set[int] = set()
+    tgt_parts, ar_parts = [], []
+    n_bad = 0
+    for exp_i, (heard_w, exp_bare, en, ar, dist, you_ph, widxs) in enumerate(aligned):
         if not exp_bare:
             continue
         target_ph = line["ph"][exp_i] if exp_i < len(line["ph"]) else (en or "")
         target_ar = line["ar"][exp_i] if exp_i < len(line["ar"]) else (ar or "")
         kind = _match_class(heard_w, exp_bare, dist)
-        cls = {"ok": "cmpok", "near": "cmpnear", "miss": "cmpbad"}.get(kind, "cmpbad")
-        badge = {"ok": "match", "near": "close", "miss": "miss"}.get(kind, "miss")
-        rows.append(
-            f'<div class="cmprow {cls}">'
-            f'<div class="cmpyou"><span class="cmplbl">You</span> {you_ph or "—"}</div>'
-            f'<div class="cmptgt"><span class="cmplbl">Target</span> {target_ph} '
-            f'<span class="arlight">({target_ar})</span></div>'
-            f'<div class="cmpbadge">{badge}</div></div>'
-        )
+        for wi in widxs:
+            used_heard.add(wi)
+        if kind == "ok":
+            tgt_parts.append(target_ph)
+            ar_parts.append(f'<span class="arlight">{target_ar}</span>')
+        else:
+            n_bad += 1
+            tgt_parts.append(f'<span class="marky">{target_ph}</span>')
+            ar_parts.append(f'<span class="marky">{target_ar}</span>')
+            for wi in widxs:
+                bad_heard.add(wi)
 
-    if not rows:
+    you_parts = []
+    for i, y in enumerate(you_phs or []):
+        # Yellow if this heard word fed a mismatch, or was leftover/extra.
+        if i in bad_heard or i not in used_heard:
+            you_parts.append(f'<span class="marky">{y}</span>')
+        else:
+            you_parts.append(y)
+
+    if not tgt_parts:
         return ""
+    note = (
+        "Yellow marker = word needs work · unmarked = match"
+        if n_bad
+        else "All words lined up with the target"
+    )
     return (
         '<div class="cmpwrap">'
-        '<div class="hmatchlbl">Closest ayah — word compare (English first)</div>'
-        f'<div class="cmpbox">{"".join(rows)}</div>'
-        '<div class="hnote">Green = match · Amber = close / partial · Red = different / missing</div>'
+        '<div class="hmatchlbl">Heard vs target (English first)</div>'
+        f'<div class="cmpline"><span class="cmplbl">You</span> '
+        f'<span class="cmplinetxt">{" ".join(you_parts) if you_parts else "—"}</span></div>'
+        f'<div class="cmpline"><span class="cmplbl">Target</span> '
+        f'<span class="cmplinetxt">{" ".join(tgt_parts)}</span></div>'
+        f'<div class="cmpline arline" dir="rtl" lang="ar">'
+        f'<span class="cmplinetxt">{" ".join(ar_parts)}</span></div>'
+        f'<div class="hnote">{note}</div>'
         "</div>"
     )
 
@@ -397,7 +420,7 @@ def word_order_card(verse: int, heard_arabic: str, heard_phonetic: str, nwords: 
     you_phs = _heard_phonetics(heard_arabic, heard_phonetic)
 
     ph_parts, ar_parts, chips = [], [], []
-    for exp_i, (heard_w, exp_bare, en, ar, dist, you_ph) in enumerate(
+    for exp_i, (heard_w, exp_bare, en, ar, dist, you_ph, _widxs) in enumerate(
         _align_words(heard_words, expected, you_phs)
     ):
         if not exp_bare:
@@ -514,11 +537,58 @@ def word_shape_card(
     }
 
 
+def _find_identity_tip(
+    en: str,
+    heard_w: str | None,
+    exp_bare: str,
+    you_ph: str,
+    heard_words: list[str],
+    you_phs: list[str],
+) -> tuple[dict | None, str]:
+    """Word-identity tip (F↔W, B↔W). Returns (tip, maybe-updated you_ph)."""
+    if not en:
+        return None, you_ph
+    identity_tip = None
+    if heard_w:
+        h = _letters_only(heard_w)
+        # Prefer first-letter identity when both sides start with identity pair.
+        if h and exp_bare and h[0] != exp_bare[0] and (h[0], exp_bare[0]) in WORD_IDENTITY:
+            identity_tip = WORD_IDENTITY[(h[0], exp_bare[0])]
+        if identity_tip is None:
+            for hc, ec in _align_chars(h, exp_bare):
+                if hc and ec and hc != ec and (hc, ec) in WORD_IDENTITY:
+                    identity_tip = WORD_IDENTITY[(hc, ec)]
+                    break
+        # huwa / waw words: فو→هو, بو→هو (F/B replace the W quality; ه is not the swap target)
+        if identity_tip is None and "و" in exp_bare and "ف" not in exp_bare and "ب" not in exp_bare:
+            if "ف" in h and "و" not in h:
+                identity_tip = WORD_IDENTITY[("ف", "و")]
+            elif h.startswith("ف") and "و" in h:
+                identity_tip = WORD_IDENTITY[("ف", "و")]
+            elif "ب" in h and "و" not in h:
+                identity_tip = WORD_IDENTITY[("ب", "و")]
+            elif h.startswith("ب") and "و" in h:
+                identity_tip = WORD_IDENTITY[("ب", "و")]
+    # Dentures / glue: F standing in for W on huwa (fāllahu)
+    if identity_tip is None and en.lower() == "huwa":
+        has_w = "و" in (heard_w or "")
+        heard_f = (heard_w or "").startswith("ف") or (you_ph or "").lower().startswith("f")
+        glued_f = any(
+            (w.startswith("ف") or (i < len(you_phs) and you_phs[i].lower().startswith("f")))
+            for i, w in enumerate(heard_words)
+        )
+        if (heard_f or glued_f) and not has_w:
+            identity_tip = WORD_IDENTITY[("ف", "و")]
+            if you_ph and "f" not in you_ph.lower():
+                you_ph = f"{you_ph} / f…"
+    return identity_tip, you_ph
+
+
 def coach_from_heard(verse: int, heard_arabic: str, heard_phonetic: str = "") -> list[dict]:
     """
     Two-pass coaching:
-      1) word_shape — words roughly right + in order (priority 0..)
-      2) pronunciation — fine letter tips only when no full misses (priority 40+)
+      1) word identity (F↔W) then rough word shape/order
+      2) fine letter tajweed only when no full misses
     """
     expected = EXPECTED.get(verse)
     if not expected or not (heard_arabic or "").strip():
@@ -535,34 +605,16 @@ def coach_from_heard(verse: int, heard_arabic: str, heard_phonetic: str = "") ->
     seen = set()
     any_miss = False
 
-    for wi, (heard_w, exp_bare, en, ar, dist, you_ph) in enumerate(aligned):
+    for wi, (heard_w, exp_bare, en, ar, dist, you_ph, _widxs) in enumerate(aligned):
         if not exp_bare or not en:
             continue
         kind = _match_class(heard_w, exp_bare, dist)
-        if kind == "miss":
-            any_miss = True
-            cards.append(word_shape_card(verse, en, ar, you_ph, priority=wi))
-            continue
-        if not heard_w:
+        if kind == "ok":
             continue
 
-        identity_tip = None
-        h = _letters_only(heard_w)
-        for hc, ec in _align_chars(h, exp_bare):
-            if hc and ec and hc != ec and (hc, ec) in WORD_IDENTITY:
-                identity_tip = WORD_IDENTITY[(hc, ec)]
-                break
-        # Dentures: F often replaces W and glues onto the next word (fāllahu)
-        if identity_tip is None and en.lower() == "huwa" and "و" not in (heard_w or ""):
-            glued_f = any(
-                (w.startswith("ف") or (i < len(you_phs) and you_phs[i].lower().startswith("f")))
-                for i, w in enumerate(heard_words)
-            )
-            if glued_f:
-                identity_tip = WORD_IDENTITY[("ف", "و")]
-                if you_ph and "f" not in you_ph.lower():
-                    you_ph = f"{you_ph} / f…"
-
+        identity_tip, you_ph = _find_identity_tip(
+            en, heard_w, exp_bare, you_ph, heard_words, you_phs
+        )
         if identity_tip:
             key = ("id", en, identity_tip["ar"])
             if key not in seen:
@@ -570,15 +622,22 @@ def coach_from_heard(verse: int, heard_arabic: str, heard_phonetic: str = "") ->
                 cards.append(
                     word_shape_card(verse, en, ar, you_ph, priority=wi, tip=identity_tip)
                 )
-        elif kind == "near":
-            cards.append(word_shape_card(verse, en, ar, you_ph, priority=wi))
+            # Identity swaps (F→W) beat both generic shape and fine tajweed.
+            if kind == "miss":
+                any_miss = True
+            continue
+
+        if kind == "miss":
+            # Full miss: get the word roughly recognisable before letter tips.
+            any_miss = True
+            cards.append(word_shape_card(verse, en, ar, you_ph, priority=10 + wi))
+        # near without identity → leave for fine tajweed pass below
 
     if not any_miss:
-        for wi, (heard_w, exp_bare, en, ar, dist, you_ph) in enumerate(aligned):
+        for wi, (heard_w, exp_bare, en, ar, dist, you_ph, _widxs) in enumerate(aligned):
             if not exp_bare or not heard_w or not en:
                 continue
             kind = _match_class(heard_w, exp_bare, dist)
-            # Letter tips on close words only — next_step still prefers word_shape first
             if kind not in ("ok", "near"):
                 continue
             h = _letters_only(heard_w)
