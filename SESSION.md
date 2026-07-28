@@ -1,6 +1,6 @@
 # Tarteel — session handoff
 
-Last updated: 2026-07-28 (journey decisions locked; ayah 2 stages)
+Last updated: 2026-07-28 (fix false wrong_stage Allāhu→Qul)
 
 Full handover: `HANDOVER.md`.
 
@@ -8,6 +8,9 @@ Full handover: `HANDOVER.md`.
 1. **QUALITY** — ق onset = QUAL / QUA like *quality*
 2. **PULL** — ul = end of *pull* / *full*
 Together → **Qul**. Labels stay **Qul/Qu**; cue stays QUALITY+PULL.
+
+## Latest fix
+**False `wrong_stage:allahu:qul`:** saying Allāhu (الله) was left-aligned as near-Qul via letters ال. Not stale audio. Stage-scoped whole-word align + require clear ok for earlier-word detect. Hard-refresh after deploy.
 
 ## Journey decisions (Omar 2026-07-28) — locked
 1. **First visit:** Listen to the **whole short surah** once → then focus on current task (start Qul). Later visits: Listen = this ayah; banner says Continue + current Say.

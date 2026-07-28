@@ -289,6 +289,46 @@ def _align_words(
     return out
 
 
+def _filter_expected(
+    verse: int, stage_words: list[str] | None
+) -> list[tuple[str, str, str]]:
+    """Expected ayah words, optionally limited to this stage (ayah order kept)."""
+    expected = list(EXPECTED.get(verse) or [])
+    if stage_words is None:
+        return expected
+    allow = {(w or "").lower() for w in stage_words}
+    return [row for row in expected if (row[1] or "").lower() in allow]
+
+
+def _align_stage(
+    verse: int,
+    heard_arabic: str,
+    heard_phonetic: str = "",
+    stage_words: list[str] | None = None,
+):
+    """
+    Align heard take to expected words, scoped to stage_words when set.
+
+    Single-word stages compare the whole letter stream to that word so الله
+    is not scored as near-قل via the prefix letters ال (left-align cherry-pick).
+    """
+    expected = _filter_expected(verse, stage_words)
+    heard_words = [w for w in normalize_ar(heard_arabic or "").split() if w]
+    you_phs = _heard_phonetics(heard_arabic, heard_phonetic)
+    if len(expected) == 1:
+        exp_bare, en, ar = expected[0]
+        chunk = "".join(_letters_only(w) for w in heard_words) if heard_words else None
+        if not chunk:
+            return [(None, exp_bare, en, ar, 99, "—", [])]
+        dist = _edit(chunk, exp_bare)
+        if dist > max(2, len(exp_bare)):
+            return [(None, exp_bare, en, ar, dist, "—", [])]
+        you_ph = " ".join(you_phs) if you_phs else _romanize(chunk)
+        widxs = list(range(len(heard_words)))
+        return [(chunk, exp_bare, en, ar, dist, you_ph, widxs)]
+    return _align_words(heard_words, expected, you_phs)
+
+
 # Word-identity swaps — coach these BEFORE fine tajweed (throat-K, etc.).
 WORD_IDENTITY = {
     ("ف", "و"): {
@@ -414,26 +454,29 @@ def compare_html(
     If stage_words is set (e.g. ['qul']), only those stage words appear as
     Target — never paint the whole ayah yellow when the learner said one word.
     """
-    expected = EXPECTED.get(verse) or []
+    full_expected = EXPECTED.get(verse) or []
     line = AYAH_LINE.get(verse) or {"ph": [], "ar": []}
     heard_words = [w for w in normalize_ar(heard_arabic or "").split() if w]
     you_phs = _heard_phonetics(heard_arabic, heard_phonetic)
-    aligned = _align_words(heard_words, expected, you_phs)
+    aligned = _align_stage(verse, heard_arabic, heard_phonetic, stage_words)
     allow = (
         {(w or "").lower() for w in stage_words}
         if stage_words is not None
         else None
     )
+    # Map en → index in the full ayah line (aligned rows may be stage-filtered).
+    en_to_i = {(row[1] or "").lower(): i for i, row in enumerate(full_expected)}
 
     bad_heard: set[int] = set()
     used_heard: set[int] = set()
     tgt_parts, ar_parts = [], []
     n_bad = 0
-    for exp_i, (heard_w, exp_bare, en, ar, dist, you_ph, widxs) in enumerate(aligned):
+    for heard_w, exp_bare, en, ar, dist, you_ph, widxs in aligned:
         if not exp_bare:
             continue
         if allow is not None and (en or "").lower() not in allow:
             continue
+        exp_i = en_to_i.get((en or "").lower(), 0)
         target_ph = line["ph"][exp_i] if exp_i < len(line["ph"]) else (en or "")
         target_ar = line["ar"][exp_i] if exp_i < len(line["ar"]) else (ar or "")
         kind = _match_class(heard_w, exp_bare, dist)
@@ -1019,7 +1062,7 @@ def coach_from_heard(
         allow = {(w or "").lower() for w in stage_words}
 
     you_phs = _heard_phonetics(heard_arabic, heard_phonetic)
-    aligned = _align_words(heard_words, expected, you_phs)
+    aligned = _align_stage(verse, heard_arabic, heard_phonetic, stage_words)
 
     cards = []
     seen = set()
@@ -1091,17 +1134,17 @@ def stage_word_kinds(
     heard_phonetic: str = "",
     stage_words: list[str] | None = None,
 ) -> dict[str, str]:
-    """Map expected en → match kind for words in the stage."""
-    expected = EXPECTED.get(verse) or []
-    heard_words = [w for w in normalize_ar(heard_arabic or "").split() if w]
-    you_phs = _heard_phonetics(heard_arabic, heard_phonetic)
-    aligned = _align_words(heard_words, expected, you_phs)
-    allow = {(w or "").lower() for w in (stage_words or [])} if stage_words is not None else None
+    """Map expected en → match kind for words in the stage.
+
+    When stage_words is set, only those ayah words are scored — and in ayah
+    order — so a lone Allāhu take is not left-aligned against Qul/huwa first.
+    Single-word stages compare the whole take to that word (no prefix cherry-pick:
+    الله must not score as near-قل via letters ال).
+    """
+    aligned = _align_stage(verse, heard_arabic, heard_phonetic, stage_words)
     out = {}
     for heard_w, exp_bare, en, ar, dist, you_ph, _widxs in aligned:
         if not en:
-            continue
-        if allow is not None and (en or "").lower() not in allow:
             continue
         out[en] = _match_class(heard_w, exp_bare, dist)
     return out
@@ -1117,6 +1160,9 @@ def detect_repeated_earlier_word(
     Learner re-said a locked earlier word while the current stage word is missing.
     Classic case: Qul locked → stage is huwa → they say Qul again → heard looks
     'correct' in the panel but the stage fails. Return the earlier stage dict.
+
+    Require a clear ok on the earlier word (not near): otherwise Allāhu's letters
+    ال can falsely look like a near-Qul via prefix alignment.
     """
     import stages as stg
 
@@ -1141,7 +1187,7 @@ def detect_repeated_earlier_word(
         if len(words) != 1:
             continue
         kinds = stage_word_kinds(verse, heard_arabic, heard_phonetic, words)
-        if kinds and all(k in ("ok", "near") for k in kinds.values()):
+        if kinds and all(k == "ok" for k in kinds.values()):
             return earlier
     return None
 

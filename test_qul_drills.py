@@ -283,6 +283,40 @@ def test_qul_again_on_huwa_is_wrong_stage_not_mystery_miss():
     )
 
 
+def test_allahu_is_not_false_wrong_stage_qul():
+    """Allāhu letters must not left-align as near-Qul (wrong_stage:allahu:qul)."""
+    # Same shape as the live false fail: heard panel shows Allahu / اللَّهُ
+    # but FOCUS claimed “sounded like Qul again”.
+    assert coach.stage_word_kinds(1, "اللَّهُ", "Allahu", ["Allāhu"]) == {"Allāhu": "ok"}
+    assert coach.stage_word_kinds(1, "اللَّهُ", "Allahu", ["qul"]) == {"qul": "miss"}
+    import stages as stg
+    stage = next(s for s in stg.list_stages(1) if s["id"] == "allahu")
+    assert coach.detect_repeated_earlier_word(1, stage, "اللَّهُ", "Allahu") is None
+    cards = build_feedback(
+        1,
+        [],
+        None,
+        heard_arabic="اللَّهُ",
+        heard_phonetic="Allahu",
+        stage_id="allahu",
+        locked_stages=["qul", "qu", "ul", "huwa", "qul_huwa"],
+    )
+    assert not any(c.get("rule") == "wrong_stage" for c in cards)
+    assert not any(
+        "wrong_stage:allahu:qul" == (c.get("key") or "") for c in cards
+    )
+    assert not any(
+        "sounded like" in (c.get("plain") or "") and "Qul" in (c.get("plain") or "")
+        for c in cards
+    )
+    assert not any(
+        c.get("rule") == "word_shape" and "—" in (c.get("plain") or "")
+        for c in cards
+    )
+    assert cards[0].get("stage_passed") is True
+
+
+
 def test_stage_needs_qalqalah_only_on_bounce_word():
     from stages import stage_needs_qalqalah
     assert stage_needs_qalqalah(1, "qul") is False
