@@ -1,6 +1,6 @@
 # Tarteel — session handoff
 
-Last updated: 2026-07-28 (FOCUS vs next-step; Hear only on stage box)
+Last updated: 2026-07-28 (wrong-stage false-fail; FOCUS vs Hear only)
 
 ## Live tester care
 Mom is testing production. **Do not wipe practice on deploy or header tap.**
@@ -15,9 +15,16 @@ Clear only via explicit “Clear practice history” button.
 3. After 3 Qu syllable fails → ask a teacher.
 
 ## Pass / fail UX
-- Pass: green **Stage N cleared · next step** + **Hear only {next word}** (e.g. huwa after Qul).
-- Fail: blue card tag is **FOCUS** (not “NEXT STEP” — that looked like advance). Retry = Try {current} again + Hear only {current}.
-- Stage box always has Hear only for the word you’re on.
+- Pass: green **Stage N cleared · next step** + **Hear only {next word}**.
+- Fail: **FOCUS** (not NEXT STEP). Hear only for the word you’re on.
+- If you re-say a locked word (Qul again on huwa): **Wrong word for this step** — not a mystery huwa miss.
+- Word/drill stages do not require final dal / qalqalah.
+
+## If a “correct” take fails
+1. Check the pink **what the app heard** line (Arabic + English).
+2. If it shows **ك / Kul** — ASR heard middle K (stable fail).
+3. If it shows **قل / Qul** but you’re on **huwa** — say only huwa now.
+4. Hard-refresh keeps progress.
 
 ## Backlog
 - Word-first ×3 → syllables ×3 → defer across rest of surah.

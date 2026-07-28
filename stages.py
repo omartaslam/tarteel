@@ -331,6 +331,28 @@ def word_in_stage(en: str, stage: dict | None) -> bool:
     return (en or "").lower() in target
 
 
+# Final bounce (qalqalah) word per ayah — only score when that word is in-stage.
+QALQALAH_WORD = {1: "aḥad", 2: "aṣ-ṣamad", 3: "yalid", 4: "aḥad"}
+
+
+def stage_needs_qalqalah(verse: int, stage_id: str | None) -> bool:
+    """Word/drill stages without the bounce letter must not require final dal."""
+    if not stage_id:
+        return True  # no stage context → full ayah path
+    stage = get_stage(verse, stage_id)
+    if not stage:
+        return True
+    if stage.get("drill"):
+        return False
+    words = stage.get("words") or []
+    if not words:
+        return True
+    qw = QALQALAH_WORD.get(verse)
+    if not qw:
+        return True
+    return word_in_stage(qw, stage)
+
+
 def earliest_failing_stage(verse: int, failing_words: list[str]) -> dict | None:
     """If a join breaks an earlier piece, step back to that piece's isolate stage."""
     stages = list_stages(verse)

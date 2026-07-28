@@ -126,15 +126,9 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
         pad=proc.tokenizer.pad_token_id
         dal_id=vocab.get("د")
         dal_frames=[i for i,t in enumerate(frames) if t==dal_id]
-        if not dal_frames:
-            return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"no_dal_found",
-                     "level":"defer","plain":"Could not find the final dal in the recording.",
-                     **heard_info}]
-        a=dal_frames[0]/T*dur; b=(dal_frames[-1]+1)/T*dur
-        b=max(b, a+0.12)
-        prog(82, "tajweed", "Checking length, doubling & final bounce…")
-        y22,_=librosa.load(wavp,sr=22050)
-        f=_feat(y22,22050,a,b)
+        import stages as stg
+        needs_q = stg.stage_needs_qalqalah(verse, stage_id)
+
         peak=0.0; rmslev=0.0
         try:
             wproc,_=librosa.load(wavp,sr=16000)
@@ -162,19 +156,43 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
               "matched_arabic":heard_info.get("matched_arabic",""),
               "matched_phonetic":heard_info.get("matched_phonetic",""),
               "compare_html": heard_info.get("compare_html","")}
-        if f is None:
-            return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"feat_none",**diag}]
-        proba=clf.predict_proba([f])[0][1]; conf=abs(proba-0.5)*2
-        if proba>0.5:
-            verdict="error" if conf>=HI_ERROR else "defer"
+
+        qcard=None
+        if not dal_frames:
+            if needs_q:
+                return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"no_dal_found",
+                         "level":"defer","plain":"Could not find the final dal in the recording.",
+                         **diag}]
+            # Word/drill stage — no bounce letter required; coach from ASR only.
+            prog(92, "coach", "Writing your next-step tips…")
         else:
-            verdict="correct" if conf>=HI else "defer"
-        prog(92, "coach", "Writing your next-step tips…")
-        import explanations as ex, elements as el
-        qfb=ex.qalqalah_feedback(verse, verdict, round(float(conf),2), p_error=round(float(proba),2))
-        qcard={**qfb,"rule":"qalqalah","verse":verse,
-               "confidence":round(float(conf),2),"p_error":round(float(proba),2),
-               "dal_start":round(a,3),"dal_end":round(b,3)}
+            a=dal_frames[0]/T*dur; b=(dal_frames[-1]+1)/T*dur
+            b=max(b, a+0.12)
+            prog(82, "tajweed", "Checking length, doubling & final bounce…")
+            y22,_=librosa.load(wavp,sr=22050)
+            f=_feat(y22,22050,a,b)
+            if f is None:
+                if needs_q:
+                    return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"feat_none",**diag}]
+                prog(92, "coach", "Writing your next-step tips…")
+            elif needs_q:
+                proba=clf.predict_proba([f])[0][1]; conf=abs(proba-0.5)*2
+                if proba>0.5:
+                    verdict="error" if conf>=HI_ERROR else "defer"
+                else:
+                    verdict="correct" if conf>=HI else "defer"
+                prog(92, "coach", "Writing your next-step tips…")
+                import explanations as ex
+                qfb=ex.qalqalah_feedback(verse, verdict, round(float(conf),2), p_error=round(float(proba),2))
+                qcard={**qfb,"rule":"qalqalah","verse":verse,
+                       "confidence":round(float(conf),2),"p_error":round(float(proba),2),
+                       "dal_start":round(a,3),"dal_end":round(b,3)}
+            else:
+                # Dal frames exist from full-ayah forced align, but this stage
+                # does not include the bounce word — skip the classifier.
+                prog(92, "coach", "Writing your next-step tips…")
+
+        import elements as el
         cards=el.build_feedback(
             verse, diag["letters"], qcard,
             heard_arabic=heard_ar,

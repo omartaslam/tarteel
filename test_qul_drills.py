@@ -154,6 +154,38 @@ def test_build_feedback_qul_qaf_skips_to_huwa():
     assert "ul" in (cards[0].get("lock_also") or [])
 
 
+def test_qul_again_on_huwa_is_wrong_stage_not_mystery_miss():
+    """After Qul locks, re-saying Qul must not look like a broken huwa."""
+    cards = build_feedback(
+        1,
+        [],
+        None,
+        heard_arabic="قل",
+        heard_phonetic="Qul",
+        stage_id="huwa",
+        locked_stages=["qul", "qu", "ul"],
+    )
+    assert cards[0].get("stage_passed") is False
+    err = next(c for c in cards if c.get("rule") == "wrong_stage")
+    assert "Wrong word" in (err.get("plain") or "")
+    assert "huwa" in (err.get("plain") or "").lower() or "huwa" in (err.get("fix") or "").lower()
+    # Must not claim huwa was heard as "—"
+    assert not any(
+        c.get("rule") == "word_shape" and "—" in (c.get("plain") or "")
+        for c in cards
+    )
+
+
+def test_stage_needs_qalqalah_only_on_bounce_word():
+    from stages import stage_needs_qalqalah
+    assert stage_needs_qalqalah(1, "qul") is False
+    assert stage_needs_qalqalah(1, "huwa") is False
+    assert stage_needs_qalqalah(1, "qu") is False
+    assert stage_needs_qalqalah(1, "ahad") is True
+    assert stage_needs_qalqalah(1, "full") is True
+    assert stage_needs_qalqalah(1, None) is True
+
+
 def test_earliest_fail_qul_goes_to_qu():
     s = earliest_failing_stage(1, ["qul"])
     assert s and s["id"] == "qu"

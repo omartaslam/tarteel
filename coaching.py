@@ -960,6 +960,75 @@ def stage_word_kinds(
     return out
 
 
+def detect_repeated_earlier_word(
+    verse: int,
+    stage: dict | None,
+    heard_arabic: str,
+    heard_phonetic: str = "",
+) -> dict | None:
+    """
+    Learner re-said a locked earlier word while the current stage word is missing.
+    Classic case: Qul locked → stage is huwa → they say Qul again → heard looks
+    'correct' in the panel but the stage fails. Return the earlier stage dict.
+    """
+    import stages as stg
+
+    if not stage or not (heard_arabic or "").strip():
+        return None
+    cur_words = list(stage.get("words") or [])
+    if not cur_words:
+        return None
+    cur_kinds = stage_word_kinds(verse, heard_arabic, heard_phonetic, cur_words)
+    if not cur_kinds:
+        return None
+    # Pure miss on current stage — not a partial attempt that includes the target
+    if any(k in ("ok", "near") for k in cur_kinds.values()):
+        return None
+    if not any(k == "miss" for k in cur_kinds.values()):
+        return None
+
+    for earlier in stg.list_stages(verse):
+        if earlier.get("id") == stage.get("id"):
+            break
+        words = list(earlier.get("words") or [])
+        if len(words) != 1:
+            continue
+        kinds = stage_word_kinds(verse, heard_arabic, heard_phonetic, words)
+        if kinds and all(k in ("ok", "near") for k in kinds.values()):
+            return earlier
+    return None
+
+
+def wrong_stage_repeat_card(verse: int, stage: dict, earlier: dict) -> dict:
+    say = stage.get("say_en") or "this"
+    say_ar = stage.get("say_ar") or ""
+    prev = earlier.get("say_en") or "the earlier word"
+    prev_ar = earlier.get("say_ar") or ""
+    focus = stage.get("focus_word") or ((stage.get("words") or [""])[0])
+    return {
+        "level": "error",
+        "rule": "wrong_stage",
+        "key": f"wrong_stage:{stage.get('id')}:{earlier.get('id')}",
+        "priority": 1,
+        "verse": verse,
+        "word_en": say,
+        "word_ar": say_ar,
+        "section": section_html(verse, focus or ""),
+        "plain": (
+            f"<b>Wrong word for this step.</b> You’re on <b>{say}</b> "
+            f"<span class=\"arlight\">({say_ar})</span> now — "
+            f"<b>{prev}</b> is already locked.<br>"
+            f"This take sounded like <b>{prev}</b> again "
+            f"<span class=\"arlight\">({prev_ar})</span>."
+        ),
+        "fix": (
+            f"Say only <b>{say}</b> <span class=\"arlight\">({say_ar})</span> — "
+            f"not {prev}. Tap Hear only {say} first if you need the model."
+        ),
+        "scholarly": None,
+    }
+
+
 def madd_short_card(verse: int, word_en: str, word_ar: str, dur: float, priority: int) -> dict:
     return {
         "level": "measured",
@@ -1060,6 +1129,8 @@ def describe_skill(key: str | None, card: dict | None = None) -> str:
             return f"the sound shape of {wen}"
         if rule == "word_shape":
             return f"the shape of {wen}"
+        if rule == "wrong_stage":
+            return f"saying only {wen} (not the earlier locked word)"
         if rule == "pronunciation":
             hc, ec = card.get("heard_letter"), card.get("expected_letter")
             if hc == "ك" and ec == "ق":

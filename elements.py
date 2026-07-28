@@ -153,6 +153,23 @@ def build_feedback(
             )
         )
 
+    # Re-said a locked earlier word (e.g. Qul again while on huwa) — don't
+    # show a confusing "huwa miss / heard —" when the panel shows correct Qul.
+    earlier = coach.detect_repeated_earlier_word(
+        verse, stage, heard_arabic or "", heard_phonetic or ""
+    )
+    if earlier and stage:
+        cur_set = {(w or "").lower() for w in (stage_words or [])}
+        errors = [
+            e
+            for e in errors
+            if not (
+                e.get("rule") == "word_shape"
+                and (e.get("word_en") or "").lower() in cur_set
+            )
+        ]
+        errors.insert(0, coach.wrong_stage_repeat_card(verse, stage, earlier))
+
     for (letter, wen, war, desc, lo, hi, pri) in spec.get("madd", []):
         if stage_words and not stg.word_in_stage(wen, stage):
             continue
@@ -238,7 +255,7 @@ def build_feedback(
         if c.get("level") != "error":
             return False
         rule = c.get("rule") or ""
-        if rule in ("drill", "word_shape", "pronunciation", "qalqalah"):
+        if rule in ("drill", "word_shape", "pronunciation", "qalqalah", "wrong_stage"):
             return True
         return not rule
 
