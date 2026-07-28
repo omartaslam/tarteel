@@ -483,7 +483,7 @@ def evaluate_drill(
                 "fix": (
                     "Say only <b>Qu</b> (قُ) — not English K.<br>"
                     "Middle K is too far forward. Soft-gargle place in the throat: "
-                    "short dry pop + “u”. Stop. No L yet."
+                    "short dry pop + “u”. Stop there."
                 ),
                 "ar": ("ك", "ق"),
             }
@@ -501,8 +501,8 @@ def evaluate_drill(
             "heard": "almost nothing clear" if not (letters or ph.strip()) else "something without a clear Q onset",
             "want": "a short Qu (قُ) — deep Q + “u” only",
             "fix": (
-                "Say only <b>Qu</b> — deep back Q + short “u”. Stop. "
-                "Do <b>not</b> add the L yet."
+                "Say only <b>Qu</b> — deep back Q + short “u”. "
+                "Stop after the short u."
             ),
             "ar": ("?", "ق"),
         }

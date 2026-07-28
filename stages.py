@@ -17,24 +17,26 @@ STAGES = {
             "say_en": "Qu",
             "say_ar": "قُ",
             "hint": (
-                "Only the first half: deep back Q + short “u”. "
-                "Not English / middle K. No L yet."
+                "Only Qu: deep back Q + short “u”. "
+                "Not English / middle K. Yellow mark on the ayah shows where you are."
             ),
             "words": [],
-            "idxs": [],
+            "idxs": [0],
             "drill": "qu",
             "focus_word": "qul",
+            "highlight": "qu",
         },
         {
             "id": "ul",
             "title": "ul",
             "say_en": "ul",
             "say_ar": "ـُلْ",
-            "hint": "Only the ending: “ul” — short u + clear L. No first letter yet.",
+            "hint": "Only the ending: “ul” — short u + clear L. Yellow mark on the ayah shows where you are.",
             "words": [],
-            "idxs": [],
+            "idxs": [0],
             "drill": "ul",
             "focus_word": "qul",
+            "highlight": "ul",
         },
         {
             "id": "qul",
@@ -302,10 +304,18 @@ def stage_public(verse: int, stage_id: str | None) -> dict:
         "say_ar": cur.get("say_ar"),
         "hint": cur.get("hint"),
         "words": list(cur.get("words") or []),
+        "idxs": list(cur.get("idxs") or []),
+        "highlight": cur.get("highlight"),
         "drill": cur.get("drill"),
         "is_full": cur.get("id") == "full",
         "ladder": [
-            {"id": s["id"], "title": s["title"], "say_en": s["say_en"]}
+            {
+                "id": s["id"],
+                "title": s["title"],
+                "say_en": s["say_en"],
+                "idxs": list(s.get("idxs") or []),
+                "highlight": s.get("highlight"),
+            }
             for s in stages
         ],
     }

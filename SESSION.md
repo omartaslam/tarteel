@@ -1,17 +1,23 @@
 # Tarteel — session handoff
 
-Last updated: 2026-07-28 (require back ق — stop accepting ك as pass)
+Last updated: 2026-07-28 (Qu hint + ayah highlight; stable Qu detection marked)
 
-## Bug fixed
-- Qu drill had been coded `pass if ك OR ق` — incorrect middle-K clips locked.
-- Full Qul demoted ك→ق to a tip so `Kull` could still advance.
-- Now: analyse each take. **ق passes. ك fails + coaches.** No sample hard-wiring.
+## Stable marker
+- **Tag / file:** `stable-qu-detection` / `STABLE.md`
+- **Commit:** `e6878cd` (build `e6878cde0424`)
+- Successful Qu lock (session `20260728-092902-94fcca`). Do not regress ك-as-pass.
+
+## UI (this change)
+- Qu beginner-path hint no longer says “No L yet” (Say: Qu never showed L — confusing).
+- On Qu, yellow-highlight **Qu** / **قُ** on English + Arabic ayah lines so the learner sees where they are.
+- ul / later stages also yellow-mark their ayah words.
+
+## Detection (unchanged)
+- Analyse each take: **ق passes, ك fails + coaches.**
+- Practice store `tarteel_practice_v6`.
 
 ## Stages (ayah 1)
-Qu (قُ) → ul → Qul. Practice store `tarteel_practice_v5`.
-
-## Samples in UI
-On Qu/Qul: Minshawi قُلْ vs Arabic-speaker كُل (hear-the-difference).
+Qu (قُ) → ul → Qul → …
 
 ## Stack
 Railway from `main`. Hard-refresh after deploy.
