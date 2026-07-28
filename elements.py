@@ -52,7 +52,6 @@ def build_feedback(
     mastered=None,
     last_focus=None,
     stage_id=None,
-    qu_acoustic=None,
     locked_stages=None,
 ):
     spec = VERSE_ELEMENTS.get(verse, {})
@@ -75,7 +74,6 @@ def build_feedback(
             verse,
             heard_arabic or "",
             heard_phonetic or "",
-            acoustic=qu_acoustic if drill == "qu" else None,
         )
         errors.extend(ev.get("cards") or [])
         # defer blocks advance (no false lock) but still feeds next-step coaching
@@ -109,8 +107,6 @@ def build_feedback(
             "matched_arabic": "",
             "matched_phonetic": "",
         }
-        if ev.get("qu_decision"):
-            disp["qu_decision"] = ev["qu_decision"]
         if cards:
             cards[0] = {**cards[0], **disp}
         return cards

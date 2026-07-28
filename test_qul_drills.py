@@ -79,7 +79,7 @@ def test_build_feedback_qu_kaf_stays():
 
 
 def test_build_feedback_qu_qaf_advances():
-    # Without acoustic payload → ASR-letter gate (stable fallback).
+    # Stable ASR-letter gate: ق locks Qu → ul.
     cards = build_feedback(
         1, [], None, heard_arabic="قُ", heard_phonetic="Qu", stage_id="qu"
     )
@@ -88,45 +88,13 @@ def test_build_feedback_qu_qaf_advances():
     assert cards[0].get("next_stage_id") == "ul"
 
 
-def test_qu_hybrid_pass_needs_acoustic_agreement():
-    import qu_acoustic as qa
-
-    ac = qa.score_path("data/qu_corpus/correct/qul_minshawi.wav")
-    assert ac and ac.get("p_qaf") is not None
-    ev = coach.evaluate_drill("qu", 1, "قُل", "Qul", acoustic=ac)
-    assert ev["passed"] is True
-    assert ev.get("qu_decision", {}).get("verdict") == "pass"
-
-
-def test_qu_hybrid_defers_when_acoustic_unsure():
-    thr = {
-        "pass_p_hi": 0.82,
-        "pass_p": 0.70,
-        "pass_margin": 0.20,
-        "fail_p_lo": 0.28,
-        "fail_p": 0.40,
-        "fail_margin": -0.30,
-    }
-    fake = {
-        "p_qaf": 0.55,
-        "margin": 0.0,
-        "d_q": 1.0,
-        "d_k": 1.0,
-        "version": "test",
-        "thresholds": thr,
-    }
+def test_qu_asr_qaf_locks_even_without_acoustic():
+    # Acoustic must not veto ASR ق (reverted hybrid gate).
     cards = build_feedback(
-        1,
-        [],
-        None,
-        heard_arabic="قُ",
-        heard_phonetic="Qu",
-        stage_id="qu",
-        qu_acoustic=fake,
+        1, [], None, heard_arabic="قَوْمَا", heard_phonetic="qawma", stage_id="qu"
     )
-    assert cards[0].get("stage_passed") is False
-    assert cards[0].get("stage_action") == "stay"
-    assert cards[0].get("level") in ("defer", "next")
+    assert cards[0].get("stage_passed") is True
+    assert cards[0].get("stage_action") == "advance"
 
 
 def test_build_feedback_qul_kaf_blocks():

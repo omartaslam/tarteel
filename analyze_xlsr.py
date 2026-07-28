@@ -171,20 +171,6 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
             verdict="correct" if conf>=HI else "defer"
         prog(92, "coach", "Writing your next-step tips…")
         import explanations as ex, elements as el
-        # Qu drill: score onset against male ق / ك corpus clusters
-        qu_ac = None
-        if (stage_id or "") == "qu":
-            try:
-                import qu_acoustic as qa
-                qu_ac = qa.score_path(wavp)
-                if qu_ac:
-                    diag["qu_acoustic"] = {
-                        k: qu_ac.get(k)
-                        for k in ("p_qaf", "margin", "d_q", "d_k", "version", "reason")
-                        if k in qu_ac or k in ("p_qaf", "margin", "version")
-                    }
-            except Exception as e:
-                diag["qu_acoustic_error"] = str(e)
         qfb=ex.qalqalah_feedback(verse, verdict, round(float(conf),2), p_error=round(float(proba),2))
         qcard={**qfb,"rule":"qalqalah","verse":verse,
                "confidence":round(float(conf),2),"p_error":round(float(proba),2),
@@ -196,7 +182,6 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
             mastered=mastered,
             last_focus=last_focus,
             stage_id=stage_id,
-            qu_acoustic=qu_ac,
             locked_stages=locked_stages,
         )
         # Keep literal Whisper in heard_raw; drill stages override the shown heard_*.
