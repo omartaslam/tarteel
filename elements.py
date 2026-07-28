@@ -3,7 +3,8 @@ Per-element feedback for Al-Ikhlas.
 English phonetics first; Arabic lightly in brackets.
 
 Beginner journey: stage ladder (isolate → join → full).
-  One NEXT STEP inside the current stage.
+  One FOCUS tip inside the current stage (not stage advance).
+  Green “Stage cleared · next step” + Hear only {next word} only after a lock.
   Forward only when the stage passes; step back if an earlier piece breaks.
   Micro-drills (Qu / ul) use syllable scoring before full Qul.
 """
@@ -391,7 +392,7 @@ def _finish_stage_cards(
             cards.append({
                 "level": "next",
                 "rule": "next_step",
-                "tag": "NEXT STEP",
+                "tag": "FOCUS",
                 "key": f"stage:{(stage or {}).get('id')}",
                 "section": coach.section_html(verse, focus_word or ""),
                 "plain": (

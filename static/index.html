@@ -118,12 +118,14 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .advbanner .as{font-size:28px;font-weight:700;color:#1a2a3a;margin:6px 0 2px}
 .advbanner .aa{font-family:Amiri,serif;font-size:26px;color:#3a4a5a;direction:rtl}
 .advbanner .an{font-size:13px;color:#456;margin-top:6px;line-height:1.4}
-.advbanner .stageplay{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px}
-.advbanner .stageplay button{flex-shrink:0;background:#2c5f2d;color:#fff;border:none;border-radius:50%;width:44px;height:44px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0}
-.advbanner .stageplay button::before{content:"";display:block;width:0;height:0;border-style:solid;border-width:8px 0 8px 13px;border-color:transparent transparent transparent #fff;margin-left:3px}
-.advbanner .stageplay button.playing::before{border-width:0;width:12px;height:12px;background:#fff;margin-left:0}
-.advbanner .stageplay .splbl{font-size:13px;color:#2c5f2d;text-align:left;line-height:1.35}
-.advbanner .stageplay .splbl b{display:block;font-size:14px}
+.stageplay{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px}
+.stageplay button{flex-shrink:0;background:#2c5f2d;color:#fff;border:none;border-radius:50%;width:44px;height:44px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0}
+.stageplay button::before{content:"";display:block;width:0;height:0;border-style:solid;border-width:8px 0 8px 13px;border-color:transparent transparent transparent #fff;margin-left:3px}
+.stageplay button.playing::before{border-width:0;width:12px;height:12px;background:#fff;margin-left:0}
+.stageplay .splbl{font-size:13px;color:#2c5f2d;text-align:left;line-height:1.35}
+.stageplay .splbl b{display:block;font-size:14px}
+.stagwrap .stageplay{justify-content:flex-start;margin-top:10px}
+.retry .stageplay{justify-content:flex-start;margin:0 0 10px}
 .stagwrap{margin:12px 0;padding:14px 16px;background:linear-gradient(180deg,#f4f7fb 0%,#eef3f8 100%);border:1px solid #d4dee8;border-radius:12px}
 .staglbl{font-size:11px;font-weight:700;letter-spacing:.4px;color:#6a7a8a;text-transform:uppercase;margin-bottom:6px}
 .stagsay{font-size:26px;font-weight:700;color:#1a2a3a;line-height:1.25;margin:4px 0}
@@ -276,7 +278,16 @@ function stopStageClip(){
     try{ _stageClipAudio.pause(); }catch(e){}
     _stageClipAudio=null;
   }
-  document.querySelectorAll('.stageplay button.playing,.advbanner .stageplay button.playing').forEach(b=>b.classList.remove('playing'));
+  document.querySelectorAll('.stageplay button.playing').forEach(b=>b.classList.remove('playing'));
+}
+function stagePlayHtml(stageId, say, btnId){
+  const src=(STAGE_WORD_CLIPS[v]||{})[stageId];
+  if(!src || !say) return '';
+  const id=btnId?` id="${btnId}"`:'';
+  return `<div class="stageplay">
+    <button type="button"${id} data-stage="${stageId}" aria-label="Play ${say}"></button>
+    <div class="splbl"><b>Hear only ${say}</b><span>Al-Husary · this word</span></div>
+  </div>`;
 }
 function playStageWordClip(stageId, btn){
   const map=STAGE_WORD_CLIPS[v]||{};
@@ -538,15 +549,19 @@ function renderStageBox(stOverride){
       + `</p></div>`;
   }
   const modeLbl = onQul ? ' · word first' : (onQu && st.syllableRescue ? ' · syllable rescue' : '');
+  const wordPlay = stagePlayHtml(cur.id, cur.say_en, 'playStageCurrent');
   box.innerHTML=`
     <div class="staglbl">Beginner path — stage ${idx+1} of ${ladder.length}${modeLbl}</div>
     <div class="stagsay">Say: ${cur.say_en}</div>
     <div class="stagar" dir="rtl" lang="ar">${cur.say_ar}</div>
     <div class="staghint">${cur.hint}</div>
+    ${wordPlay}
     <div class="stagsteps">${chips}</div>
     ${modeNote}
     ${samp}`;
   if(showQafKaf) bindSampleButtons(box);
+  const pcb=$('playStageCurrent');
+  if(pcb) pcb.onclick=()=>playStageWordClip(cur.id, pcb);
 }
 let _sampAudio=null;
 function stopSampleAudio(){
@@ -1071,11 +1086,13 @@ function render(data){
     const lvl=r.level||'defer';
     const isReg=!!(r.regression || r.tag==='REGRESSION');
     const isClear=!!(r.stage_action==='advance' || (r.tag||'').includes('CLEARED') || (r.tag||'')==='STAGE CLEAR');
-    let tag=r.tag||({ok:'✓ GOOD',error:'FIX',defer:'ASK YOUR TEACHER',measured:'TIP',next:'NEXT STEP'}[lvl]||'');
+    let tag=r.tag||({ok:'✓ GOOD',error:'FIX',defer:'ASK YOUR TEACHER',measured:'TIP',next:'FOCUS'}[lvl]||'');
     if(isClear && !(r.tag||'').includes('CLEARED')){
       const n=r.cleared_stage_n || (((r.stage||{}).index||0)+1);
       tag=`STAGE ${n} CLEARED · NEXT STEP`;
     }
+    // Fail coaching used to say NEXT STEP — that looked like "advance to huwa"
+    if(!isClear && !isReg && (tag==='NEXT STEP' || tag==='next')) tag='FOCUS';
     const tagClass=isReg ? 'regression' : (isClear ? 'cleared' : lvl);
     const cardClass=isReg && lvl==='next' ? 'next regression' : (isClear ? 'next cleared' : lvl);
     const sec=r.section||'';
@@ -1123,19 +1140,20 @@ function render(data){
       <div class="as">Say: ${say}</div>
       ${sayAr?`<div class="aa" dir="rtl" lang="ar">${sayAr}</div>`:''}
       <div class="an">Fresh start on this piece — listen to <b>only ${say}</b>, then record.</div>
-      ${clipSrc?`<div class="stageplay">
-        <button type="button" id="playStageWord" aria-label="Play ${say}"></button>
-        <div class="splbl"><b>Hear only ${say}</b><span>Al-Husary · this word</span></div>
-      </div>`:''}
+      ${clipSrc?stagePlayHtml(to, say, 'playStageWord'):''}
     </div>`;
   }
 
   // On fail: keep coaching cards; retry is stage-specific (not full ayah).
+  // Hear only the word you're drilling now — "Hear only huwa" is on the green clear banner after Qul locks.
+  const curClipId = curStageName;
+  const failHear = !didAdvance ? stagePlayHtml(curClipId, curSay, 'playFocusWord') : '';
   const retryHtml=didAdvance
     ? `<div class="retry">
          <button id="tryAgain" class="rbtn">● Record ${say}</button>
        </div>`
     : `<div class="retry">
+         ${failHear}
          <button id="tryAgain" class="rbtn">↻ Try ${curSay} again</button>
        </div>
        <div class="notebox">
@@ -1199,10 +1217,11 @@ function scrollToHeard(){
 
 function bindRetry(data, opts){
   opts=opts||{};
-  const pw=$('playStageWord');
-  if(pw && opts.stageId){
-    pw.onclick=()=>playStageWordClip(opts.stageId, pw);
-  }
+  document.querySelectorAll('.stageplay button[data-stage]').forEach(btn=>{
+    const sid=btn.getAttribute('data-stage');
+    if(!sid) return;
+    btn.onclick=()=>playStageWordClip(sid, btn);
+  });
   const ta=$('tryAgain');
   if(ta) ta.onclick=()=>{
     $('results').innerHTML='';

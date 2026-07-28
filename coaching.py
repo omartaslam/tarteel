@@ -1184,7 +1184,8 @@ def pick_next_step(
 
     top["level"] = "next"
     top["rule"] = "next_step"
-    top["tag"] = "REGRESSION" if is_reg else "NEXT STEP"
+    # Fail path: FOCUS (keep drilling). Reserve "NEXT STEP" for stage-clear advance.
+    top["tag"] = "REGRESSION" if is_reg else "FOCUS"
     top["regression"] = is_reg
     top["key"] = top.get("key")
     n_left = len(actionable)
