@@ -292,12 +292,14 @@ WORD_IDENTITY = {
 FIX = {
     ("ك", "ق"): {
         "heard": "a front K (like the K in “key” or “cool”)",
-        "want": "a deep Q from the uvula (not an English K)",
+        "want": "a deep Q from far back in the mouth (not an English K)",
         "fix": (
-            "On <b>Qul</b>: English “cool/key” is a mid-mouth K (tongue against the soft palate). "
-            "Arabic <b>qaf</b> is farther back — almost a soft gag-point stop at the uvula. "
-            "Sound target: less like “Kool”, more like a hollow “Qool” with a clicky catch deep in the throat, "
-            "then a short “ul”. Mouth slightly open; pull the tongue body back; one clean hit — don’t stretch into “Kulla…”."
+            "On <b>Qul</b>: English “key/cool” hits mid-mouth (where “k” usually lives). "
+            "Arabic <b>qaf</b> is farther back. Find the spot: say “ah” and look in a mirror — "
+            "the little soft punch-bag hanging at the back of the throat is the <b>uvula</b>. "
+            "Your tongue should stop the air against that far-back area (soft gag-point), not the mid roof. "
+            "Sound: hollow short “Qool” → “ul”. One clean hit — <b>Qul</b> — not “Kulla…”. "
+            "Normal speaking breath; no big inhale."
         ),
         "ar": ("ك", "ق"),
     },
