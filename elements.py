@@ -2,12 +2,12 @@
 Per-element feedback for Al-Ikhlas.
 English phonetics first; Arabic lightly in brackets.
 
-Card journey (UI focuses the learner):
-  NEXT STEP (one focus; regressions first if a prior win broke)
-  → retry actions
-  → all other cards (regression / progress check)
+Beginner journey: stage ladder (isolate → join → full).
+  One NEXT STEP inside the current stage.
+  Forward only when the stage passes; step back if an earlier piece breaks.
 """
 import coaching as coach
+import stages as stg
 
 SOUND = {
     "ق":"qaf (deep K)","ل":"lam (L)","ه":"ha (soft H)","و":"waw (W)",
@@ -50,8 +50,13 @@ def build_feedback(
     heard_phonetic=None,
     mastered=None,
     last_focus=None,
+    stage_id=None,
 ):
     spec = VERSE_ELEMENTS.get(verse, {})
+    stage = stg.get_stage(verse, stage_id)
+    stage_words = list((stage or {}).get("words") or [])
+    stage_info = stg.stage_public(verse, (stage or {}).get("id"))
+
     ok_cards = []
     errors = []
     tips = []
@@ -70,10 +75,17 @@ def build_feedback(
 
     if heard_arabic:
         errors.extend(
-            coach.coach_from_heard(verse, heard_arabic, heard_phonetic or "")
+            coach.coach_from_heard(
+                verse,
+                heard_arabic,
+                heard_phonetic or "",
+                stage_words=stage_words or None,
+            )
         )
 
     for (letter, wen, war, desc, lo, hi, pri) in spec.get("madd", []):
+        if stage_words and not stg.word_in_stage(wen, stage):
+            continue
         seg = _letter_span(letters, letter)
         if seg is None:
             continue
@@ -92,9 +104,12 @@ def build_feedback(
                 "scholarly": None,
             })
         else:
+            # Madd is polish — tip only, does not block stage advance.
             tips.append(coach.madd_short_card(verse, wen, war, seg, pri))
 
     for (letter, wen, war, desc, pri) in spec.get("shadda", []):
+        if stage_words and not stg.word_in_stage(wen, stage):
+            continue
         if any(l["c"] == letter for l in letters):
             ok_cards.append({
                 "level": "ok",
@@ -111,13 +126,15 @@ def build_feedback(
             })
 
     qpri = spec.get("qalqalah_priority", 80)
-    if qalqalah_result:
+    q_en = "aḥad"
+    if verse == 2:
+        q_en = "aṣ-ṣamad"
+    elif verse == 3:
+        q_en = "yalid"
+    q_in_stage = (not stage_words) or stg.word_in_stage(q_en, stage)
+
+    if qalqalah_result and q_in_stage:
         lvl = qalqalah_result.get("level")
-        q_en = "aḥad"
-        if verse == 2:
-            q_en = "aṣ-ṣamad"
-        elif verse == 3:
-            q_en = "yalid"
         if lvl == "ok":
             ok_cards.append({
                 "level": "ok",
@@ -134,37 +151,151 @@ def build_feedback(
             soft = (qalqalah_result.get("confidence") or 0) < 0.70
             errors.append(coach.qalqalah_error_card(verse, soft=soft, priority=qpri))
         else:
+            # Soft practice tip — does not block stage advance alone.
             tips.append(coach.ahad_bounce_card(verse, priority=qpri + 10))
 
     errors = sorted(errors, key=coach._issue_sort_key)
     tips = sorted(tips, key=lambda x: x.get("priority", 50))
-    issues = errors + tips
+
+    # Stage pass: no blocking errors (shape / identity / pronunciation / hard qalqalah).
+    blocking = [c for c in errors if c.get("level") == "error"]
+    kinds = coach.stage_word_kinds(
+        verse, heard_arabic or "", heard_phonetic or "", stage_words or None
+    )
+    miss_words = [en for en, k in kinds.items() if k == "miss"]
+
+    # If a join stage breaks an earlier locked word, step back.
+    regress_to = None
+    if miss_words and stage and len(stage.get("words") or []) > 1:
+        regress_to = stg.earliest_failing_stage(verse, miss_words)
+        if regress_to and regress_to.get("id") == stage.get("id"):
+            regress_to = None
 
     cards = []
     cards.extend(errors)
     cards.extend(tips)
 
-    nxt = coach.pick_next_step(issues, mastered=mastered, last_focus=last_focus)
-    if nxt:
-        cards.append(nxt)
-    elif not issues:
-        line = coach.AYAH_LINE.get(verse) or {}
-        keys = line.get("key") or [""]
+    stage_passed = not blocking and not miss_words
+    nxt_stage = stg.next_stage(verse, (stage or {}).get("id")) if stage_passed else None
+
+    if regress_to and not stage_passed:
         cards.append({
             "level": "next",
             "rule": "next_step",
-            "tag": "NEXT STEP",
-            "key": "ayah_clear",
-            "section": coach.section_html(verse, keys[0]),
+            "tag": "STEP BACK",
+            "key": f"stage:{regress_to['id']}",
+            "priority": 0,
+            "section": coach.section_html(verse, (regress_to.get("words") or [""])[0]),
             "plain": (
-                "<b>Nice — no clear fixes left on this ayah.</b> "
+                f"<b>Step back:</b> {regress_to['say_en']} needs locking again "
+                f"before this join.<br>"
+                f"Say only <b>{regress_to['say_en']}</b> "
+                f"<span class=\"arlight\">({regress_to['say_ar']})</span>."
+            ),
+            "fix": regress_to.get("hint"),
+            "scholarly": None,
+            "stage_id": regress_to["id"],
+            "stage_action": "regress",
+            "stage": stage_info,
+        })
+    elif stage_passed and nxt_stage:
+        cards.append({
+            "level": "next",
+            "rule": "next_step",
+            "tag": "STAGE CLEAR",
+            "key": f"stage:{stage['id']}:clear",
+            "priority": 0,
+            "section": coach.section_html(verse, (nxt_stage.get("words") or [""])[0]),
+            "plain": (
+                f"<b>Locked:</b> {stage['say_en']}. "
+                f"Next stage — say <b>{nxt_stage['say_en']}</b> "
+                f"<span class=\"arlight\">({nxt_stage['say_ar']})</span>."
+            ),
+            "fix": nxt_stage.get("hint"),
+            "scholarly": None,
+            "stage_id": nxt_stage["id"],
+            "stage_action": "advance",
+            "stage": stage_info,
+        })
+    elif stage_passed and not nxt_stage:
+        cards.append({
+            "level": "next",
+            "rule": "next_step",
+            "tag": "AYAH CLEAR",
+            "key": "ayah_clear",
+            "priority": 0,
+            "section": coach.section_html(verse, (stage_words or [""])[0] if stage_words else ""),
+            "plain": (
+                "<b>Nice — this ayah’s stages are locked.</b> "
                 "When you’re happy with it, move to the next ayah."
             ),
             "fix": None,
             "scholarly": None,
+            "stage_id": (stage or {}).get("id"),
+            "stage_action": "complete",
+            "stage": stage_info,
         })
+    else:
+        issues = blocking + tips
+        nxt = coach.pick_next_step(issues, mastered=mastered, last_focus=last_focus)
+        if nxt:
+            nxt["stage"] = stage_info
+            nxt["stage_id"] = (stage or {}).get("id")
+            nxt["stage_action"] = "stay"
+            # Reframe remaining count around this stage
+            n_left = len([c for c in issues if c.get("level") in ("error", "measured") and c.get("fix")])
+            after = max(0, n_left - 1)
+            more = (
+                f' <span class="arlight">({after} more in this stage)</span>'
+                if after
+                else ""
+            )
+            plain = nxt.get("plain") or ""
+            plain = plain.replace("on the ayah)", "in this stage)")
+            if "One thing next:" in plain and more and "more in this stage" not in plain:
+                # leave pick_next_step text; stage context is in the stage card UI
+                pass
+            nxt["plain"] = plain
+            cards.append(nxt)
+        elif not issues:
+            cards.append({
+                "level": "next",
+                "rule": "next_step",
+                "tag": "NEXT STEP",
+                "key": f"stage:{(stage or {}).get('id')}",
+                "section": coach.section_html(verse, (stage_words or [""])[0] if stage_words else ""),
+                "plain": (
+                    f"<b>Try again:</b> say only <b>{(stage or {}).get('say_en')}</b> "
+                    f"<span class=\"arlight\">({(stage or {}).get('say_ar')})</span>."
+                ),
+                "fix": (stage or {}).get("hint"),
+                "scholarly": None,
+                "stage_id": (stage or {}).get("id"),
+                "stage_action": "stay",
+                "stage": stage_info,
+            })
 
     cards.extend(ok_cards)
+
+    # Attach stage meta on first diagnostic card for the client
+    meta = {
+        "stage": stage_info,
+        "stage_passed": stage_passed,
+        "stage_action": (
+            "regress" if regress_to and not stage_passed
+            else ("advance" if stage_passed and nxt_stage
+                  else ("complete" if stage_passed else "stay"))
+        ),
+        "next_stage_id": (
+            (regress_to or {}).get("id") if regress_to and not stage_passed
+            else ((nxt_stage or {}).get("id") if stage_passed and nxt_stage
+                  else (stage or {}).get("id"))
+        ),
+    }
+    if cards:
+        cards[0] = {**cards[0], **meta}
+    else:
+        cards.append({**meta, "level": "ok", "rule": "stage", "plain": ""})
     return cards
 
 

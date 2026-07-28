@@ -584,11 +584,17 @@ def _find_identity_tip(
     return identity_tip, you_ph
 
 
-def coach_from_heard(verse: int, heard_arabic: str, heard_phonetic: str = "") -> list[dict]:
+def coach_from_heard(
+    verse: int,
+    heard_arabic: str,
+    heard_phonetic: str = "",
+    stage_words: list[str] | None = None,
+) -> list[dict]:
     """
     Two-pass coaching:
       1) word identity (F↔W) then rough word shape/order
       2) fine letter tajweed only when no full misses
+    If stage_words is set, only coach those expected words.
     """
     expected = EXPECTED.get(verse)
     if not expected or not (heard_arabic or "").strip():
@@ -597,6 +603,10 @@ def coach_from_heard(verse: int, heard_arabic: str, heard_phonetic: str = "") ->
     heard_words = [w for w in normalize_ar(heard_arabic).split() if w]
     if not heard_words:
         return []
+
+    allow = None
+    if stage_words is not None:
+        allow = {(w or "").lower() for w in stage_words}
 
     you_phs = _heard_phonetics(heard_arabic, heard_phonetic)
     aligned = _align_words(heard_words, expected, you_phs)
@@ -607,6 +617,8 @@ def coach_from_heard(verse: int, heard_arabic: str, heard_phonetic: str = "") ->
 
     for wi, (heard_w, exp_bare, en, ar, dist, you_ph, _widxs) in enumerate(aligned):
         if not exp_bare or not en:
+            continue
+        if allow is not None and (en or "").lower() not in allow:
             continue
         kind = _match_class(heard_w, exp_bare, dist)
         if kind == "ok":
@@ -637,6 +649,8 @@ def coach_from_heard(verse: int, heard_arabic: str, heard_phonetic: str = "") ->
         for wi, (heard_w, exp_bare, en, ar, dist, you_ph, _widxs) in enumerate(aligned):
             if not exp_bare or not heard_w or not en:
                 continue
+            if allow is not None and (en or "").lower() not in allow:
+                continue
             kind = _match_class(heard_w, exp_bare, dist)
             if kind not in ("ok", "near"):
                 continue
@@ -659,6 +673,28 @@ def coach_from_heard(verse: int, heard_arabic: str, heard_phonetic: str = "") ->
                     _card(40 + wi, verse, en, ar, tip, hc, ec, rule="pronunciation")
                 )
     return cards
+
+
+def stage_word_kinds(
+    verse: int,
+    heard_arabic: str,
+    heard_phonetic: str = "",
+    stage_words: list[str] | None = None,
+) -> dict[str, str]:
+    """Map expected en → match kind for words in the stage."""
+    expected = EXPECTED.get(verse) or []
+    heard_words = [w for w in normalize_ar(heard_arabic or "").split() if w]
+    you_phs = _heard_phonetics(heard_arabic, heard_phonetic)
+    aligned = _align_words(heard_words, expected, you_phs)
+    allow = {(w or "").lower() for w in (stage_words or [])} if stage_words is not None else None
+    out = {}
+    for heard_w, exp_bare, en, ar, dist, you_ph, _widxs in aligned:
+        if not en:
+            continue
+        if allow is not None and (en or "").lower() not in allow:
+            continue
+        out[en] = _match_class(heard_w, exp_bare, dist)
+    return out
 
 
 def madd_short_card(verse: int, word_en: str, word_ar: str, dur: float, priority: int) -> dict:

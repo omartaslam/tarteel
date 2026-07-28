@@ -54,7 +54,7 @@ def _set_job(jid, **kw):
         _JOBS[jid] = job
 
 
-def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, last_focus=None):
+def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, last_focus=None, stage_id=None):
     t0 = time.time()
 
     def cancelled():
@@ -81,6 +81,7 @@ def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, 
             mastered=mastered or [],
             last_focus=last_focus or None,
             cancel_check=cancelled,
+            stage_id=stage_id,
         ) or []
         if cancelled():
             _set_job(
@@ -101,6 +102,7 @@ def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, 
                 "job": jid,
                 "mastered": mastered or [],
                 "last_focus": last_focus,
+                "stage_id": stage_id,
             },
         )
         diag = _diag_from_cards(cards)
@@ -111,7 +113,7 @@ def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, 
             phase="done",
             message="Done",
             elapsed=round(time.time() - t0, 1),
-            result={"verse": verse, "results": cards, "session": sid, **diag},
+            result={"verse": verse, "results": cards, "session": sid, "stage_id": stage_id, **diag},
         )
     except analyze.AnalysisCancelled:
         _set_job(
@@ -155,6 +157,7 @@ async def analyze_start(
     verse: int = Form(...),
     mastered: str = Form(""),
     last_focus: str = Form(""),
+    stage_id: str = Form(""),
 ):
     raw = await audio.read()
     ext = (audio.filename or "audio.webm").split(".")[-1].lower()
@@ -166,6 +169,7 @@ async def analyze_start(
     jid = uuid.uuid4().hex[:12]
     mastered_list = _parse_mastered(mastered)
     focus = (last_focus or "").strip() or None
+    stage = (stage_id or "").strip() or None
     _set_job(
         jid,
         status="queued",
@@ -180,7 +184,7 @@ async def analyze_start(
         target=_run_job,
         args=(
             jid, path, ext, raw, verse, audio.filename, audio.content_type,
-            mastered_list, focus,
+            mastered_list, focus, stage,
         ),
         daemon=True,
     ).start()
@@ -230,6 +234,7 @@ async def do_analyze(
     verse: int = Form(...),
     mastered: str = Form(""),
     last_focus: str = Form(""),
+    stage_id: str = Form(""),
 ):
     """Legacy one-shot analyze (still used as fallback)."""
     raw = await audio.read()
@@ -238,12 +243,14 @@ async def do_analyze(
         ext = "webm"
     mastered_list = _parse_mastered(mastered)
     focus = (last_focus or "").strip() or None
+    stage = (stage_id or "").strip() or None
     with tempfile.NamedTemporaryFile(suffix="." + ext, delete=False) as tmp:
         tmp.write(raw)
         path = tmp.name
     try:
         results = await run_in_threadpool(
-            analyze.analyze_verse, path, verse, None, mastered_list, focus,
+            analyze.analyze_verse,
+            path, verse, None, mastered_list, focus, None, stage,
         )
     except Exception as e:
         return JSONResponse({"error": str(e), "results": [], "verse": verse}, status_code=500)
@@ -261,10 +268,11 @@ async def do_analyze(
             "bytes": len(raw),
             "mastered": mastered_list,
             "last_focus": focus,
+            "stage_id": stage,
         },
     )
     diag = _diag_from_cards(cards)
-    return JSONResponse({"verse": verse, "results": cards, "session": sid, **diag})
+    return JSONResponse({"verse": verse, "results": cards, "session": sid, "stage_id": stage, **diag})
 
 
 @app.get("/sessions")
@@ -318,6 +326,12 @@ def health():
         or "dev"
     )
     return {"ok": True, "build": build[:12]}
+
+
+@app.get("/stages/{verse}")
+def stages_for_verse(verse: int):
+    import stages as stg
+    return JSONResponse(stg.stage_public(verse, None))
 
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
