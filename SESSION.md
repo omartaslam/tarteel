@@ -9,8 +9,9 @@ Full handover: `HANDOVER.md`.
 2. **PULL** — ul = end of *pull* / *full*
 Together → **Qul**. Labels stay **Qul/Qu**; cue stays QUALITY+PULL.
 
-## Latest fix
-**False `wrong_stage:allahu:qul`:** saying Allāhu (الله) was left-aligned as near-Qul via letters ال. Not stale audio. Stage-scoped whole-word align + require clear ok for earlier-word detect. Hard-refresh after deploy.
+## Latest fix (ship to main — live only after /health bumps)
+1. **False `wrong_stage:allahu:qul`:** Allāhu left-aligned as near-Qul via ال. Stage-scoped whole-word align.
+2. **Hear-only huwa:** retimed 1.45–1.88 (was 1.22–1.95 = Qul leftover). Silence bookends. URL `?v=4`. Hard-refresh.
 
 ## Journey decisions (Omar 2026-07-28) — locked
 1. **First visit:** Listen to the **whole short surah** once → then focus on current task (start Qul). Later visits: Listen = this ayah; banner says Continue + current Say.

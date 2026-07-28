@@ -9,7 +9,7 @@ MIN_DUR = {
     "stage_qul_husary.mp3": 0.65,
     "stage_qu_husary.mp3": 0.45,
     "stage_ul_husary.mp3": 0.35,
-    "stage_huwa_husary.mp3": 0.85,
+    "stage_huwa_husary.mp3": 0.75,  # clean هو only (~0.43s) + silence bookends
     "stage_allahu_husary.mp3": 1.4,
     "stage_ahad_husary.mp3": 1.2,
 }

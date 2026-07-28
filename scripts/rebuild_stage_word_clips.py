@@ -26,21 +26,25 @@ WINDOWS = {
     "qul": (0.72, 1.28),
     "qu": (0.72, 1.12),    # Qu onset for syllable rescue — Hear only Qu
     "ul": (1.05, 1.32),    # ul ending model for syllable rescue
-    "huwa": (1.22, 1.95),   # XLSR: ه@1.48 و@1.62; after Qul |@1.16, before Allah@2.14
+    # huwa: start in quiet valley before ه@1.48 — NOT 1.22 (that was Qul leftover).
+    # End after |@1.82, before Allāhu energy ramp ~1.92 / letter @2.14.
+    "huwa": (1.45, 1.88),
     "allahu": (1.95, 3.60),
     "ahad": (3.40, 4.75),
 }
 
 PAD_S = 0.08
+# Huwa needs audible silence bookends so Hear-only has a clear start + end.
+PAD_BY_NAME = {"huwa": 0.22}
 FADE_S = 0.025
 
 
-def extract(y: np.ndarray, sr: int, a: float, b: float) -> np.ndarray:
+def extract(y: np.ndarray, sr: int, a: float, b: float, pad_s: float = PAD_S) -> np.ndarray:
     seg = y[int(a * sr) : int(b * sr)].astype(np.float32)
     peak = float(np.abs(seg).max()) or 1.0
     if peak > 0.05:
         seg = seg * min(0.92 / peak, 2.5)
-    pad = np.zeros(int(PAD_S * sr), dtype=np.float32)
+    pad = np.zeros(int(pad_s * sr), dtype=np.float32)
     out = np.concatenate([pad, seg, pad])
     n = int(FADE_S * sr)
     if len(out) > 2 * n:
@@ -53,7 +57,7 @@ def main() -> None:
     y, sr = librosa.load(str(SRC), sr=16000)
     OUT.mkdir(parents=True, exist_ok=True)
     for name, (a, b) in WINDOWS.items():
-        audio = extract(y, sr, a, b)
+        audio = extract(y, sr, a, b, pad_s=PAD_BY_NAME.get(name, PAD_S))
         wav = OUT / f"stage_{name}_husary.wav"
         mp3 = OUT / f"stage_{name}_husary.mp3"
         sf.write(str(wav), audio, sr)
