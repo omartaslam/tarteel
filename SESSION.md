@@ -26,8 +26,9 @@ Apply on every future tip. See `STABLE.md`.
 3. After 3 Qu syllable fails → ask a teacher.
 
 ## Pass / fail UX
-- Every stage shows **Hear only {current}** (word or syllable) in the stage box + fail retry.
-- **Correct / Incorrect compare** is always for the **current stage** (Qul ق/ك, Qu, ul, huwa, Allāhu, aḥad, joins) — never a hard-coded Qul-only block when practicing something else.
+- Every stage shows **Hear only {current}** + **Correct/Incorrect for {current}** (stage contract on `STAGE_LADDER`).
+- Ayah 1 is the filled prototype; ayahs 2–4 use the same `hear` + `compare` shape (stubs until clips).
+- Do **not** hard-code a Qul-only compare panel — replicate per stage and move on.
 - Syllable rescue entry: banner **Say: Qu** + Hear only Qu (not mixed Qul copy).
 - Card ayah snippet for Qu marks **Qu** inside Qul, not the whole word.
 - **Heard vs target** on a word stage only shows that stage’s word(s) — never yellow the whole ayah for a one-word take.
@@ -39,10 +40,10 @@ qul_correct_male) → pass when ASR shows ق. Kaf bench fails. Phone/mic takes t
 still fail by design.
 
 ## Backlog
-- Record real incorrect clips for huwa / Allāhu / aḥad (panel is stage-scoped; some bad buttons text-only until then).
+- Fill incorrect clips for huwa / Allāhu / aḥad (Incorrect row already stage-scoped).
+- Fill `hear` + real `compare` clips for ayahs 2–4 using the same stage contract.
 - Word-first ×3 → syllables across rest of surah.
 - Progress UI ~17% stall.
-- More stage word clips for ayahs 2–4.
 
 ## Stack
 Railway from `main`. Practice store `tarteel_practice_v7`.

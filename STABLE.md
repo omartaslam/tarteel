@@ -1,5 +1,18 @@
 # Deploy markers
 
+## Hard rule — stage UI prototype (2026-07-28)
+**Every practice stage owns its own Hear only + Correct/Incorrect.**
+
+Ayah 1 is the filled prototype. Replicate the same shape for every later step:
+
+- `hear` — clip for **this** step only
+- `compare` — `{note, ok:{src,title,sub}, bad:{src,title,sub}}` for **this** step
+- UI always renders both for the **live** stage — never a hard-coded Qul-only pair
+- `bad.src` may be empty until the incorrect clip exists; the Incorrect row still shows
+- New stages: copy an ayah-1 stage object, swap say/hint/clips — do not invent a side map
+
+See `STAGE CONTRACT` in `static/index.html` and `test_stage_contract.py`.
+
 ## Hard rule — English phonetics (learner lesson 2026-07-28)
 **Every coaching cue must use English sounds a beginner can actually make.**
 

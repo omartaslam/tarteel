@@ -3,11 +3,20 @@ Beginner stage ladder for Al-Ikhlas.
 
 Isolate a chunk → lock it → join with the previous → only then move on.
 Forward only when the current stage passes; step back if an earlier piece breaks.
+
+Stage UI contract (prototype — replicate for every new step; see static/index.html):
+  Every live stage must show Hear only {current} + Correct/Incorrect for THAT stage.
+  UI fields live on STAGE_LADDER in index.html:
+    hear     — clip for this step only
+    compare  — {note, ok:{src,title,sub}, bad:{src,title,sub}}
+  Do not hard-code a Qul-only compare panel. Ayah 1 is the filled prototype;
+  later ayahs get the same shape (stub compare until clips exist).
 """
 from __future__ import annotations
 
 # Each stage: id, English prompt, Arabic prompt, expected word keys (EXPECTED en names)
 # word_idxs: indices into EXPECTED[verse]
+# hear + compare are defined in static/index.html STAGE_LADDER (UI prototype).
 STAGES = {
     1: [
         # Word-first: full Qul ×3, then syllable rescue (Qu → ul), then tutor defer.

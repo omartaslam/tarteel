@@ -225,39 +225,164 @@ const AYAH_WORDS={
   3:{ph:['Lam','yalid','wa lam','yūlad'], ar:['لَمْ','يَلِدْ','وَلَمْ','يُولَدْ']},
   4:{ph:['Wa lam','yakun','lahu','kufuwan','aḥad'], ar:['وَلَمْ','يَكُن','لَّهُ','كُفُوًا','أَحَدٌ']},
 };
-// Beginner ladder — keep in sync with stages.py
+/**
+ * STAGE CONTRACT — replicate this for every new step (ayah 1 is the prototype).
+ * Every stage MUST carry:
+ *   id, title, say_en, say_ar, hint, idxs
+ *   hear     — clip for “Hear only {current}” (this step only)
+ *   compare  — Correct vs Incorrect for THIS step (never borrow another stage’s pair)
+ *     compare.note
+ *     compare.ok  = {src, title, sub}   // correct model
+ *     compare.bad = {src, title, sub}   // common miss; src may be '' until recorded
+ * UI always renders Hear only + Compare for the live stage. Do not hard-code Qul-only UI.
+ */
+function stageComparePair(sayEn, note, okSrc, okTitle, okSub, badSrc, badTitle, badSub){
+  return {
+    note: note,
+    ok:  {src:okSrc||'', title:okTitle, sub:okSub||''},
+    bad: {src:badSrc||'', title:badTitle, sub:badSub||''},
+  };
+}
+function stageStubCompare(sayEn){
+  return stageComparePair(
+    sayEn,
+    `Correct is the model for <b>${sayEn}</b>. Incorrect is the common miss for this step.`,
+    '', `Correct — ${sayEn}`, 'Clip TBD — use Listen first until cut',
+    '', 'Incorrect — common miss', 'Clip TBD for this step'
+  );
+}
+// Beginner ladder — keep ids/hints in sync with stages.py; hear+compare live here (UI).
 const STAGE_LADDER={
   1:[
-    {id:'qul', title:'Qul', say_en:'Qul', say_ar:'قُلْ', hint:'Say the full word Qul (قُلْ). English cue: <b>QUAL</b> like <b>quality</b> — not “cull/cool”. Three tries here; if stuck we’ll break it into Qu + ul.', idxs:[0]},
-    {id:'qu', title:'Qu', say_en:'Qu', say_ar:'قُ', hint:'Syllable rescue — only Qu. English cue: <b>QUA</b> like <b>quality</b>, not “coo/cu”. Yellow mark on the ayah shows where you are.', idxs:[0], highlight:'qu'},
-    {id:'ul', title:'ul', say_en:'ul', say_ar:'ـُلْ', hint:'Only the ending: ul — like the end of “pull” / “full” (short u + clear L). No Q/K at the front.', idxs:[0], highlight:'ul'},
-    {id:'huwa', title:'huwa', say_en:'huwa', say_ar:'هُوَ', hint:'Say only huwa. English cue: <b>HOO-wa</b> — like “who” then “wa” (round lips on the W).', idxs:[1]},
-    {id:'qul_huwa', title:'Qul huwa', say_en:'Qul huwa', say_ar:'قُلْ هُوَ', hint:'Join: <b>QUAL</b> (like quality) then <b>HOO-wa</b>. Keep ق and the W.', idxs:[0,1]},
-    {id:'allahu', title:'Allāhu', say_en:'Allāhu', say_ar:'ٱللَّهُ', hint:'Say only Allāhu. English cue: <b>Al-LAA-hu</b> — hold the doubled L, then “hu”. Don’t rush it.', idxs:[2]},
-    {id:'qul_huwa_allahu', title:'Qul huwa Allāhu', say_en:'Qul huwa Allāhu', say_ar:'قُلْ هُوَ ٱللَّهُ', hint:'Join: QUAL · HOO-wa · Al-LAA-hu.', idxs:[0,1,2]},
-    {id:'ahad', title:'aḥad', say_en:'aḥad', say_ar:'أَحَدٌ', hint:'Say only aḥad. English cue: <b>a-ḤAD</b> — fog-mirror Ḥ (stronger than “ahead”), light bounce on D.', idxs:[3]},
-    {id:'full', title:'Full ayah', say_en:'Qul huwa Allāhu aḥad', say_ar:'قُلْ هُوَ ٱللَّهُ أَحَدٌ', hint:'Whole ayah: QUAL · HOO-wa · Al-LAA-hu · a-ḤAD. Keep every locked piece.', idxs:[0,1,2,3]},
+    {
+      id:'qul', title:'Qul', say_en:'Qul', say_ar:'قُلْ',
+      hint:'Say the full word Qul (قُلْ). English cue: <b>QUAL</b> like <b>quality</b> — not “cull/cool”. Three tries here; if stuck we’ll break it into Qu + ul.',
+      idxs:[0],
+      hear:'/samples/stage_qul_husary.mp3',
+      compare:stageComparePair(
+        'Qul',
+        'Correct is QUAL / hollow ق. Incorrect is middle ك (cull/cool) — the app must fail that.',
+        '/samples/bench_correct_qaf_qul_minshawi.mp3', 'Correct — Qul (ق / QUAL)', 'Minshawi · back ق',
+        '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — Kul (ك / cull)', 'Arabic speaker · forward K'
+      ),
+    },
+    {
+      id:'qu', title:'Qu', say_en:'Qu', say_ar:'قُ',
+      hint:'Syllable rescue — only Qu. English cue: <b>QUA</b> like <b>quality</b>, not “coo/cu”. Yellow mark on the ayah shows where you are.',
+      idxs:[0], highlight:'qu',
+      hear:'/samples/stage_qu_husary.mp3',
+      compare:stageComparePair(
+        'Qu',
+        'Same contrast for the Qu onset — QUAL / qh, not coo/cull.',
+        '/samples/bench_correct_qaf_qul_minshawi.mp3', 'Correct — Qu onset (ق / QUA)', 'Minshawi · back ق',
+        '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — Ku (ك)', 'Forward K — must fail'
+      ),
+    },
+    {
+      id:'ul', title:'ul', say_en:'ul', say_ar:'ـُلْ',
+      hint:'Only the ending: ul — like the end of “pull” / “full” (short u + clear L). No Q/K at the front.',
+      idxs:[0], highlight:'ul',
+      hear:'/samples/stage_ul_husary.mp3',
+      compare:stageComparePair(
+        'ul',
+        'Correct ends like pull/full (clear L). Incorrect is onset-only with no L.',
+        '/samples/stage_ul_husary.mp3', 'Correct — ul (…ull)', 'Al-Husary · ending only',
+        '/samples/stage_qu_husary.mp3', 'Incorrect — Qu only (no L)', 'Onset without the L ending'
+      ),
+    },
+    {
+      id:'huwa', title:'huwa', say_en:'huwa', say_ar:'هُوَ',
+      hint:'Say only huwa. English cue: <b>HOO-wa</b> — like “who” then “wa” (round lips on the W).',
+      idxs:[1],
+      hear:'/samples/stage_huwa_husary.mp3',
+      compare:stageComparePair(
+        'huwa',
+        'Correct is HOO-wa (round lips for W). Common miss: F instead of W (fuwa).',
+        '/samples/stage_huwa_husary.mp3', 'Correct — huwa (HOO-wa)', 'Al-Husary · this word',
+        '', 'Incorrect — F instead of W', 'Lips for “fan”, not “we” — clip TBD'
+      ),
+    },
+    {
+      id:'qul_huwa', title:'Qul huwa', say_en:'Qul huwa', say_ar:'قُلْ هُوَ',
+      hint:'Join: <b>QUAL</b> (like quality) then <b>HOO-wa</b>. Keep ق and the W.',
+      idxs:[0,1],
+      hear:'/samples/real_ikhlas1_husary_full.mp3',
+      compare:stageComparePair(
+        'Qul huwa',
+        'Join QUAL then HOO-wa. Keep back ق — middle ك still fails.',
+        '/samples/real_ikhlas1_husary_full.mp3', 'Correct — Qul huwa join', 'Al-Husary · phrase model',
+        '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — ك on Qul', 'Forward K in the join — must fail'
+      ),
+    },
+    {
+      id:'allahu', title:'Allāhu', say_en:'Allāhu', say_ar:'ٱللَّهُ',
+      hint:'Say only Allāhu. English cue: <b>Al-LAA-hu</b> — hold the doubled L, then “hu”. Don’t rush it.',
+      idxs:[2],
+      hear:'/samples/stage_allahu_husary.mp3',
+      compare:stageComparePair(
+        'Allāhu',
+        'Correct is Al-LAA-hu — hold the doubled L. Common miss: rushed “Allah!” with no hold.',
+        '/samples/stage_allahu_husary.mp3', 'Correct — Allāhu (Al-LAA-hu)', 'Al-Husary · hold ll',
+        '', 'Incorrect — rushed Allah', 'No doubled-L hold — clip TBD'
+      ),
+    },
+    {
+      id:'qul_huwa_allahu', title:'Qul huwa Allāhu', say_en:'Qul huwa Allāhu', say_ar:'قُلْ هُوَ ٱللَّهُ',
+      hint:'Join: QUAL · HOO-wa · Al-LAA-hu.',
+      idxs:[0,1,2],
+      hear:'/samples/real_ikhlas1_husary_full.mp3',
+      compare:stageComparePair(
+        'Qul huwa Allāhu',
+        'QUAL · HOO-wa · Al-LAA-hu. Keep back ق through the join.',
+        '/samples/real_ikhlas1_husary_full.mp3', 'Correct — three-word join', 'Al-Husary · phrase model',
+        '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — ك on Qul', 'Forward K — must fail'
+      ),
+    },
+    {
+      id:'ahad', title:'aḥad', say_en:'aḥad', say_ar:'أَحَدٌ',
+      hint:'Say only aḥad. English cue: <b>a-ḤAD</b> — fog-mirror Ḥ (stronger than “ahead”), light bounce on D.',
+      idxs:[3],
+      hear:'/samples/stage_ahad_husary.mp3',
+      compare:stageComparePair(
+        'aḥad',
+        'Correct is a-ḤAD — fog-mirror Ḥ, light bounce on D. Common miss: soft English “ahead” H.',
+        '/samples/stage_ahad_husary.mp3', 'Correct — aḥad (a-ḤAD)', 'Al-Husary · strong Ḥ',
+        '', 'Incorrect — soft “ahead” H', 'English hello-H is too soft — clip TBD'
+      ),
+    },
+    {
+      id:'full', title:'Full ayah', say_en:'Qul huwa Allāhu aḥad', say_ar:'قُلْ هُوَ ٱللَّهُ أَحَدٌ',
+      hint:'Whole ayah: QUAL · HOO-wa · Al-LAA-hu · a-ḤAD. Keep every locked piece.',
+      idxs:[0,1,2,3],
+      hear:'/samples/real_ikhlas1_husary_full.mp3',
+      compare:stageComparePair(
+        'Qul huwa Allāhu aḥad',
+        'Full ayah: QUAL · HOO-wa · Al-LAA-hu · a-ḤAD. Back ق still required.',
+        '/samples/real_ikhlas1_husary_full.mp3', 'Correct — full ayah', 'Al-Husary · whole line',
+        '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — ك on Qul', 'Forward K — must fail'
+      ),
+    },
   ],
   2:[
-    {id:'allahu', title:'Allāhu', say_en:'Allāhu', say_ar:'ٱللَّهُ', hint:'Say only Allāhu.', idxs:[0]},
-    {id:'samad', title:'aṣ-ṣamad', say_en:'aṣ-ṣamad', say_ar:'ٱلصَّمَدُ', hint:'Say only aṣ-ṣamad.', idxs:[1]},
-    {id:'full', title:'Full ayah', say_en:'Allāhu aṣ-ṣamad', say_ar:'ٱللَّهُ ٱلصَّمَدُ', hint:'Join both words.', idxs:[0,1]},
+    {id:'allahu', title:'Allāhu', say_en:'Allāhu', say_ar:'ٱللَّهُ', hint:'Say only Allāhu.', idxs:[0], hear:'', compare:stageStubCompare('Allāhu')},
+    {id:'samad', title:'aṣ-ṣamad', say_en:'aṣ-ṣamad', say_ar:'ٱلصَّمَدُ', hint:'Say only aṣ-ṣamad.', idxs:[1], hear:'', compare:stageStubCompare('aṣ-ṣamad')},
+    {id:'full', title:'Full ayah', say_en:'Allāhu aṣ-ṣamad', say_ar:'ٱللَّهُ ٱلصَّمَدُ', hint:'Join both words.', idxs:[0,1], hear:'', compare:stageStubCompare('Allāhu aṣ-ṣamad')},
   ],
   3:[
-    {id:'lam', title:'Lam', say_en:'Lam', say_ar:'لَمْ', hint:'Say only Lam.', idxs:[0]},
-    {id:'yalid', title:'yalid', say_en:'yalid', say_ar:'يَلِدْ', hint:'Say only yalid.', idxs:[1]},
-    {id:'lam_yalid', title:'Lam yalid', say_en:'Lam yalid', say_ar:'لَمْ يَلِدْ', hint:'Join Lam yalid.', idxs:[0,1]},
-    {id:'wa_lam', title:'wa lam', say_en:'wa lam', say_ar:'وَلَمْ', hint:'Say only wa lam.', idxs:[2]},
-    {id:'yulad', title:'yūlad', say_en:'yūlad', say_ar:'يُولَدْ', hint:'Say only yūlad.', idxs:[3]},
-    {id:'full', title:'Full ayah', say_en:'Lam yalid wa lam yūlad', say_ar:'لَمْ يَلِدْ وَلَمْ يُولَدْ', hint:'The whole ayah.', idxs:[0,1,2,3]},
+    {id:'lam', title:'Lam', say_en:'Lam', say_ar:'لَمْ', hint:'Say only Lam.', idxs:[0], hear:'', compare:stageStubCompare('Lam')},
+    {id:'yalid', title:'yalid', say_en:'yalid', say_ar:'يَلِدْ', hint:'Say only yalid.', idxs:[1], hear:'', compare:stageStubCompare('yalid')},
+    {id:'lam_yalid', title:'Lam yalid', say_en:'Lam yalid', say_ar:'لَمْ يَلِدْ', hint:'Join Lam yalid.', idxs:[0,1], hear:'', compare:stageStubCompare('Lam yalid')},
+    {id:'wa_lam', title:'wa lam', say_en:'wa lam', say_ar:'وَلَمْ', hint:'Say only wa lam.', idxs:[2], hear:'', compare:stageStubCompare('wa lam')},
+    {id:'yulad', title:'yūlad', say_en:'yūlad', say_ar:'يُولَدْ', hint:'Say only yūlad.', idxs:[3], hear:'', compare:stageStubCompare('yūlad')},
+    {id:'full', title:'Full ayah', say_en:'Lam yalid wa lam yūlad', say_ar:'لَمْ يَلِدْ وَلَمْ يُولَدْ', hint:'The whole ayah.', idxs:[0,1,2,3], hear:'', compare:stageStubCompare('Lam yalid wa lam yūlad')},
   ],
   4:[
-    {id:'wa_lam', title:'Wa lam', say_en:'Wa lam', say_ar:'وَلَمْ', hint:'Say only Wa lam.', idxs:[0]},
-    {id:'yakun', title:'yakun', say_en:'yakun', say_ar:'يَكُن', hint:'Say only yakun.', idxs:[1]},
-    {id:'lahu', title:'lahu', say_en:'lahu', say_ar:'لَّهُ', hint:'Say only lahu.', idxs:[2]},
-    {id:'kufuwan', title:'kufuwan', say_en:'kufuwan', say_ar:'كُفُوًا', hint:'Say only kufuwan.', idxs:[3]},
-    {id:'ahad', title:'aḥad', say_en:'aḥad', say_ar:'أَحَدٌ', hint:'Say only aḥad.', idxs:[4]},
-    {id:'full', title:'Full ayah', say_en:'Wa lam yakun lahu kufuwan aḥad', say_ar:'وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ', hint:'The whole ayah.', idxs:[0,1,2,3,4]},
+    {id:'wa_lam', title:'Wa lam', say_en:'Wa lam', say_ar:'وَلَمْ', hint:'Say only Wa lam.', idxs:[0], hear:'', compare:stageStubCompare('Wa lam')},
+    {id:'yakun', title:'yakun', say_en:'yakun', say_ar:'يَكُن', hint:'Say only yakun.', idxs:[1], hear:'', compare:stageStubCompare('yakun')},
+    {id:'lahu', title:'lahu', say_en:'lahu', say_ar:'لَّهُ', hint:'Say only lahu.', idxs:[2], hear:'', compare:stageStubCompare('lahu')},
+    {id:'kufuwan', title:'kufuwan', say_en:'kufuwan', say_ar:'كُفُوًا', hint:'Say only kufuwan.', idxs:[3], hear:'', compare:stageStubCompare('kufuwan')},
+    {id:'ahad', title:'aḥad', say_en:'aḥad', say_ar:'أَحَدٌ', hint:'Say only aḥad.', idxs:[4], hear:'', compare:stageStubCompare('aḥad')},
+    {id:'full', title:'Full ayah', say_en:'Wa lam yakun lahu kufuwan aḥad', say_ar:'وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ', hint:'The whole ayah.', idxs:[0,1,2,3,4], hear:'', compare:stageStubCompare('Wa lam yakun lahu kufuwan aḥad')},
   ],
 };
 const VERSE_WORDS={
@@ -266,75 +391,27 @@ const VERSE_WORDS={
   3:['lam','yalid','wa lam','yūlad'],
   4:['wa lam','yakun','lahu','kufuwan','aḥad'],
 };
-/** Husary (or bench) clips for the current stage word only — not the full ayah. */
-const STAGE_WORD_CLIPS={
-  1:{
-    qul:'/samples/stage_qul_husary.mp3',
-    qu:'/samples/stage_qu_husary.mp3',
-    ul:'/samples/stage_ul_husary.mp3',
-    huwa:'/samples/stage_huwa_husary.mp3',
-    allahu:'/samples/stage_allahu_husary.mp3',
-    ahad:'/samples/stage_ahad_husary.mp3',
-    qul_huwa:'/samples/real_ikhlas1_husary_full.mp3',
-    qul_huwa_allahu:'/samples/real_ikhlas1_husary_full.mp3',
-    full:'/samples/real_ikhlas1_husary_full.mp3',
-  },
-};
-/**
- * Correct vs incorrect for whatever stage you are on (not always Qul).
- * ok/bad: {src, title, sub}. bad.src may be '' if we only have a text cue so far.
- */
-const STAGE_COMPARE={
-  1:{
-    qul:{
-      note:'Correct is QUAL / hollow ق. Incorrect is middle ك (cull/cool) — the app must fail that.',
-      ok:{src:'/samples/bench_correct_qaf_qul_minshawi.mp3', title:'Correct — Qul (ق / QUAL)', sub:'Minshawi · back ق'},
-      bad:{src:'/samples/bench_incorrect_kaf_kul_fjmustak.mp3', title:'Incorrect — Kul (ك / cull)', sub:'Arabic speaker · forward K'},
-    },
-    qu:{
-      note:'Same contrast for the Qu onset — QUAL / qh, not coo/cull.',
-      ok:{src:'/samples/bench_correct_qaf_qul_minshawi.mp3', title:'Correct — Qu onset (ق / QUA)', sub:'Minshawi · back ق'},
-      bad:{src:'/samples/bench_incorrect_kaf_kul_fjmustak.mp3', title:'Incorrect — Ku (ك)', sub:'Forward K — must fail'},
-    },
-    ul:{
-      note:'Correct ends like pull/full (clear L). Incorrect is onset-only with no L.',
-      ok:{src:'/samples/stage_ul_husary.mp3', title:'Correct — ul (…ull)', sub:'Al-Husary · ending only'},
-      bad:{src:'/samples/stage_qu_husary.mp3', title:'Incorrect — Qu only (no L)', sub:'Onset without the L ending'},
-    },
-    huwa:{
-      note:'Correct is HOO-wa (round lips for W). Common miss: F instead of W (fuwa).',
-      ok:{src:'/samples/stage_huwa_husary.mp3', title:'Correct — huwa (HOO-wa)', sub:'Al-Husary · this word'},
-      bad:{src:'', title:'Incorrect — F instead of W', sub:'Lips for “fan”, not “we” — no clip yet; avoid this shape'},
-    },
-    allahu:{
-      note:'Correct is Al-LAA-hu — hold the doubled L. Common miss: rushed “Allah!” with no hold.',
-      ok:{src:'/samples/stage_allahu_husary.mp3', title:'Correct — Allāhu (Al-LAA-hu)', sub:'Al-Husary · hold ll'},
-      bad:{src:'', title:'Incorrect — rushed Allah', sub:'No doubled-L hold — no clip yet; don’t rush'},
-    },
-    ahad:{
-      note:'Correct is a-ḤAD — fog-mirror Ḥ, light bounce on D. Common miss: soft English “ahead” H.',
-      ok:{src:'/samples/stage_ahad_husary.mp3', title:'Correct — aḥad (a-ḤAD)', sub:'Al-Husary · strong Ḥ'},
-      bad:{src:'', title:'Incorrect — soft “ahead” H', sub:'English hello-H is too soft — no clip yet'},
-    },
-    qul_huwa:{
-      note:'Join QUAL then HOO-wa. Keep back ق — middle ك still fails.',
-      ok:{src:'/samples/real_ikhlas1_husary_full.mp3', title:'Correct — Qul huwa join', sub:'Al-Husary · phrase model'},
-      bad:{src:'/samples/bench_incorrect_kaf_kul_fjmustak.mp3', title:'Incorrect — ك on Qul', sub:'Forward K in the join — must fail'},
-    },
-    qul_huwa_allahu:{
-      note:'QUAL · HOO-wa · Al-LAA-hu. Keep back ق through the join.',
-      ok:{src:'/samples/real_ikhlas1_husary_full.mp3', title:'Correct — three-word join', sub:'Al-Husary · phrase model'},
-      bad:{src:'/samples/bench_incorrect_kaf_kul_fjmustak.mp3', title:'Incorrect — ك on Qul', sub:'Forward K — must fail'},
-    },
-    full:{
-      note:'Full ayah: QUAL · HOO-wa · Al-LAA-hu · a-ḤAD. Back ق still required.',
-      ok:{src:'/samples/real_ikhlas1_husary_full.mp3', title:'Correct — full ayah', sub:'Al-Husary · whole line'},
-      bad:{src:'/samples/bench_incorrect_kaf_kul_fjmustak.mp3', title:'Incorrect — ك on Qul', sub:'Forward K — must fail'},
-    },
-  },
-};
+/** Derived from stage.hear — keep for call sites that key by stage id. */
+const STAGE_WORD_CLIPS=Object.fromEntries(
+  Object.entries(STAGE_LADDER).map(([verse, stages])=>[
+    Number(verse),
+    Object.fromEntries(stages.filter(s=>s.hear).map(s=>[s.id, s.hear])),
+  ])
+);
+/** Resolve Correct/Incorrect for the LIVE stage — never silent, never another stage’s pair. */
+function resolveStageCompare(cur){
+  if(!cur) return null;
+  if(cur.compare && cur.compare.ok) return cur.compare;
+  const hear=cur.hear || (STAGE_WORD_CLIPS[v]||{})[cur.id] || '';
+  return stageComparePair(
+    cur.say_en||cur.title||'this step',
+    `Correct is the model for <b>${cur.say_en||'this step'}</b>. Incorrect is the common miss for this step.`,
+    hear, `Correct — ${cur.say_en||cur.title}`, hear?'Model for this step':'Clip TBD',
+    '', 'Incorrect — common miss', 'Clip TBD for this step'
+  );
+}
 function stageCompareHtml(cur){
-  const pair=((STAGE_COMPARE[v]||{})[cur.id])||null;
+  const pair=resolveStageCompare(cur);
   if(!pair || !pair.ok) return '';
   const ok=pair.ok, bad=pair.bad||{};
   const okBtn=ok.src
@@ -360,12 +437,18 @@ function stopStageClip(){
   }
   document.querySelectorAll('.stageplay button.playing').forEach(b=>b.classList.remove('playing'));
 }
+function stageHearSrc(stageId){
+  const ladder=STAGE_LADDER[v]||[];
+  const st=ladder.find(s=>s.id===stageId);
+  if(st && st.hear) return st.hear;
+  return (STAGE_WORD_CLIPS[v]||{})[stageId]||'';
+}
 function stagePlayHtml(stageId, say, btnId){
-  const src=(STAGE_WORD_CLIPS[v]||{})[stageId];
+  const src=stageHearSrc(stageId);
   if(!src || !say) return '';
   const id=btnId?` id="${btnId}"`:'';
   const kind=(stageId==='qu'||stageId==='ul') ? 'this syllable only'
-    : (stageId==='full'||stageId==='qul_huwa'||stageId==='qul_huwa_allahu') ? 'this step'
+    : (stageId==='full'||String(stageId).includes('_')) ? 'this step'
     : 'this word only';
   return `<div class="stageplay" data-role="hear-only">
     <button type="button"${id} data-stage="${stageId}" aria-label="Play ${say}"></button>
@@ -373,8 +456,7 @@ function stagePlayHtml(stageId, say, btnId){
   </div>`;
 }
 function playStageWordClip(stageId, btn){
-  const map=STAGE_WORD_CLIPS[v]||{};
-  const src=map[stageId];
+  const src=stageHearSrc(stageId);
   if(!src){
     // Fallback: full-ayah Husary at top
     $('playH').click();
