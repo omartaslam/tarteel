@@ -44,8 +44,14 @@ def _feat(y,sr,a,b):
     rms=librosa.feature.rms(y=s,hop_length=128)[0]
     return np.concatenate([mf.mean(1),mf.std(1),[rms.min(),rms.max(),rms.max()-rms.min(),len(s)/sr]])
 
-def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None):
+class AnalysisCancelled(Exception):
+    """Raised when the user starts a new recording and cancels this job."""
+
+
+def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None, cancel_check=None):
     def prog(pct, phase, msg):
+        if cancel_check and cancel_check():
+            raise AnalysisCancelled()
         if on_progress:
             try: on_progress(pct, phase, msg)
             except Exception: pass
@@ -92,6 +98,8 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None)
             heard_info={"heard_arabic":"","heard_phonetic":"","heard_raw":"",
                         "heard_match":f"error:{e}","heard_verse":None,
                         "matched_arabic":"","matched_phonetic":""}
+        if cancel_check and cancel_check():
+            raise AnalysisCancelled()
         # Always attach English-led word compare when we have a target ayah
         try:
             import coaching as _coach_early

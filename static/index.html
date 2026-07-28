@@ -167,6 +167,18 @@ let _progRunning=false;
 let _progPhase='';
 let _progMsg='';
 let _progElap=0;
+let _activeJob=null;
+let _pollGen=0;
+
+function cancelActiveAnalysis(){
+  _pollGen += 1;
+  const jid=_activeJob;
+  _activeJob=null;
+  showProg(false);
+  if(jid){
+    fetch('/analyze/cancel/'+jid,{method:'POST'}).catch(()=>{});
+  }
+}
 
 function shortProgMsg(msg, phase, pct){
   const m=(msg||'').trim();
@@ -395,6 +407,11 @@ $('playH').onclick=()=>{
 
 $('rec').onclick=async()=>{
   if(rec&&rec.state==='recording'){rec.stop();return;}
+  // New take: kill any in-flight analysis so stale results can't overwrite.
+  cancelActiveAnalysis();
+  $('results').innerHTML='';
+  $('quality').style.display='none';
+  $('sessionInfo').textContent='';
   // Prefer raw-ish capture: AGC on (helps quiet iPhone mics), no browser
   // noise suppression that can eat consonants / qalqalah bursts.
   const stream=await navigator.mediaDevices.getUserMedia({audio:{
@@ -430,13 +447,16 @@ $('rec').onclick=async()=>{
     const prac=loadPractice(v);
     fd.append('mastered', JSON.stringify(prac.mastered||[]));
     if(prac.lastFocus) fd.append('last_focus', prac.lastFocus);
+    const myGen=_pollGen;
     showProg(true, 2, 'Uploading…', 0, 'queued');
     try{
       const startRes=await fetch('/analyze/start',{method:'POST',body:fd});
+      if(myGen!==_pollGen) return; // superseded by a newer Record
       const startData=await startRes.json().catch(()=>({}));
       if(!startRes.ok || !startData.job){
         showProg(true, 5, 'Analysing…', 0, 'start');
         const res=await fetch('/analyze',{method:'POST',body:fd});
+        if(myGen!==_pollGen) return;
         const data=await res.json().catch(()=>({}));
         if(!res.ok){
           showProg(false);
@@ -446,9 +466,10 @@ $('rec').onclick=async()=>{
           render(data);
         }
       } else {
-        await pollJob(startData.job);
+        await pollJob(startData.job, myGen);
       }
     }catch(e){
+      if(myGen!==_pollGen) return;
       showProg(false);
       $('results').innerHTML='<p>Network error / timeout. Stay on Wi‑Fi, tap the green header to refresh, then try again.</p>';
     }
@@ -457,28 +478,53 @@ $('rec').onclick=async()=>{
   rec.start(250);$('rec').classList.add('on');$('rec').textContent='■ Stop';
 };
 
-async function pollJob(job){
+async function pollJob(job, gen){
+  _activeJob=job;
   const t0=Date.now();
   for(;;){
+    if(gen!==_pollGen){
+      if(_activeJob===job) _activeJob=null;
+      return;
+    }
     const res=await fetch('/analyze/status/'+job);
     const st=await res.json().catch(()=>({}));
+    if(gen!==_pollGen){
+      if(_activeJob===job) _activeJob=null;
+      return;
+    }
     if(!res.ok){
       showProg(false);
       $('results').innerHTML='<p>Lost analysis job. Tap header to refresh and try again.</p>';
+      if(_activeJob===job) _activeJob=null;
+      return;
+    }
+    if(st.status==='cancelled' || st.status==='cancelling'){
+      showProg(false);
+      if(_activeJob===job) _activeJob=null;
       return;
     }
     const elapsed=st.elapsed!=null?st.elapsed:((Date.now()-t0)/1000);
     showProg(true, st.pct||0, st.message||'Working…', elapsed, st.phase||'');
     if(st.status==='done'){
+      if(gen!==_pollGen){
+        if(_activeJob===job) _activeJob=null;
+        return;
+      }
       showProg(true, 100, 'Done', elapsed, 'done');
       await new Promise(r=>setTimeout(r, 280));
+      if(gen!==_pollGen){
+        if(_activeJob===job) _activeJob=null;
+        return;
+      }
       showProg(false);
       render(st.result||{});
+      if(_activeJob===job) _activeJob=null;
       return;
     }
     if(st.status==='error'){
       showProg(false);
       $('results').innerHTML=`<p>Analysis failed. ${st.error||st.message||'Try again.'}</p>`;
+      if(_activeJob===job) _activeJob=null;
       return;
     }
     await new Promise(r=>setTimeout(r, 400));

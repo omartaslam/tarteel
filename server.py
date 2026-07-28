@@ -57,7 +57,13 @@ def _set_job(jid, **kw):
 def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, last_focus=None):
     t0 = time.time()
 
+    def cancelled():
+        with _JOBS_LOCK:
+            return bool((_JOBS.get(jid) or {}).get("cancel"))
+
     def on_progress(pct, phase, msg):
+        if cancelled():
+            raise analyze.AnalysisCancelled()
         _set_job(
             jid,
             status="running",
@@ -74,7 +80,18 @@ def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, 
             on_progress=on_progress,
             mastered=mastered or [],
             last_focus=last_focus or None,
+            cancel_check=cancelled,
         ) or []
+        if cancelled():
+            _set_job(
+                jid,
+                status="cancelled",
+                pct=0,
+                phase="cancelled",
+                message="Cancelled — new recording started",
+                elapsed=round(time.time() - t0, 1),
+            )
+            return
         sid = storage.save(
             raw, ext, verse, cards,
             extra={
@@ -96,16 +113,35 @@ def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, 
             elapsed=round(time.time() - t0, 1),
             result={"verse": verse, "results": cards, "session": sid, **diag},
         )
-    except Exception as e:
+    except analyze.AnalysisCancelled:
         _set_job(
             jid,
-            status="error",
-            pct=100,
-            phase="error",
-            message=str(e),
+            status="cancelled",
+            pct=0,
+            phase="cancelled",
+            message="Cancelled — new recording started",
             elapsed=round(time.time() - t0, 1),
-            error=str(e),
         )
+    except Exception as e:
+        if cancelled():
+            _set_job(
+                jid,
+                status="cancelled",
+                pct=0,
+                phase="cancelled",
+                message="Cancelled — new recording started",
+                elapsed=round(time.time() - t0, 1),
+            )
+        else:
+            _set_job(
+                jid,
+                status="error",
+                pct=100,
+                phase="error",
+                message=str(e),
+                elapsed=round(time.time() - t0, 1),
+                error=str(e),
+            )
     finally:
         try:
             os.unlink(path)
@@ -170,6 +206,22 @@ def analyze_status(jid: str):
     if job.get("status") == "error":
         out["error"] = job.get("error") or job.get("message")
     return JSONResponse(out)
+
+
+@app.post("/analyze/cancel/{jid}")
+def analyze_cancel(jid: str):
+    """Stop an in-flight analysis when the user starts a new recording."""
+    with _JOBS_LOCK:
+        job = _JOBS.get(jid)
+        if not job:
+            return JSONResponse({"ok": False, "error": "job not found"}, status_code=404)
+        if job.get("status") in ("done", "error", "cancelled"):
+            return {"ok": True, "status": job.get("status")}
+        job["cancel"] = True
+        job["status"] = "cancelling"
+        job["message"] = "Cancelling…"
+        _JOBS[jid] = job
+    return {"ok": True, "status": "cancelling"}
 
 
 @app.post("/analyze")
