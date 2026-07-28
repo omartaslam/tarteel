@@ -650,6 +650,8 @@ $('rec').onclick=async()=>{
   // New take: kill any in-flight analysis so stale results can't overwrite.
   cancelActiveAnalysis();
   stopSampleAudio();
+  const ha=$('heardAudio');
+  if(ha){ try{ ha.pause(); }catch(e){} }
   if(hAudio){
     try{ hAudio.pause(); }catch(e){}
     hAudio=null;
@@ -890,8 +892,22 @@ function render(data){
 
   bindRetry(data);
   bindClearLog();
+  bindHeardAudio();
   if(data.session) $('sessionInfo').textContent='session: '+data.session;
   scrollToHeard();
+}
+
+function bindHeardAudio(){
+  const a=$('heardAudio');
+  if(!a) return;
+  a.addEventListener('play', ()=>{
+    stopSampleAudio();
+    if(hAudio){
+      try{ hAudio.pause(); }catch(e){}
+      hAudio=null;
+      const ph=$('playH'); if(ph) ph.classList.remove('playing');
+    }
+  });
 }
 
 function scrollToHeard(){
