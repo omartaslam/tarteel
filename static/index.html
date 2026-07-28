@@ -47,10 +47,12 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .progwrap{display:none;margin:10px 0;padding:8px 10px;background:#f7f9fc;border:1px solid #e3eaf2;border-radius:8px}
 .progwrap.on{display:block}
 .progline{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:13px;color:#445;margin-bottom:6px;min-height:1.2em}
+.progleft{display:flex;align-items:baseline;gap:8px;flex:1;min-width:0}
+.progelap{font-variant-numeric:tabular-nums;color:#7a8a9a;flex:none;min-width:2.4em}
 .progphase{font-weight:normal;color:#334;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .progpct{font-variant-numeric:tabular-nums;color:#667;flex:none}
 .progtrack{height:4px;background:#e2e8f0;border-radius:4px;overflow:hidden}
-.progbar{height:100%;width:0%;background:#6a8fb5;border-radius:4px;transition:width .3s ease}
+.progbar{height:100%;width:0%;background:#6a8fb5;border-radius:4px;transition:width .45s linear}
 .restbox{margin:12px 0;border:1px solid #e0e4ea;border-radius:10px;background:#fafbfc}
 .restbox>summary{cursor:pointer;padding:12px 14px;font-size:13px;font-weight:bold;color:#5a6a7a;list-style:none}
 .restbox>summary::-webkit-details-marker{display:none}
@@ -126,7 +128,10 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
   <div class="spin" id="spin">Analysing your recitation…</div>
   <div class="progwrap" id="prog">
     <div class="progline">
-      <span class="progphase" id="progPhase">Starting…</span>
+      <span class="progleft">
+        <span class="progelap" id="progElap">0s</span>
+        <span class="progphase" id="progPhase">Starting…</span>
+      </span>
       <span class="progpct" id="progPct">0%</span>
     </div>
     <div class="progtrack"><div class="progbar" id="progBar"></div></div>
@@ -154,6 +159,14 @@ const VERSE_WORDS={
   4:['wa lam','yakun','lahu','kufuwan','aḥad'],
 };
 let _progBroughtIntoView=false;
+let _dispPct=0;
+let _srvPct=0;
+let _srvPctAt=0;
+let _progTick=null;
+let _progRunning=false;
+let _progPhase='';
+let _progMsg='';
+let _progElap=0;
 
 function shortProgMsg(msg, phase, pct){
   const m=(msg||'').trim();
@@ -168,6 +181,97 @@ function shortProgMsg(msg, phase, pct){
     tajweed:'Checking tajweed…', coach:'Writing next step…', done:'Done'
   };
   return map[phase] || ((pct||0)>=100 ? 'Done' : 'Working…');
+}
+
+/** Soft ceiling above last server % so the bar keeps moving during long phases. */
+function softPctCeiling(srv){
+  if(srv>=100) return 100;
+  // Crawl toward just below the next typical milestone
+  if(srv < 8) return 7;
+  if(srv < 18) return 17;
+  if(srv < 30) return 29;
+  if(srv < 45) return 44;
+  if(srv < 70) return 68;   // transcribe — longest hang
+  if(srv < 82) return 81;
+  if(srv < 92) return 91;
+  return 97;
+}
+
+function paintProg(){
+  const p=Math.max(0, Math.min(100, _dispPct));
+  $('progBar').style.width=p+'%';
+  $('progPct').textContent=Math.round(p)+'%';
+  $('progElap').textContent=Math.max(0, Math.floor(_progElap))+'s';
+  $('progPhase').textContent=shortProgMsg(_progMsg, _progPhase, p);
+}
+
+function stopProgTick(){
+  if(_progTick){ clearInterval(_progTick); _progTick=null; }
+  _progRunning=false;
+}
+
+function startProgTick(){
+  if(_progTick) return;
+  _progTick=setInterval(()=>{
+    if(!_progRunning){ stopProgTick(); return; }
+    // Local elapsed keeps ticking even between polls
+    _progElap = (_progElap||0) + 0.1;
+    const srv=_srvPct;
+    let next=_dispPct;
+    if(srv>=100){
+      next=Math.min(100, next + 8);
+    } else if(next < srv){
+      // Catch up to server quickly but smoothly
+      next = Math.min(srv, next + Math.max(1.2, (srv-next)*0.35));
+    } else {
+      // Soft crawl during long silent phases (esp. transcribe)
+      const ceil=softPctCeiling(srv);
+      const waited=Math.max(0, (Date.now()-_srvPctAt)/1000);
+      // Slower crawl early in a phase, a bit faster if we've waited
+      const rate = srv < 70 && srv >= 45
+        ? (0.18 + Math.min(0.35, waited*0.02))  // ~0.2–0.5%/tick during transcribe
+        : (0.22 + Math.min(0.25, waited*0.03));
+      if(next < ceil) next = Math.min(ceil, next + rate);
+    }
+    _dispPct=next;
+    paintProg();
+  }, 100);
+}
+
+function showProg(on, pct, msg, elapsed, phase){
+  const w=$('prog');
+  if(!on){
+    w.classList.remove('on');
+    $('spin').style.display='none';
+    stopProgTick();
+    _progBroughtIntoView=false;
+    _dispPct=0;
+    _srvPct=0;
+    return;
+  }
+  const turningOn=!w.classList.contains('on');
+  w.classList.add('on');
+  $('spin').style.display='none';
+  const p=Math.max(0,Math.min(100, pct==null?0:pct));
+  if(p !== _srvPct){
+    _srvPct=p;
+    _srvPctAt=Date.now();
+  }
+  if(elapsed!=null) _progElap=Math.max(_progElap||0, elapsed);
+  _progMsg=msg||'';
+  _progPhase=phase||'';
+  if(turningOn){
+    _dispPct=Math.min(p, 3);
+    _srvPctAt=Date.now();
+  }
+  _progRunning=true;
+  startProgTick();
+  paintProg();
+  // Only scroll once when the bar first appears — stops iPhone jumpiness
+  if(turningOn && !_progBroughtIntoView){
+    _progBroughtIntoView=true;
+    try{ w.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){}
+  }
 }
 
 function loadPractice(verse){
@@ -353,28 +457,6 @@ $('rec').onclick=async()=>{
   rec.start(250);$('rec').classList.add('on');$('rec').textContent='■ Stop';
 };
 
-function showProg(on, pct, msg, elapsed, phase){
-  const w=$('prog');
-  if(!on){
-    w.classList.remove('on');
-    $('spin').style.display='none';
-    _progBroughtIntoView=false;
-    return;
-  }
-  const turningOn=!w.classList.contains('on');
-  w.classList.add('on');
-  $('spin').style.display='none';
-  const p=Math.max(0,Math.min(100, pct==null?0:pct));
-  $('progBar').style.width=p+'%';
-  $('progPct').textContent=Math.round(p)+'%';
-  $('progPhase').textContent=shortProgMsg(msg, phase, p);
-  // Only scroll once when the bar first appears — stops iPhone jumpiness
-  if(turningOn && !_progBroughtIntoView){
-    _progBroughtIntoView=true;
-    try{ w.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){}
-  }
-}
-
 async function pollJob(job){
   const t0=Date.now();
   for(;;){
@@ -388,6 +470,8 @@ async function pollJob(job){
     const elapsed=st.elapsed!=null?st.elapsed:((Date.now()-t0)/1000);
     showProg(true, st.pct||0, st.message||'Working…', elapsed, st.phase||'');
     if(st.status==='done'){
+      showProg(true, 100, 'Done', elapsed, 'done');
+      await new Promise(r=>setTimeout(r, 280));
       showProg(false);
       render(st.result||{});
       return;
