@@ -11,10 +11,10 @@ After **3 isolated Qu fails**, UI offers **Try full Qul**:
 2. Round 2 — 3 more. Same rule.
 3. If all 6 miss → **ASK A TEACHER** defer (no fake lock).
 
-Middle ك never unlocks. Cancel header-clear to keep fail count so the offer appears.
+Middle ك never unlocks. Green header always clears history + refreshes (no confirm — iPhone blocks it).
 
 ## Current focus
-Omar: hard-refresh → **Cancel** clear → if offer shows, start bridge; else 3 Qu fails then bridge.
+Omar: tap green header → **Try full Qul** → batch of Qul takes.
 Reply `chk log` after the batch.
 
 ## Next after Qu locks (via Qu or bridge)
