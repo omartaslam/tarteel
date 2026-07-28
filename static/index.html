@@ -729,6 +729,8 @@ function render(data){
     let note;
     if(match==='raw'||match==='empty'){
       note='Showing the literal capture of this take. Could not cleanly match a known ayah.';
+    } else if(match==='drill'){
+      note='This drill only — showing the piece we scored, not a full-word guess.';
     } else if(showMatch || compare){
       note='English-first word compare below — green match, amber close, red different.';
     } else {

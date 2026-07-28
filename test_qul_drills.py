@@ -39,14 +39,24 @@ def test_ul_fail_without_l():
     assert ev["passed"] is False
 
 
-def test_build_feedback_ku_advances_on_kul():
-    # Latest live takes were heard as Kul — must advance past Ku.
+def test_ku_display_strips_whisper_l():
+    # Whisper said كل/Kul — UI must show Ku only, not invent L.
+    ev = coach.evaluate_drill("qu", 1, "كُل", "Kul")
+    assert ev["passed"] is True
+    assert ev["display_phonetic"] == "Ku"
+    assert "ل" not in ev["display_arabic"]
+    assert "L" not in ev["display_phonetic"].upper() or ev["display_phonetic"] == "Ku"
+    assert ev["heard_match"] == "drill"
+
+
+def test_build_feedback_ku_display_not_kul():
     cards = build_feedback(
         1, [], None, heard_arabic="كُل", heard_phonetic="Kul", stage_id="qu"
     )
-    assert cards[0].get("stage_passed") is True
-    assert cards[0].get("stage_action") == "advance"
-    assert cards[0].get("next_stage_id") == "ul"
+    assert cards[0].get("heard_phonetic") == "Ku"
+    assert cards[0].get("heard_arabic") == "كُ"
+    assert cards[0].get("heard_match") == "drill"
+
 
 
 def test_build_feedback_qul_near_kul_advances():

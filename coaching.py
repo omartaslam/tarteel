@@ -426,14 +426,37 @@ def evaluate_drill(
     heard_phonetic: str = "",
 ) -> dict:
     """
-    Score syllable micro-drills (Qu / ul) without full-word ayah alignment.
+    Score syllable micro-drills (Ku / ul) without full-word ayah alignment.
 
-    Returns {"passed": bool, "cards": list[dict]}.
+    Returns passed/cards plus display_* fields for the UI.
+    Whisper often hallucinates a full word (e.g. كل/Kul) for a short syllable —
+    never show that inventedness to the user on drill stages.
     """
     ar = normalize_ar(heard_arabic or "")
     letters = _letters_only(ar)
     ph = (heard_phonetic or "").lower()
     ph_compact = re.sub(r"[^a-zāḥṣṭḍẓ]", "", ph)
+
+    def _drill_compare(you_ph: str, you_ar: str, tgt_ph: str, tgt_ar: str, ok: bool) -> str:
+        you_cls = "" if ok else "marky"
+        tgt_cls = "" if ok else "marky"
+        you_ph_h = f'<span class="{you_cls}">{you_ph}</span>' if you_cls else you_ph
+        you_ar_h = f'<span class="{you_cls}">{you_ar}</span>' if you_cls else you_ar
+        tgt_ph_h = f'<span class="{tgt_cls}">{tgt_ph}</span>' if tgt_cls else tgt_ph
+        tgt_ar_h = f'<span class="{tgt_cls}">{tgt_ar}</span>' if tgt_cls else tgt_ar
+        note = "Drill match" if ok else "Yellow = this drill piece still needs work"
+        return (
+            '<div class="cmpwrap">'
+            '<div class="hmatchlbl">Heard vs target (this drill only)</div>'
+            f'<div class="cmpline"><span class="cmplbl">You</span> '
+            f'<span class="cmplinetxt">{you_ph_h}</span></div>'
+            f'<div class="cmpline"><span class="cmplbl">Target</span> '
+            f'<span class="cmplinetxt">{tgt_ph_h}</span></div>'
+            f'<div class="cmpline arline" dir="rtl" lang="ar">'
+            f'<span class="cmplinetxt">{you_ar_h} → {tgt_ar_h}</span></div>'
+            f'<div class="hnote">{note}</div>'
+            "</div>"
+        )
 
     if drill == "qu":
         # Shape-first: lock the Ku onset (ك or ق). Deep ق is polish later, not a gate.
@@ -445,7 +468,11 @@ def evaluate_drill(
         )
         if has_q or has_k:
             cards = []
-            if has_k and not has_q:
+            # Display only the onset we scored — never Whisper's extra L (كل/Kul).
+            if has_q:
+                disp_ar, disp_ph = "قُ", "Qu"
+            else:
+                disp_ar, disp_ph = "كُ", "Ku"
                 cards.append({
                     "level": "measured",
                     "rule": "drill",
@@ -466,7 +493,14 @@ def evaluate_drill(
                     ),
                     "scholarly": None,
                 })
-            return {"passed": True, "cards": cards}
+            return {
+                "passed": True,
+                "cards": cards,
+                "display_arabic": disp_ar,
+                "display_phonetic": disp_ph,
+                "compare_html": _drill_compare(disp_ph, disp_ar, "Ku", "كُ", True),
+                "heard_match": "drill",
+            }
         tip = {
             "heard": "almost nothing clear" if not (letters or ph.strip()) else "something without a clear K/Q onset",
             "want": "a short Ku (كُ) — K + “u” only",
@@ -478,7 +512,14 @@ def evaluate_drill(
         }
         card = _card(5, verse, "Ku", "كُ", tip, "?", "ك", rule="drill")
         card["key"] = "drill:qu:onset"
-        return {"passed": False, "cards": [card]}
+        return {
+            "passed": False,
+            "cards": [card],
+            "display_arabic": "(unclear)",
+            "display_phonetic": "—",
+            "compare_html": _drill_compare("—", "(unclear)", "Ku", "كُ", False),
+            "heard_match": "drill",
+        }
 
     if drill == "ul":
         has_l = (
@@ -489,7 +530,14 @@ def evaluate_drill(
             or ph_compact.endswith("l")
         )
         if has_l:
-            return {"passed": True, "cards": []}
+            return {
+                "passed": True,
+                "cards": [],
+                "display_arabic": "ـُلْ",
+                "display_phonetic": "ul",
+                "compare_html": _drill_compare("ul", "ـُلْ", "ul", "ـُلْ", True),
+                "heard_match": "drill",
+            }
         tip = {
             "heard": "something without a clear L ending",
             "want": "just “ul” (u + L)",
@@ -501,7 +549,14 @@ def evaluate_drill(
         }
         card = _card(5, verse, "ul", "ـُلْ", tip, "?", "ل", rule="drill")
         card["key"] = "drill:ul:L"
-        return {"passed": False, "cards": [card]}
+        return {
+            "passed": False,
+            "cards": [card],
+            "display_arabic": "(unclear)",
+            "display_phonetic": "—",
+            "compare_html": _drill_compare("—", "(unclear)", "ul", "ـُلْ", False),
+            "heard_match": "drill",
+        }
 
     return {"passed": False, "cards": []}
 

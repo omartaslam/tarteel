@@ -183,7 +183,20 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
             last_focus=last_focus,
             stage_id=stage_id,
         )
-        if cards: cards[0]={**cards[0],**diag}
+        # Keep literal Whisper in heard_raw; drill stages override the shown heard_*.
+        if cards:
+            shown = cards[0]
+            if shown.get("heard_match") == "drill":
+                diag = {
+                    **diag,
+                    "heard_arabic": shown.get("heard_arabic", diag.get("heard_arabic", "")),
+                    "heard_phonetic": shown.get("heard_phonetic", diag.get("heard_phonetic", "")),
+                    "compare_html": shown.get("compare_html", ""),
+                    "heard_match": "drill",
+                    "matched_arabic": "",
+                    "matched_phonetic": "",
+                }
+            cards[0] = {**shown, **diag}
         prog(100, "done", "Done")
         return cards
     finally:

@@ -76,7 +76,7 @@ def build_feedback(
         stage_passed = bool(ev.get("passed")) and not blocking
         miss_words: list[str] = []
         regress_to = None
-        return _finish_stage_cards(
+        cards = _finish_stage_cards(
             verse=verse,
             stage=stage,
             stage_info=stage_info,
@@ -92,6 +92,18 @@ def build_feedback(
             mastered=mastered,
             last_focus=last_focus,
         )
+        # Honest drill display — never show Whisper's invented full word.
+        disp = {
+            "heard_arabic": ev.get("display_arabic", ""),
+            "heard_phonetic": ev.get("display_phonetic", ""),
+            "compare_html": ev.get("compare_html", ""),
+            "heard_match": ev.get("heard_match", "drill"),
+            "matched_arabic": "",
+            "matched_phonetic": "",
+        }
+        if cards:
+            cards[0] = {**cards[0], **disp}
+        return cards
 
     detected = [l for l in letters if l["c"] != "|"]
     if detected:
