@@ -5,6 +5,7 @@ English phonetics first; Arabic lightly in brackets.
 Beginner journey: stage ladder (isolate → join → full).
   One NEXT STEP inside the current stage.
   Forward only when the stage passes; step back if an earlier piece breaks.
+  Micro-drills (Qu / ul) use syllable scoring before full Qul.
 """
 import coaching as coach
 import stages as stg
@@ -55,11 +56,42 @@ def build_feedback(
     spec = VERSE_ELEMENTS.get(verse, {})
     stage = stg.get_stage(verse, stage_id)
     stage_words = list((stage or {}).get("words") or [])
+    drill = (stage or {}).get("drill")
     stage_info = stg.stage_public(verse, (stage or {}).get("id"))
+    focus_word = (stage or {}).get("focus_word") or (
+        (stage_words[0] if stage_words else "") or ""
+    )
 
     ok_cards = []
     errors = []
     tips = []
+
+    # Syllable micro-drills: Qu / ul — do not score against full ayah words.
+    if drill:
+        ev = coach.evaluate_drill(
+            drill, verse, heard_arabic or "", heard_phonetic or ""
+        )
+        errors.extend(ev.get("cards") or [])
+        blocking = [c for c in errors if c.get("level") == "error"]
+        stage_passed = bool(ev.get("passed")) and not blocking
+        miss_words: list[str] = []
+        regress_to = None
+        return _finish_stage_cards(
+            verse=verse,
+            stage=stage,
+            stage_info=stage_info,
+            stage_words=stage_words,
+            focus_word=focus_word,
+            errors=errors,
+            tips=tips,
+            ok_cards=ok_cards,
+            blocking=blocking,
+            miss_words=miss_words,
+            stage_passed=stage_passed,
+            regress_to=regress_to,
+            mastered=mastered,
+            last_focus=last_focus,
+        )
 
     detected = [l for l in letters if l["c"] != "|"]
     if detected:
@@ -171,12 +203,61 @@ def build_feedback(
         if regress_to and regress_to.get("id") == stage.get("id"):
             regress_to = None
 
+    # Full Qul still showing English K → step back to Qu onset drill.
+    if (
+        not regress_to
+        and stage
+        and stage.get("id") == "qul"
+        and any(
+            c.get("heard_letter") == "ك" and c.get("expected_letter") == "ق"
+            for c in blocking
+        )
+    ):
+        regress_to = stg.get_stage(verse, "qu")
+
+    stage_passed = not blocking and not miss_words
+    return _finish_stage_cards(
+        verse=verse,
+        stage=stage,
+        stage_info=stage_info,
+        stage_words=stage_words,
+        focus_word=focus_word,
+        errors=errors,
+        tips=tips,
+        ok_cards=ok_cards,
+        blocking=blocking,
+        miss_words=miss_words,
+        stage_passed=stage_passed,
+        regress_to=regress_to,
+        mastered=mastered,
+        last_focus=last_focus,
+    )
+
+
+def _finish_stage_cards(
+    *,
+    verse,
+    stage,
+    stage_info,
+    stage_words,
+    focus_word,
+    errors,
+    tips,
+    ok_cards,
+    blocking,
+    miss_words,
+    stage_passed,
+    regress_to,
+    mastered,
+    last_focus,
+):
     cards = []
     cards.extend(errors)
     cards.extend(tips)
 
-    stage_passed = not blocking and not miss_words
     nxt_stage = stg.next_stage(verse, (stage or {}).get("id")) if stage_passed else None
+    say = (stage or {}).get("say_en") or focus_word or "this"
+    say_ar = (stage or {}).get("say_ar") or ""
 
     if regress_to and not stage_passed:
         cards.append({
@@ -185,7 +266,9 @@ def build_feedback(
             "tag": "STEP BACK",
             "key": f"stage:{regress_to['id']}",
             "priority": 0,
-            "section": coach.section_html(verse, (regress_to.get("words") or [""])[0]),
+            "section": coach.section_html(
+                verse, (regress_to.get("focus_word") or (regress_to.get("words") or [""])[0])
+            ),
             "plain": (
                 f"<b>Step back:</b> {regress_to['say_en']} needs locking again "
                 f"before this join.<br>"
@@ -205,7 +288,10 @@ def build_feedback(
             "tag": "STAGE CLEAR",
             "key": f"stage:{stage['id']}:clear",
             "priority": 0,
-            "section": coach.section_html(verse, (nxt_stage.get("words") or [""])[0]),
+            "section": coach.section_html(
+                verse,
+                (nxt_stage.get("focus_word") or (nxt_stage.get("words") or [""])[0]),
+            ),
             "plain": (
                 f"<b>Locked:</b> {stage['say_en']}. "
                 f"Next stage — say <b>{nxt_stage['say_en']}</b> "
@@ -224,7 +310,7 @@ def build_feedback(
             "tag": "AYAH CLEAR",
             "key": "ayah_clear",
             "priority": 0,
-            "section": coach.section_html(verse, (stage_words or [""])[0] if stage_words else ""),
+            "section": coach.section_html(verse, focus_word or ""),
             "plain": (
                 "<b>Nice — this ayah’s stages are locked.</b> "
                 "When you’re happy with it, move to the next ayah."
@@ -242,19 +328,8 @@ def build_feedback(
             nxt["stage"] = stage_info
             nxt["stage_id"] = (stage or {}).get("id")
             nxt["stage_action"] = "stay"
-            # Reframe remaining count around this stage
-            n_left = len([c for c in issues if c.get("level") in ("error", "measured") and c.get("fix")])
-            after = max(0, n_left - 1)
-            more = (
-                f' <span class="arlight">({after} more in this stage)</span>'
-                if after
-                else ""
-            )
             plain = nxt.get("plain") or ""
             plain = plain.replace("on the ayah)", "in this stage)")
-            if "One thing next:" in plain and more and "more in this stage" not in plain:
-                # leave pick_next_step text; stage context is in the stage card UI
-                pass
             nxt["plain"] = plain
             cards.append(nxt)
         elif not issues:
@@ -263,10 +338,10 @@ def build_feedback(
                 "rule": "next_step",
                 "tag": "NEXT STEP",
                 "key": f"stage:{(stage or {}).get('id')}",
-                "section": coach.section_html(verse, (stage_words or [""])[0] if stage_words else ""),
+                "section": coach.section_html(verse, focus_word or ""),
                 "plain": (
-                    f"<b>Try again:</b> say only <b>{(stage or {}).get('say_en')}</b> "
-                    f"<span class=\"arlight\">({(stage or {}).get('say_ar')})</span>."
+                    f"<b>Try again:</b> say only <b>{say}</b> "
+                    f"<span class=\"arlight\">({say_ar})</span>."
                 ),
                 "fix": (stage or {}).get("hint"),
                 "scholarly": None,

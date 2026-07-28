@@ -10,12 +10,39 @@ from __future__ import annotations
 # word_idxs: indices into EXPECTED[verse]
 STAGES = {
     1: [
+        # Micro-drills: lock the deep-Q onset, then the ending, then join as Qul.
+        # "drill" stages use syllable scoring (not full-word ayah alignment).
+        {
+            "id": "qu",
+            "title": "Qu",
+            "say_en": "Qu",
+            "say_ar": "قُ",
+            "hint": (
+                "Only the first half: deep Q + short “u”. "
+                "Soft-gargle place in the throat — not English K."
+            ),
+            "words": [],
+            "idxs": [],
+            "drill": "qu",
+            "focus_word": "qul",
+        },
+        {
+            "id": "ul",
+            "title": "ul",
+            "say_en": "ul",
+            "say_ar": "ـُلْ",
+            "hint": "Only the ending: “ul” — short u + clear L. No first letter yet.",
+            "words": [],
+            "idxs": [],
+            "drill": "ul",
+            "focus_word": "qul",
+        },
         {
             "id": "qul",
             "title": "Qul",
             "say_en": "Qul",
             "say_ar": "قُلْ",
-            "hint": "Say only this word, clearly.",
+            "hint": "Join Qu + ul into one short word: Qul.",
             "words": ["qul"],
             "idxs": [0],
         },
@@ -276,6 +303,7 @@ def stage_public(verse: int, stage_id: str | None) -> dict:
         "say_ar": cur.get("say_ar"),
         "hint": cur.get("hint"),
         "words": list(cur.get("words") or []),
+        "drill": cur.get("drill"),
         "is_full": cur.get("id") == "full",
         "ladder": [
             {"id": s["id"], "title": s["title"], "say_en": s["say_en"]}
@@ -297,9 +325,15 @@ def earliest_failing_stage(verse: int, failing_words: list[str]) -> dict | None:
     fail = {(w or "").lower() for w in failing_words}
     if not fail:
         return None
+    # Qul onset lives in the Qu micro-drill — step there first.
+    if "qul" in fail:
+        for s in stages:
+            if s.get("id") == "qu":
+                return s
     for s in stages:
-        # Prefer single-word stages that match a failure
-        if len(s.get("words") or []) == 1 and (s["words"][0] or "").lower() in fail:
+        # Prefer single-word stages that match a failure (skip empty drill stages)
+        words = s.get("words") or []
+        if len(words) == 1 and (words[0] or "").lower() in fail:
             return s
     for s in stages:
         if any((w or "").lower() in fail for w in (s.get("words") or [])):

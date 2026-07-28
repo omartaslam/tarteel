@@ -419,6 +419,86 @@ def compare_html(verse: int, heard_arabic: str, heard_phonetic: str = "") -> str
     )
 
 
+def evaluate_drill(
+    drill: str,
+    verse: int,
+    heard_arabic: str,
+    heard_phonetic: str = "",
+) -> dict:
+    """
+    Score syllable micro-drills (Qu / ul) without full-word ayah alignment.
+
+    Returns {"passed": bool, "cards": list[dict]}.
+    """
+    ar = normalize_ar(heard_arabic or "")
+    letters = _letters_only(ar)
+    ph = (heard_phonetic or "").lower()
+    ph_compact = re.sub(r"[^a-zāḥṣṭḍẓ]", "", ph)
+
+    if drill == "qu":
+        has_q = "ق" in letters
+        # English-K onset that Whisper often writes as ك / cool / cull / ku
+        has_k = (
+            "ك" in letters
+            or bool(re.search(r"(^|[^a-z])(k|c)(oo|u|o|a)", ph))
+            or ph_compact.startswith(("ku", "coo", "cul", "kol", "ko"))
+        )
+        if has_q:
+            return {"passed": True, "cards": []}
+        tip = {
+            "heard": "an English K (like “coo” / “cull”)",
+            "want": "Arabic Qu — deep Q + short “u” only",
+            "fix": (
+                "Say only <b>Qu</b> (قُ) — not the full word yet.<br>"
+                "1) Tip of tongue on the back of your bottom front teeth.<br>"
+                "2) English “coo/cool” is too far forward.<br>"
+                "3) Soft-gargle place in the throat: short dry pop + “u”. Stop.<br>"
+                "4) Do <b>not</b> add the L yet."
+            ),
+            "ar": ("ك", "ق"),
+        }
+        if not letters and not ph.strip():
+            tip = {
+                "heard": "almost nothing clear",
+                "want": "a short Qu (قُ)",
+                "fix": (
+                    "Say only <b>Qu</b> — deep Q + short “u”. "
+                    "Soft-gargle place, short pop, stop. No L yet."
+                ),
+                "ar": ("?", "ق"),
+            }
+            card = _card(5, verse, "Qu", "قُ", tip, "?", "ق", rule="drill")
+        else:
+            card = _card(5, verse, "Qu", "قُ", tip, "ك" if has_k else "?", "ق", rule="drill")
+        card["key"] = "drill:qu:ك→ق"
+        return {"passed": False, "cards": [card]}
+
+    if drill == "ul":
+        has_l = (
+            "ل" in letters
+            or bool(re.search(r"(u+|oo)l|ull|\bul\b|\bol\b", ph))
+            or "ul" in ph_compact
+            or "ool" in ph_compact
+            or ph_compact.endswith("l")
+        )
+        if has_l:
+            return {"passed": True, "cards": []}
+        tip = {
+            "heard": "something without a clear L ending",
+            "want": "just “ul” (u + L)",
+            "fix": (
+                "Say only <b>ul</b> — short “u”, then a clear L. "
+                "No first letter (no K / Q) yet."
+            ),
+            "ar": ("?", "ل"),
+        }
+        card = _card(5, verse, "ul", "ـُلْ", tip, "?", "ل", rule="drill")
+        card["key"] = "drill:ul:L"
+        return {"passed": False, "cards": [card]}
+
+    return {"passed": False, "cards": []}
+
+
 def word_order_card(verse: int, heard_arabic: str, heard_phonetic: str, nwords: int) -> dict:
     expected = EXPECTED.get(verse) or []
     line = AYAH_LINE.get(verse) or {"ph": [], "ar": []}
@@ -844,6 +924,12 @@ def describe_skill(key: str | None, card: dict | None = None) -> str:
         return f"the bounce on {_tw(rest[0]) if rest else 'this word'}"
     if head == "shadda":
         return f"the doubling in {_tw(rest[0]) if rest else 'this word'}"
+    if head == "drill":
+        if rest and rest[0] == "qu":
+            return "the deep Q in Qu"
+        if rest and rest[0] == "ul":
+            return "the L in ul"
+        return "this drill"
     return key
 
 
