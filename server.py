@@ -54,7 +54,7 @@ def _set_job(jid, **kw):
         _JOBS[jid] = job
 
 
-def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, last_focus=None, stage_id=None, locked_stages=None):
+def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, last_focus=None, stage_id=None, locked_stages=None, qu_bridge_attempt=None):
     t0 = time.time()
 
     def cancelled():
@@ -83,6 +83,7 @@ def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, 
             cancel_check=cancelled,
             stage_id=stage_id,
             locked_stages=locked_stages or [],
+            qu_bridge_attempt=qu_bridge_attempt,
         ) or []
         if cancelled():
             _set_job(
@@ -104,6 +105,7 @@ def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, 
                 "mastered": mastered or [],
                 "last_focus": last_focus,
                 "stage_id": stage_id,
+                "qu_bridge_attempt": qu_bridge_attempt,
             },
         )
         diag = _diag_from_cards(cards)
@@ -160,6 +162,7 @@ async def analyze_start(
     last_focus: str = Form(""),
     stage_id: str = Form(""),
     locked_stages: str = Form(""),
+    qu_bridge_attempt: str = Form(""),
 ):
     raw = await audio.read()
     ext = (audio.filename or "audio.webm").split(".")[-1].lower()
@@ -173,6 +176,12 @@ async def analyze_start(
     locked_list = _parse_mastered(locked_stages)
     focus = (last_focus or "").strip() or None
     stage = (stage_id or "").strip() or None
+    bridge_n = None
+    try:
+        if (qu_bridge_attempt or "").strip():
+            bridge_n = int(str(qu_bridge_attempt).strip())
+    except ValueError:
+        bridge_n = None
     _set_job(
         jid,
         status="queued",
@@ -187,7 +196,7 @@ async def analyze_start(
         target=_run_job,
         args=(
             jid, path, ext, raw, verse, audio.filename, audio.content_type,
-            mastered_list, focus, stage, locked_list,
+            mastered_list, focus, stage, locked_list, bridge_n,
         ),
         daemon=True,
     ).start()
@@ -239,6 +248,7 @@ async def do_analyze(
     last_focus: str = Form(""),
     stage_id: str = Form(""),
     locked_stages: str = Form(""),
+    qu_bridge_attempt: str = Form(""),
 ):
     """Legacy one-shot analyze (still used as fallback)."""
     raw = await audio.read()
@@ -249,13 +259,19 @@ async def do_analyze(
     locked_list = _parse_mastered(locked_stages)
     focus = (last_focus or "").strip() or None
     stage = (stage_id or "").strip() or None
+    bridge_n = None
+    try:
+        if (qu_bridge_attempt or "").strip():
+            bridge_n = int(str(qu_bridge_attempt).strip())
+    except ValueError:
+        bridge_n = None
     with tempfile.NamedTemporaryFile(suffix="." + ext, delete=False) as tmp:
         tmp.write(raw)
         path = tmp.name
     try:
         results = await run_in_threadpool(
             analyze.analyze_verse,
-            path, verse, None, mastered_list, focus, None, stage, locked_list,
+            path, verse, None, mastered_list, focus, None, stage, locked_list, bridge_n,
         )
     except Exception as e:
         return JSONResponse({"error": str(e), "results": [], "verse": verse}, status_code=500)
@@ -274,6 +290,7 @@ async def do_analyze(
             "mastered": mastered_list,
             "last_focus": focus,
             "stage_id": stage,
+            "qu_bridge_attempt": bridge_n,
         },
     )
     diag = _diag_from_cards(cards)

@@ -572,6 +572,120 @@ def evaluate_drill(
     return {"passed": False, "cards": []}
 
 
+def evaluate_qu_qul_bridge(
+    verse: int,
+    heard_arabic: str,
+    heard_phonetic: str = "",
+    attempt: int = 1,
+) -> dict:
+    """Qul bridge when isolated Qu is stuck.
+
+    Same stable gate: ASR ق passes (lock Qu → ul), ك fails. Never pass on kaf.
+    attempt is 1..6 (two rounds of 3). The 6th miss → tutor defer.
+    """
+    try:
+        n = int(attempt)
+    except (TypeError, ValueError):
+        n = 1
+    n = max(1, min(6, n))
+    ev = evaluate_drill("qu", verse, heard_arabic or "", heard_phonetic or "")
+    round_n = 1 if n <= 3 else 2
+    try_in_round = n if n <= 3 else n - 3
+    left_in_round = 3 - try_in_round
+
+    if ev.get("passed"):
+        out = dict(ev)
+        out["bridge"] = {
+            "mode": "qul",
+            "attempt": n,
+            "round": round_n,
+            "verdict": "pass",
+        }
+        return out
+
+    fail_key = "drill:qu:ق"
+    if n >= 6:
+        card = {
+            "level": "defer",
+            "rule": "drill",
+            "key": fail_key,
+            "tag": "ASK A TEACHER",
+            "priority": 5,
+            "verse": verse,
+            "word_en": "Qu",
+            "word_ar": "قُ",
+            "section": section_html(verse, "qul"),
+            "plain": (
+                "<b>Ask a teacher.</b> After 6 Qul tries I still didn’t hear a clear "
+                "back ق (only middle ك or unclear). "
+                "Please check your Q with a teacher before we continue."
+            ),
+            "fix": (
+                "Pause here. A teacher can confirm the deep back Q. "
+                "Come back to Qu when they say you’re ready — we won’t fake a lock."
+            ),
+            "scholarly": None,
+            "heard_letter": (ev.get("cards") or [{}])[0].get("heard_letter") or "?",
+            "expected_letter": "ق",
+            "bridge": {
+                "mode": "qul",
+                "attempt": n,
+                "round": 2,
+                "verdict": "tutor",
+            },
+        }
+        return {
+            "passed": False,
+            "cards": [card],
+            "display_arabic": ev.get("display_arabic") or "(unclear)",
+            "display_phonetic": ev.get("display_phonetic") or "—",
+            "compare_html": ev.get("compare_html") or "",
+            "heard_match": "drill",
+            "bridge": card["bridge"],
+        }
+
+    base_cards = list(ev.get("cards") or [])
+    card = dict(base_cards[0]) if base_cards else _card(
+        5, verse, "Qu", "قُ",
+        {
+            "heard": "no clear back Q",
+            "want": "deep back Q in Qul",
+            "fix": "Say <b>Qul</b> — listen for deep ق, not middle K.",
+            "ar": ("?", "ق"),
+        },
+        "?", "ق", rule="drill",
+    )
+    card["key"] = fail_key
+    more = (
+        f"Qul bridge — round {round_n}, try {try_in_round} of 3."
+        + (f" {left_in_round} left in this round." if left_in_round else " That was the last try this round.")
+    )
+    if n == 3:
+        more += " Next: one more round of 3 Qul tries."
+    card["plain"] = (card.get("plain") or "") + f"<br><br><b>{more}</b>"
+    card["fix"] = (
+        "Say the full word <b>Qul</b> (قُلْ). "
+        "I’m listening for a deep back ق at the start — middle ك still fails. "
+        "If I hear ق, Qu locks and you move to <b>ul</b>."
+    )
+    card["bridge"] = {
+        "mode": "qul",
+        "attempt": n,
+        "round": round_n,
+        "verdict": "fail",
+        "left_in_round": left_in_round,
+    }
+    return {
+        "passed": False,
+        "cards": [card],
+        "display_arabic": ev.get("display_arabic") or "(unclear)",
+        "display_phonetic": ev.get("display_phonetic") or "—",
+        "compare_html": ev.get("compare_html") or "",
+        "heard_match": "drill",
+        "bridge": card["bridge"],
+    }
+
+
 def word_order_card(verse: int, heard_arabic: str, heard_phonetic: str, nwords: int) -> dict:
     expected = EXPECTED.get(verse) or []
     line = AYAH_LINE.get(verse) or {"ph": [], "ar": []}

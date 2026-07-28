@@ -1,34 +1,24 @@
 # Tarteel — session handoff
 
-Last updated: 2026-07-28 (freeze Qu · ship ayah-1 ul)
+Last updated: 2026-07-28 (Qul bridge for stuck Qu)
 
 ## Freeze rule (this cycle)
-**Do not touch Qu detection** unless `/sessions` shows a real regression vs stable.
-Stable rule: ASR ق pass / ك fail. Tag: `stable-qu-detection` (`e6878cd`).
+**Do not change Qu letter gate** (ASR ق pass / ك fail). Tag: `stable-qu-detection`.
 
-## Where we are
-- Qu gate restored + proven (Ku fail, Qu lock).
-- Ladders exist for all 4 ayahs (24 stages) — scaffolding mostly done.
-- Usage burn was Qu experiments; path forward is batch-test + blocker fixes only.
+## Qul bridge (escape hatch)
+After **3 isolated Qu fails**, UI offers **Try full Qul**:
+1. Round 1 — up to 3 Qul takes. Any take with ASR **ق** → **lock Qu → ul**.
+2. Round 2 — 3 more. Same rule.
+3. If all 6 miss → **ASK A TEACHER** defer (no fake lock).
 
-## Public-ready definition
-Beginner can lock every stage through ayah 4 with honest pass/fail and clear next step.
-Not a full phonetic examiner.
+Middle ك never unlocks. Cancel header-clear to keep fail count so the offer appears.
 
-## Current focus — ayah 1 `ul`
-Gate: clear L / “ul” → lock → `qul`. Onset-only (Qu/Ku without L) → stay.
-Header tap asks before clearing history (Cancel = keep locked stages).
+## Current focus
+Omar: hard-refresh → **Cancel** clear → if offer shows, start bridge; else 3 Qu fails then bridge.
+Reply `chk log` after the batch.
 
-### Omar batch (do NOT clear between takes)
-1. Hard-refresh → **Cancel** on clear prompt (keep Qu lock if you have it). If on Qu: one good Qu first.
-2. Stage should say **ul**. Yellow mark on the L part of Qul.
-3. Takes in one batch:
-   - good `ul` → expect **Locked ul → Qul**
-   - Qu-only (no L) → stay, ask for L
-4. Reply `chk log` — I read `/sessions`, fix only blockers, one ship.
-
-## Next after ul locks
-`qul` (ك must fail → step back to Qu) → `huwa` → joins → `ahad` → `full` → ayah 2–4 smoke.
+## Next after Qu locks (via Qu or bridge)
+`ul` → `qul` → … ayah 1 full → ayahs 2–4 smoke.
 
 ## Stack
-Railway from `main`. Practice store `tarteel_practice_v7`. Build via `/health`.
+Railway from `main`. Practice store `tarteel_practice_v7`.

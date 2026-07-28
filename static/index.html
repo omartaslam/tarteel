@@ -100,6 +100,11 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .clearhist{font-size:12px;padding:6px 12px;margin:8px 0 0;background:transparent;color:#6a7a8a;border:1px solid #d0d7e0;border-radius:8px;width:100%}
 .clearhist:active{background:#f0f3f7}
 .buildnote{font-size:12px;color:#2c5f2d;background:#eef7ee;border:1px solid #c5e0c5;border-radius:8px;padding:8px 10px;margin:8px 0;display:none}
+.bridgebox{margin-top:12px;padding:12px;background:#fff;border:1px solid #c5d4e4;border-radius:10px}
+.bridgebox .bt{font-size:13px;color:#334;line-height:1.4;margin:0 0 10px}
+.bridgebtn{background:#2c5f8f;color:#fff;border:none;border-radius:8px;padding:10px 14px;font-size:14px;font-weight:600;width:100%}
+.bridgebtn:active{opacity:.9}
+.bridgebtn.secondary{background:#fff;color:#2c5f8f;border:1px solid #2c5f8f;margin-top:8px}
 .stagwrap{margin:12px 0;padding:14px 16px;background:linear-gradient(180deg,#f4f7fb 0%,#eef3f8 100%);border:1px solid #d4dee8;border-radius:12px}
 .staglbl{font-size:11px;font-weight:700;letter-spacing:.4px;color:#6a7a8a;text-transform:uppercase;margin-bottom:6px}
 .stagsay{font-size:26px;font-weight:700;color:#1a2a3a;line-height:1.25;margin:4px 0}
@@ -374,10 +379,17 @@ function loadPractice(verse){
       lastFocus: st.lastFocus||null,
       stageId: st.stageId || defaultStage,
       lockedStages: Array.isArray(st.lockedStages)?st.lockedStages:[],
+      quBridgeActive: !!st.quBridgeActive,
+      quBridgeFails: Math.max(0, Math.min(6, Number(st.quBridgeFails)||0)),
+      quBridgeExhausted: !!st.quBridgeExhausted,
     };
   }catch(e){
     const ladder=STAGE_LADDER[verse]||[];
-    return {mastered:[], iterations:[], lastFocus:null, stageId:ladder[0]?ladder[0].id:null, lockedStages:[]};
+    return {
+      mastered:[], iterations:[], lastFocus:null,
+      stageId:ladder[0]?ladder[0].id:null, lockedStages:[],
+      quBridgeActive:false, quBridgeFails:0, quBridgeExhausted:false,
+    };
   }
 }
 function savePractice(verse, st){
@@ -392,10 +404,16 @@ function clearPractice(verse){
   savePractice(verse, {
     mastered:[], iterations:[], lastFocus:null,
     stageId:ladder[0]?ladder[0].id:null, lockedStages:[],
+    quBridgeActive:false, quBridgeFails:0, quBridgeExhausted:false,
   });
 }
 function clearAllPractice(){
   try{ localStorage.removeItem(PRACTICE_STORE); }catch(e){}
+}
+function quIsolationFailCount(st){
+  return (st.iterations||[]).filter(it=>
+    it.stage==='qu' && it.stageAction==='stay' && !it.bridge
+  ).length;
 }
 function currentStage(verse){
   const st=loadPractice(verse);
@@ -417,8 +435,15 @@ function renderStageBox(){
     else if(locked.has(s.id) || i<idx) cls+=' done';
     return `<span class="${cls}">${s.title}</span>`;
   }).join('');
-  // ق vs ك hear-the-difference on first-syllable / Qul stages
-  const showQafKaf = (v===1 && (cur.id==='qu' || cur.id==='qul'));
+  const onQu = (v===1 && cur.id==='qu');
+  const bridgeOn = onQu && st.quBridgeActive && !st.quBridgeExhausted;
+  const bridgeFails = st.quBridgeFails||0;
+  const nextAttempt = Math.min(6, bridgeFails+1);
+  const roundN = nextAttempt<=3 ? 1 : 2;
+  const tryInRound = nextAttempt<=3 ? nextAttempt : nextAttempt-3;
+  const isolationFails = quIsolationFailCount(st);
+  const offerBridge = onQu && !bridgeOn && !st.quBridgeExhausted && isolationFails>=3;
+  const showQafKaf = onQu || (v===1 && cur.id==='qul') || bridgeOn;
   const samp = showQafKaf ? `
     <div class="sampbox">
       <div class="samplbl">Hear the difference — back ق vs middle ك</div>
@@ -434,14 +459,51 @@ function renderStageBox(){
         </div>
       </div>
     </div>` : '';
+  let sayEn = cur.say_en;
+  let sayAr = cur.say_ar;
+  let hint = cur.hint;
+  let bridgeHtml = '';
+  if(bridgeOn){
+    sayEn = 'Qul';
+    sayAr = 'قُلْ';
+    hint = `Qul bridge — round ${roundN}, try ${tryInRound} of 3 (attempt ${nextAttempt}/6). I’m listening for a deep back ق. If I hear it, Qu locks → ul. Middle ك still fails.`;
+    bridgeHtml = `<div class="bridgebox"><p class="bt">Bridge mode: say the <b>full word Qul</b>. Same ق rule — no fake locks.</p>
+      <button type="button" class="bridgebtn secondary" id="exitBridge">Back to isolated Qu</button></div>`;
+  } else if(offerBridge){
+    bridgeHtml = `<div class="bridgebox"><p class="bt">Stuck on isolated Qu? Try the full word <b>Qul</b> instead — up to 2 rounds of 3. A clear back ق unlocks you to <b>ul</b>.</p>
+      <button type="button" class="bridgebtn" id="startBridge">Try full Qul (3 + 3 tries)</button></div>`;
+  } else if(onQu && st.quBridgeExhausted){
+    bridgeHtml = `<div class="bridgebox"><p class="bt"><b>Ask a teacher</b> to check your deep Q before continuing. You can still retry isolated Qu anytime.</p></div>`;
+  }
   box.innerHTML=`
-    <div class="staglbl">Beginner path — stage ${idx+1} of ${ladder.length}</div>
-    <div class="stagsay">Say: ${cur.say_en}</div>
-    <div class="stagar" dir="rtl" lang="ar">${cur.say_ar}</div>
-    <div class="staghint">${cur.hint}</div>
+    <div class="staglbl">Beginner path — stage ${idx+1} of ${ladder.length}${bridgeOn?' · Qul bridge':''}</div>
+    <div class="stagsay">Say: ${sayEn}</div>
+    <div class="stagar" dir="rtl" lang="ar">${sayAr}</div>
+    <div class="staghint">${hint}</div>
     <div class="stagsteps">${chips}</div>
+    ${bridgeHtml}
     ${samp}`;
   if(showQafKaf) bindSampleButtons(box);
+  const sb=$('startBridge');
+  if(sb) sb.onclick=()=>{
+    const prac=loadPractice(v);
+    prac.quBridgeActive=true;
+    prac.quBridgeFails=0;
+    prac.quBridgeExhausted=false;
+    savePractice(v, prac);
+    flashBuildNote('Qul bridge on — say full Qul. ق unlocks Qu → ul.');
+    paintAyahFocus();
+    renderStageBox();
+  };
+  const eb=$('exitBridge');
+  if(eb) eb.onclick=()=>{
+    const prac=loadPractice(v);
+    prac.quBridgeActive=false;
+    savePractice(v, prac);
+    flashBuildNote('Back to isolated Qu.');
+    paintAyahFocus();
+    renderStageBox();
+  };
 }
 let _sampAudio=null;
 function stopSampleAudio(){
@@ -559,6 +621,10 @@ function updatePracticeLog(verse, data){
   }
 
   const nextKey=next.key || null;
+  const bridgeInfo = (rs.find(r=>r.bridge) || {}).bridge
+    || (meta && meta.bridge)
+    || null;
+  const wasBridge = !!(st.quBridgeActive || bridgeInfo);
   st.iterations.push({
     t: Date.now(),
     session: data.session||'',
@@ -570,11 +636,32 @@ function updatePracticeLog(verse, data){
     stageAction: action,
     regression: action==='regress' || !!(next && next.regression),
     issueKeys,
+    bridge: wasBridge,
   });
   if(st.iterations.length>30) st.iterations=st.iterations.slice(-30);
   st.mastered=[...mastered];
   st.lockedStages=[...locked];
   st.lastFocus=(action==='advance'||action==='complete') ? null : nextKey;
+
+  // Qul bridge bookkeeping (Qu stage only)
+  if(curStage==='qu'){
+    if(action==='advance'){
+      st.quBridgeActive=false;
+      st.quBridgeFails=0;
+      st.quBridgeExhausted=false;
+    } else if(bridgeInfo){
+      const att=Number(bridgeInfo.attempt)||st.quBridgeFails||0;
+      st.quBridgeFails=Math.max(0, Math.min(6, att));
+      if(bridgeInfo.verdict==='tutor'){
+        st.quBridgeExhausted=true;
+        st.quBridgeActive=false;
+      } else if(st.quBridgeFails>=6){
+        st.quBridgeExhausted=true;
+        st.quBridgeActive=false;
+      }
+    }
+  }
+
   savePractice(verse, st);
   return st;
 }
@@ -616,10 +703,12 @@ function escHtml(s){
 /** Yellow-mark the current stage on Arabic + English ayah lines. */
 function paintAyahFocus(){
   const d=V[v-1];
-  const {cur}=currentStage(v);
+  const {st, cur}=currentStage(v);
   const words=AYAH_WORDS[v];
   const idxs=new Set((cur && cur.idxs) || []);
-  const hl=cur && cur.highlight;
+  const bridgeOn = cur && cur.id==='qu' && st.quBridgeActive && !st.quBridgeExhausted;
+  // In Qul bridge, yellow-mark the whole first word (Qul), not just Qu.
+  const hl = bridgeOn ? null : (cur && cur.highlight);
   if(!words || !idxs.size){
     $('verseAr').textContent=d.ar;
     $('phon').textContent=d.ph;
@@ -751,6 +840,10 @@ $('rec').onclick=async()=>{
     fd.append('locked_stages', JSON.stringify(prac.lockedStages||[]));
     if(prac.lastFocus) fd.append('last_focus', prac.lastFocus);
     if(prac.stageId) fd.append('stage_id', prac.stageId);
+    if(prac.stageId==='qu' && prac.quBridgeActive && !prac.quBridgeExhausted){
+      const attempt=Math.min(6, (prac.quBridgeFails||0)+1);
+      fd.append('qu_bridge_attempt', String(attempt));
+    }
     const myGen=_pollGen;
     showProg(true, 2, 'Uploading…', 0, 'queued');
     try{

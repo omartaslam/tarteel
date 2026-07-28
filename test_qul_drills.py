@@ -147,3 +147,38 @@ def test_build_feedback_qul_kaf_blocks():
 def test_earliest_fail_qul_goes_to_qu():
     s = earliest_failing_stage(1, ["qul"])
     assert s and s["id"] == "qu"
+
+
+def test_qu_qul_bridge_pass_on_qaf_advances():
+    ev = coach.evaluate_qu_qul_bridge(1, "قُلْ", "Qul", attempt=1)
+    assert ev["passed"] is True
+    assert ev["bridge"]["verdict"] == "pass"
+    cards = build_feedback(
+        1, [], None, heard_arabic="قُلْ", heard_phonetic="Qul",
+        stage_id="qu", qu_bridge_attempt=2,
+    )
+    assert cards[0].get("stage_passed") is True
+    assert cards[0].get("stage_action") == "advance"
+    assert cards[0].get("next_stage_id") == "ul"
+    assert "Locked Qu" in (cards[0].get("plain") or "")
+
+
+def test_qu_qul_bridge_kaf_never_passes():
+    ev = coach.evaluate_qu_qul_bridge(1, "كُل", "Kul", attempt=1)
+    assert ev["passed"] is False
+    assert ev["bridge"]["verdict"] == "fail"
+    assert ev["bridge"]["attempt"] == 1
+
+
+def test_qu_qul_bridge_sixth_fail_defers_to_tutor():
+    ev = coach.evaluate_qu_qul_bridge(1, "كُ", "ku", attempt=6)
+    assert ev["passed"] is False
+    assert ev["bridge"]["verdict"] == "tutor"
+    assert ev["cards"][0]["level"] == "defer"
+    assert "teacher" in (ev["cards"][0].get("plain") or "").lower()
+    cards = build_feedback(
+        1, [], None, heard_arabic="كُل", heard_phonetic="Kul",
+        stage_id="qu", qu_bridge_attempt=6,
+    )
+    assert cards[0].get("stage_passed") is False
+    assert cards[0].get("level") == "defer"

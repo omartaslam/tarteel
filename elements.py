@@ -53,6 +53,7 @@ def build_feedback(
     last_focus=None,
     stage_id=None,
     locked_stages=None,
+    qu_bridge_attempt=None,
 ):
     spec = VERSE_ELEMENTS.get(verse, {})
     stage = stg.get_stage(verse, stage_id)
@@ -68,13 +69,22 @@ def build_feedback(
     tips = []
 
     # Syllable micro-drills: Qu / ul — do not score against full ayah words.
+    # Optional Qul bridge on Qu: same ق/ك gate, up to 6 tries, then tutor defer.
     if drill:
-        ev = coach.evaluate_drill(
-            drill,
-            verse,
-            heard_arabic or "",
-            heard_phonetic or "",
-        )
+        if drill == "qu" and qu_bridge_attempt:
+            ev = coach.evaluate_qu_qul_bridge(
+                verse,
+                heard_arabic or "",
+                heard_phonetic or "",
+                attempt=qu_bridge_attempt,
+            )
+        else:
+            ev = coach.evaluate_drill(
+                drill,
+                verse,
+                heard_arabic or "",
+                heard_phonetic or "",
+            )
         errors.extend(ev.get("cards") or [])
         # defer blocks advance (no false lock) but still feeds next-step coaching
         blocking = [c for c in errors if c.get("level") in ("error", "defer")]
@@ -107,8 +117,17 @@ def build_feedback(
             "matched_arabic": "",
             "matched_phonetic": "",
         }
+        if ev.get("bridge"):
+            disp["bridge"] = ev["bridge"]
         if cards:
             cards[0] = {**cards[0], **disp}
+            # Bridge pass: make the STAGE CLEAR line name the bridge win.
+            if stage_passed and ev.get("bridge") and cards[0].get("stage_action") == "advance":
+                cards[0]["plain"] = (
+                    "<b>Locked Qu</b> from your Qul try (heard back ق). "
+                    "Next stage — say <b>ul</b> "
+                    "<span class=\"arlight\">(ـُلْ)</span>."
+                )
         return cards
 
     detected = [l for l in letters if l["c"] != "|"]

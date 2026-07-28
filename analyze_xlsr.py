@@ -48,7 +48,7 @@ class AnalysisCancelled(Exception):
     """Raised when the user starts a new recording and cancels this job."""
 
 
-def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None, cancel_check=None, stage_id=None, locked_stages=None):
+def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None, cancel_check=None, stage_id=None, locked_stages=None, qu_bridge_attempt=None):
     def prog(pct, phase, msg):
         if cancel_check and cancel_check():
             raise AnalysisCancelled()
@@ -183,6 +183,7 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
             last_focus=last_focus,
             stage_id=stage_id,
             locked_stages=locked_stages,
+            qu_bridge_attempt=qu_bridge_attempt,
         )
         # Keep literal Whisper in heard_raw; drill stages override the shown heard_*.
         if cards:
