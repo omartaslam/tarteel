@@ -189,12 +189,34 @@ def build_feedback(
     errors = sorted(errors, key=coach._issue_sort_key)
     tips = sorted(tips, key=lambda x: x.get("priority", 50))
 
-    # Stage pass: no blocking errors (shape / identity / pronunciation / hard qalqalah).
-    blocking = [c for c in errors if c.get("level") == "error"]
+    # Stage pass: word identity/shape (+ hard qalqalah) only.
+    # Fine letter tajweed (ك→ق etc.) is polish — tip, does not block the ladder.
     kinds = coach.stage_word_kinds(
         verse, heard_arabic or "", heard_phonetic or "", stage_words or None
     )
     miss_words = [en for en, k in kinds.items() if k == "miss"]
+
+    polish = []
+    kept = []
+    for c in errors:
+        if c.get("rule") == "pronunciation":
+            tip = dict(c)
+            tip["level"] = "measured"
+            polish.append(tip)
+        else:
+            kept.append(c)
+    errors = kept
+    tips = sorted(tips + polish, key=lambda x: x.get("priority", 50))
+
+    def _blocks_stage(c: dict) -> bool:
+        if c.get("level") != "error":
+            return False
+        rule = c.get("rule") or ""
+        if rule == "drill":
+            return True
+        return rule in ("word_shape", "qalqalah") or not rule
+
+    blocking = [c for c in errors if _blocks_stage(c)]
 
     # If a join stage breaks an earlier locked word, step back.
     regress_to = None
@@ -202,18 +224,6 @@ def build_feedback(
         regress_to = stg.earliest_failing_stage(verse, miss_words)
         if regress_to and regress_to.get("id") == stage.get("id"):
             regress_to = None
-
-    # Full Qul still showing English K → step back to Qu onset drill.
-    if (
-        not regress_to
-        and stage
-        and stage.get("id") == "qul"
-        and any(
-            c.get("heard_letter") == "ك" and c.get("expected_letter") == "ق"
-            for c in blocking
-        )
-    ):
-        regress_to = stg.get_stage(verse, "qu")
 
     stage_passed = not blocking and not miss_words
     return _finish_stage_cards(

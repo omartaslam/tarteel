@@ -10,16 +10,16 @@ from __future__ import annotations
 # word_idxs: indices into EXPECTED[verse]
 STAGES = {
     1: [
-        # Micro-drills: lock the deep-Q onset, then the ending, then join as Qul.
-        # "drill" stages use syllable scoring (not full-word ayah alignment).
+        # Micro-drills: lock word SHAPE first (Ku + ul → Kul), then polish deep Q as a tip.
+        # Fine ك→ق must not block the ladder (identity/shape before throat-Q).
         {
             "id": "qu",
-            "title": "Qu",
-            "say_en": "Qu",
-            "say_ar": "قُ",
+            "title": "Ku",
+            "say_en": "Ku",
+            "say_ar": "كُ",
             "hint": (
-                "Only the first half: deep Q + short “u”. "
-                "Soft-gargle place in the throat — not English K."
+                "Only the first half: “Ku” — clear K + short “u”. "
+                "No L yet. (Deep Arabic Q comes after the word shape locks.)"
             ),
             "words": [],
             "idxs": [],
@@ -42,7 +42,7 @@ STAGES = {
             "title": "Qul",
             "say_en": "Qul",
             "say_ar": "قُلْ",
-            "hint": "Join Qu + ul into one short word: Qul.",
+            "hint": "Join Ku + ul into one short word (Kul/Qul shape). Deep Q is polish after.",
             "words": ["qul"],
             "idxs": [0],
         },

@@ -436,41 +436,48 @@ def evaluate_drill(
     ph_compact = re.sub(r"[^a-zāḥṣṭḍẓ]", "", ph)
 
     if drill == "qu":
+        # Shape-first: lock the Ku onset (ك or ق). Deep ق is polish later, not a gate.
         has_q = "ق" in letters
-        # English-K onset that Whisper often writes as ك / cool / cull / ku
         has_k = (
             "ك" in letters
             or bool(re.search(r"(^|[^a-z])(k|c)(oo|u|o|a)", ph))
-            or ph_compact.startswith(("ku", "coo", "cul", "kol", "ko"))
+            or ph_compact.startswith(("ku", "coo", "cul", "kol", "ko", "q"))
         )
-        if has_q:
-            return {"passed": True, "cards": []}
+        if has_q or has_k:
+            cards = []
+            if has_k and not has_q:
+                cards.append({
+                    "level": "measured",
+                    "rule": "drill",
+                    "key": "drill:qu:deeper_q",
+                    "priority": 40,
+                    "verse": verse,
+                    "word_en": "Ku",
+                    "word_ar": "كُ",
+                    "section": section_html(verse, "qul"),
+                    "plain": (
+                        "Onset shape locked as <b>Ku</b>. "
+                        "Later we’ll deepen that K toward Arabic <b>Q</b> (ق) — "
+                        "soft-gargle place — but not yet."
+                    ),
+                    "fix": (
+                        "For now: short <b>Ku</b> only. No L. "
+                        "Deep Q is a polish step after Kul/Qul shape is locked."
+                    ),
+                    "scholarly": None,
+                })
+            return {"passed": True, "cards": cards}
         tip = {
-            "heard": "an English K (like “coo” / “cull”)",
-            "want": "Arabic Qu — deep Q + short “u” only",
+            "heard": "almost nothing clear" if not (letters or ph.strip()) else "something without a clear K/Q onset",
+            "want": "a short Ku (كُ) — K + “u” only",
             "fix": (
-                "Say only <b>Qu</b> (قُ) — not the full word yet.<br>"
-                "1) Tip of tongue on the back of your bottom front teeth.<br>"
-                "2) English “coo/cool” is too far forward.<br>"
-                "3) Soft-gargle place in the throat: short dry pop + “u”. Stop.<br>"
-                "4) Do <b>not</b> add the L yet."
+                "Say only <b>Ku</b> — clear K + short “u”. Stop. "
+                "Do <b>not</b> add the L yet."
             ),
-            "ar": ("ك", "ق"),
+            "ar": ("?", "ك"),
         }
-        if not letters and not ph.strip():
-            tip = {
-                "heard": "almost nothing clear",
-                "want": "a short Qu (قُ)",
-                "fix": (
-                    "Say only <b>Qu</b> — deep Q + short “u”. "
-                    "Soft-gargle place, short pop, stop. No L yet."
-                ),
-                "ar": ("?", "ق"),
-            }
-            card = _card(5, verse, "Qu", "قُ", tip, "?", "ق", rule="drill")
-        else:
-            card = _card(5, verse, "Qu", "قُ", tip, "ك" if has_k else "?", "ق", rule="drill")
-        card["key"] = "drill:qu:ك→ق"
+        card = _card(5, verse, "Ku", "كُ", tip, "?", "ك", rule="drill")
+        card["key"] = "drill:qu:onset"
         return {"passed": False, "cards": [card]}
 
     if drill == "ul":
