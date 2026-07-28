@@ -26,22 +26,22 @@ WINDOWS = {
     "qul": (0.72, 1.28),
     "qu": (0.72, 1.12),    # Qu onset for syllable rescue — Hear only Qu
     "ul": (1.05, 1.32),    # ul ending model for syllable rescue
-    # huwa: verified by XLSR greedy decode of the ENCODED mp3 → 'هو|وَ'.
-    # Starts at/after 1.42 drop the ه entirely (decode becomes 'ني'/'لي'/'') —
-    # that was the clipped ?v=4. Ends at/after 2.00 pull in Allāhu's ل.
-    "huwa": (1.34, 1.98),
+    # No huwa here on purpose: Husary recites "Qul huwa" joined (murattal and
+    # Muallim alike), so every slice kept Qul leftover or cut the ه onset. The
+    # huwa clip now comes from an isolated word-by-word recording — see
+    # static/samples/SOURCES.txt (stage_huwa_word.mp3).
     "allahu": (1.95, 3.60),
     "ahad": (3.40, 4.75),
 }
 
 PAD_S = 0.08
 # Huwa needs audible silence bookends so Hear-only has a clear start + end.
-PAD_BY_NAME = {"huwa": 0.12}
+PAD_BY_NAME: dict[str, float] = {}
 FADE_S = 0.025
 
 # The 2.5x cap left quiet regions under-levelled (huwa ?v=4 shipped ~7 dB below
 # the other stage clips). Clips listed here normalize fully to the peak target.
-FULL_NORMALIZE = {"huwa"}
+FULL_NORMALIZE: set[str] = set()
 PEAK_TARGET = 0.92
 
 

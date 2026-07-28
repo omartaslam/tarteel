@@ -1,10 +1,13 @@
 """Stage word clips must be teachable: whole word, audible, clean bookends.
 
-Two real live failures are guarded here:
+Real live failures guarded here:
   * ?v=3 huwa started inside Qul leftover audio.
   * ?v=4 huwa cut the ه onset (0.43s stub) and shipped ~7 dB under the other
     clips, so it was barely audible on a phone.
+Huwa now comes from an isolated word recording rather than an ayah slice,
+because Husary recites "Qul huwa" joined.
 """
+import re
 from pathlib import Path
 import subprocess
 
@@ -19,7 +22,7 @@ MIN_DUR = {
     "stage_qul_husary.mp3": 0.65,
     "stage_qu_husary.mp3": 0.45,
     "stage_ul_husary.mp3": 0.35,
-    "stage_huwa_husary.mp3": 0.80,
+    "stage_huwa_word.mp3": 0.80,
     "stage_allahu_husary.mp3": 1.4,
     "stage_ahad_husary.mp3": 1.2,
 }
@@ -30,7 +33,7 @@ MIN_PEAK = 0.35
 
 # Speech (silence stripped) must cover the whole word, not a clipped stub.
 MIN_SPEECH_DUR = {
-    "stage_huwa_husary.mp3": 0.55,
+    "stage_huwa_word.mp3": 0.55,
 }
 
 
@@ -78,6 +81,17 @@ def test_stage_word_clips_are_not_clipped_stubs(name):
     assert dur >= MIN_SPEECH_DUR[name], (
         f"{name} speech only {dur:.3f}s — word onset likely cut"
     )
+
+
+def test_every_clip_referenced_by_the_ui_exists():
+    """A renamed clip must never reach live as a 404 Hear only button."""
+    html = (Path(__file__).resolve().parent / "static" / "index.html").read_text()
+    missing = [
+        ref
+        for ref in sorted(set(re.findall(r"/samples/([A-Za-z0-9_.-]+\.mp3)", html)))
+        if not (SAMPLES / ref).exists()
+    ]
+    assert not missing, f"index.html references missing clips: {missing}"
 
 
 @pytest.mark.parametrize("name", sorted(MIN_DUR))

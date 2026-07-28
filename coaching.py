@@ -309,23 +309,14 @@ def _align_stage(
     """
     Align heard take to expected words, scoped to stage_words when set.
 
-    Single-word stages compare the whole letter stream to that word so الله
-    is not scored as near-قل via the prefix letters ال (left-align cherry-pick).
+    Scoping matters for any word after the first: aligning a lone الله against
+    the whole ayah let قل eat the letters ال and هو eat ه, leaving Allāhu (and
+    aḥad) as a miss on their own stage. Matching itself is unchanged — still
+    _align_words, so partial takes like قوله stay a tolerant near on Qul.
     """
     expected = _filter_expected(verse, stage_words)
     heard_words = [w for w in normalize_ar(heard_arabic or "").split() if w]
     you_phs = _heard_phonetics(heard_arabic, heard_phonetic)
-    if len(expected) == 1:
-        exp_bare, en, ar = expected[0]
-        chunk = "".join(_letters_only(w) for w in heard_words) if heard_words else None
-        if not chunk:
-            return [(None, exp_bare, en, ar, 99, "—", [])]
-        dist = _edit(chunk, exp_bare)
-        if dist > max(2, len(exp_bare)):
-            return [(None, exp_bare, en, ar, dist, "—", [])]
-        you_ph = " ".join(you_phs) if you_phs else _romanize(chunk)
-        widxs = list(range(len(heard_words)))
-        return [(chunk, exp_bare, en, ar, dist, you_ph, widxs)]
     return _align_words(heard_words, expected, you_phs)
 
 

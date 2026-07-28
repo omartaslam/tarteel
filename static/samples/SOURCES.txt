@@ -36,14 +36,28 @@ What success looks like when you play these into Tarteel on Ku/Qul:
 #   qul   0.72–1.28  → قُلْ
 #   qu    0.72–1.12  → Qu onset (syllable rescue Hear only)
 #   ul    1.05–1.32  → ul ending model
-#   huwa  1.15–1.95  → هُوَ
 #   allahu 1.95–3.60 → اللَّهُ
 #   ahad  3.40–4.75  → أَحَدٌ
 stage_qul_husary.mp3
 stage_qu_husary.mp3
 stage_ul_husary.mp3
-stage_huwa_husary.mp3
 stage_allahu_husary.mp3
 stage_ahad_husary.mp3
+
+HUWA — isolated word recording, NOT a slice
+-------------------------------------------
+stage_huwa_word.mp3
+  What: هُوَ on its own
+  From: https://audio.qurancdn.com/wbw/112_001_002.mp3
+        (quran.com / QuranWBW word-by-word audio; same file served by
+         https://audios.quranwbw.com/words/112/112_001_002.mp3)
+  Why not Husary: in Husary's murattal AND in his Muallim (teaching) recitation,
+  "Qul huwa" is recited joined — there is no silence between the words, so every
+  slice either kept Qul leftover at the start (?v=3) or cut the ه onset (?v=4).
+  Both were rejected on live. This source is recorded word-by-word, so the clip
+  needs no splice: XLSR decodes the whole encoded file as هُوَ with no ق/ل/ا.
+  Processing: trim to speech, normalize to RMS 0.19 (ladder parity), 0.14s
+  silence bookends, 20ms fades.
+  Reciter is the word-by-word reciter, not al-Husary — do not label it Husary.
 
 Ayah 2 Husary full + stage cuts (Allāhu, aṣ-ṣamad) from EveryAyah Husary 112002.

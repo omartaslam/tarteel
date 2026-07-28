@@ -1,4 +1,6 @@
 """Unit tests: word-first Qul; Qu requires back ق; middle ك must fail."""
+import pytest
+
 from elements import build_feedback
 from stages import earliest_failing_stage, get_stage, list_stages
 import coaching as coach
@@ -283,12 +285,38 @@ def test_qul_again_on_huwa_is_wrong_stage_not_mystery_miss():
     )
 
 
+@pytest.mark.parametrize(
+    "label,heard_ar,heard_ph,stage,expect_pass",
+    [
+        # Documented live pass, HANDOVER §1 (session 20260728-140251).
+        ("phone Qul Qawlahu", "قَوْلَهُ", "Qawlahu", "qul", True),
+        ("clean Qul", "قل", "Qul", "qul", True),
+        ("middle kaf never passes", "كُل", "Kul", "qul", False),
+        ("huwa on huwa", "هُوَ", "huwa", "huwa", True),
+        # These two were silently broken: the whole-ayah align let قل/هو eat
+        # the letters, so a correct lone word missed on its own stage.
+        ("Allahu on allahu", "اللَّهُ", "Allahu", "allahu", True),
+        ("ahad on ahad", "أَحَدٌ", "ahad", "ahad", True),
+    ],
+)
+def test_stage_detection_matrix_no_regression(label, heard_ar, heard_ph, stage, expect_pass):
+    cards = build_feedback(
+        1, [], None, heard_arabic=heard_ar, heard_phonetic=heard_ph,
+        stage_id=stage, locked_stages=[],
+    )
+    passed = bool(cards and cards[0].get("stage_passed"))
+    assert passed is expect_pass, f"{label}: stage_passed={passed}, expected {expect_pass}"
+
+
 def test_allahu_is_not_false_wrong_stage_qul():
     """Allāhu letters must not left-align as near-Qul (wrong_stage:allahu:qul)."""
     # Same shape as the live false fail: heard panel shows Allahu / اللَّهُ
     # but FOCUS claimed “sounded like Qul again”.
+    # Allāhu must score on its own stage instead of being eaten by قل / هو.
     assert coach.stage_word_kinds(1, "اللَّهُ", "Allahu", ["Allāhu"]) == {"Allāhu": "ok"}
-    assert coach.stage_word_kinds(1, "اللَّهُ", "Allahu", ["qul"]) == {"qul": "miss"}
+    # قل stays a tolerant near (that tolerance is what keeps Qawlahu passing on
+    # Qul) — so the wrong-stage claim must be gated on a clear ok, not on near.
+    assert coach.stage_word_kinds(1, "اللَّهُ", "Allahu", ["qul"]) == {"qul": "near"}
     import stages as stg
     stage = next(s for s in stg.list_stages(1) if s["id"] == "allahu")
     assert coach.detect_repeated_earlier_word(1, stage, "اللَّهُ", "Allahu") is None
