@@ -1063,15 +1063,26 @@ def _skill_family(key: str | None) -> str | None:
     return key
 
 
+def _stage_for_skill_key(key: str | None) -> str | None:
+    """Map a feedback key to the beginner-stage id it belongs to (if any)."""
+    if not key:
+        return None
+    parts = str(key).split(":")
+    if parts[0] == "drill" and len(parts) >= 2:
+        return parts[1]  # qu / ul
+    return None
+
+
 def pick_next_step(
     issue_cards: list[dict],
     mastered: list[str] | None = None,
     last_focus: str | None = None,
+    locked_stages: list[str] | None = None,
 ) -> dict | None:
     """
     One focus at a time.
-    If a previously-mastered skill is broken again, that regression wins
-    (move backwards to move forwards).
+    REGRESSION only if that skill's stage was actually locked earlier —
+    never a ghost from a defer / still-on-Qu practice streak.
     """
     actionable = [
         c for c in issue_cards
@@ -1083,22 +1094,27 @@ def pick_next_step(
     mastered_set = {m for m in (mastered or []) if m}
     # Also treat old Qu-drill key variants as the same mastery family.
     mastered_families = {_skill_family(m) for m in mastered_set}
+    locked_set = {s for s in (locked_stages or []) if s}
     issue_keys = {c.get("key") for c in actionable if c.get("key")}
     issue_families = {_skill_family(k) for k in issue_keys}
 
+    def _was_truly_locked(key: str | None) -> bool:
+        if not key:
+            return False
+        st = _stage_for_skill_key(key)
+        # Prefer locked stages — only a real Qu lock can regress Qu.
+        if st:
+            return st in locked_set
+        return key in mastered_set or _skill_family(key) in mastered_families
+
     regressions = [
         c for c in actionable
-        if c.get("key") and (
-            c["key"] in mastered_set or _skill_family(c["key"]) in mastered_families
-        )
+        if c.get("key") and _was_truly_locked(c.get("key"))
     ]
     pool = regressions if regressions else actionable
     pool = sorted(pool, key=_issue_sort_key)
     top = dict(pool[0])
-    is_reg = bool(regressions) and (
-        top.get("key") in mastered_set
-        or _skill_family(top.get("key")) in mastered_families
-    )
+    is_reg = bool(regressions) and _was_truly_locked(top.get("key"))
     orig_rule = top.get("rule")
     need = describe_skill(top.get("key"), {**top, "rule": orig_rule})
 

@@ -183,7 +183,7 @@ const V=[
 ];
 let v=1, rec=null, chunks=[], hAudio=null;
 const $=id=>document.getElementById(id);
-const PRACTICE_STORE='tarteel_practice_v6';
+const PRACTICE_STORE='tarteel_practice_v7';
 const BUILD_STORE='tarteel_build_id';
 // Beginner ladder — keep in sync with stages.py
 // Word-split ayah lines (keep in sync with coaching.AYAH_LINE) — used to yellow-mark where you are
@@ -493,6 +493,7 @@ async function syncBuildAndMaybeReset(){
       localStorage.removeItem('tarteel_practice_v3');
       localStorage.removeItem('tarteel_practice_v4');
       localStorage.removeItem('tarteel_practice_v5');
+      localStorage.removeItem('tarteel_practice_v6');
     }catch(e){}
     const h=await fetch('/health',{cache:'no-store'}).then(r=>r.json());
     const build=(h && h.build) ? String(h.build) : '';
@@ -519,8 +520,9 @@ function prettyKey(k){
 function updatePracticeLog(verse, data){
   const st=loadPractice(verse);
   const rs=data.results||[];
+  // defer counts as still-open — never treat it as a silent "focus pass"
   const issueKeys=[...new Set(
-    rs.filter(r=>r.level==='error')
+    rs.filter(r=>r.level==='error'||r.level==='defer')
       .map(r=>r.key).filter(Boolean)
   )];
   const issueSet=new Set(issueKeys);
@@ -746,6 +748,7 @@ $('rec').onclick=async()=>{
     const fd=new FormData(); fd.append('audio',blob,'rec.'+ext); fd.append('verse',v);
     const prac=loadPractice(v);
     fd.append('mastered', JSON.stringify(prac.mastered||[]));
+    fd.append('locked_stages', JSON.stringify(prac.lockedStages||[]));
     if(prac.lastFocus) fd.append('last_focus', prac.lastFocus);
     if(prac.stageId) fd.append('stage_id', prac.stageId);
     const myGen=_pollGen;

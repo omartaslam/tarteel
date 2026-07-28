@@ -53,6 +53,7 @@ def build_feedback(
     last_focus=None,
     stage_id=None,
     qu_acoustic=None,
+    locked_stages=None,
 ):
     spec = VERSE_ELEMENTS.get(verse, {})
     stage = stg.get_stage(verse, stage_id)
@@ -97,6 +98,7 @@ def build_feedback(
             regress_to=regress_to,
             mastered=mastered,
             last_focus=last_focus,
+            locked_stages=locked_stages,
         )
         # Honest drill display — never show Whisper's invented full word.
         disp = {
@@ -261,6 +263,7 @@ def build_feedback(
         regress_to=regress_to,
         mastered=mastered,
         last_focus=last_focus,
+        locked_stages=locked_stages,
     )
 
 
@@ -280,6 +283,7 @@ def _finish_stage_cards(
     regress_to,
     mastered,
     last_focus,
+    locked_stages=None,
 ):
     cards = []
     cards.extend(errors)
@@ -353,7 +357,12 @@ def _finish_stage_cards(
         })
     else:
         issues = blocking + tips
-        nxt = coach.pick_next_step(issues, mastered=mastered, last_focus=last_focus)
+        nxt = coach.pick_next_step(
+            issues,
+            mastered=mastered,
+            last_focus=last_focus,
+            locked_stages=locked_stages,
+        )
         if nxt:
             nxt["stage"] = stage_info
             nxt["stage_id"] = (stage or {}).get("id")
