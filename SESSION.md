@@ -14,7 +14,9 @@ After **3 isolated Qu fails**, UI offers **Try full Qul**:
 Middle ك never unlocks. Green header always clears history + refreshes (no confirm — iPhone blocks it).
 
 ## Current focus
-Omar: tap green header → **Try full Qul** → batch of Qul takes.
+Omar: tap green header → record. On Qu lock, stage box must switch to **ul** (not huwa yet).
+If STAGE CLEAR but prompt stuck, hard-refresh and say — that was a client UI bug (fixing).
+
 Reply `chk log` after the batch.
 
 ## Next after Qu locks (via Qu or bridge)
