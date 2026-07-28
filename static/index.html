@@ -630,7 +630,8 @@ function paintAyahFocus(){
       return '<span class="focusw">Qu</span>'+escHtml(w.slice(2));
     }
     if(hl==='ul' && i===0){
-      return escHtml(w.slice(0,2))+'<span class="focusw">'+escHtml(w.slice(2))+'</span>';
+      // Mark ul inside Qul
+      return escHtml(w.slice(0,1))+'<span class="focusw">'+escHtml(w.slice(1))+'</span>';
     }
     return '<span class="focusw">'+escHtml(w)+'</span>';
   });
@@ -641,7 +642,8 @@ function paintAyahFocus(){
       return '<span class="focusw">'+escHtml(w.slice(0,2))+'</span>'+escHtml(w.slice(2));
     }
     if(hl==='ul' && i===0){
-      return escHtml(w.slice(0,2))+'<span class="focusw">'+escHtml(w.slice(2))+'</span>';
+      // ُلْ inside قُلْ
+      return escHtml(w.slice(0,1))+'<span class="focusw">'+escHtml(w.slice(1))+'</span>';
     }
     return '<span class="focusw">'+escHtml(w)+'</span>';
   });
