@@ -294,13 +294,12 @@ FIX = {
         "heard": "a front K (like the K in “key” or “cool”)",
         "want": "a deep Q from far back in the mouth (not an English K)",
         "fix": (
-            "On <b>Qul</b>: English “key/cool” hits mid-mouth (where “k” usually lives). "
-            "Arabic <b>qaf</b> is farther back. Find the spot: say “ah” in a mirror — "
-            "the little soft punch-bag hanging down at the back of the throat is the <b>uvula</b> "
-            "(not the epiglottis — that’s a different flap lower down that closes when you swallow). "
-            "Do <b>not</b> curl/roll the tongue tip. Keep the tip down; pull the <b>whole back of the tongue</b> "
-            "toward that punch-bag until you almost feel a soft gag, then make a short dry pop there → “u” → “l”: <b>Qul</b>. "
-            "Normal speaking breath; one clean hit — not “Kulla…”."
+            "On <b>Qul</b> — do this with your mouth, not jargon:<br>"
+            "1) Park the <b>tip</b> of your tongue lightly on the back of your bottom front teeth (so it can’t curl).<br>"
+            "2) Say English <b>“go”</b> / <b>“guh”</b>. Feel the thick part of the tongue jump up farther back than “key”.<br>"
+            "3) Same move, but aim that thick part even farther back — like you’re starting a soft gargle or almost gagging — then make a short dry <b>pop</b> there.<br>"
+            "4) Right after the pop, add a tiny <b>“u”</b> then <b>“l”</b>: <b>Qul</b>. Stop. Don’t say “Kulla…”.<br>"
+            "If it still sounds like “cool/cull”, you’re still on English K — redo step 2–3."
         ),
         "ar": ("ك", "ق"),
     },

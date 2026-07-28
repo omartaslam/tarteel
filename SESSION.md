@@ -5,9 +5,8 @@ Last updated: 2026-07-28 (after beginner stage ladder deploy `0778007`)
 ## Where we left off
 - **Product direction:** beginner stage ladder (isolate → lock → join → full ayah). Live on `main`.
 - **Omar stuck on stage 1 — Qul:** 6 takes all heard as `Kulla`/`Kullahu`/`Kullahi` (ك, front K). Not flaky calibration; real ك→ق difficulty + fatigue.
-- **Coaching copy:** Qul tip — uvula = hanging punch-bag (NOT epiglottis); don’t roll tip — pull whole back of tongue; short Qul.
-- **Husary on iPhone:** same-origin `/husary/{code}` proxy + playsInline (was failing on cross-origin Audio).
-- **Technique note for Omar:** not a deep inhale blast; normal breath + tongue far back + abrupt short **Qul**.
+- **Coaching copy:** Qul tip is a 4-step mouth drill: tip on bottom teeth → feel “go/guh” → same but farther back like soft gargle/gag → short pop + “ul”. Not “pull tongue” jargon.
+- **Husary on iPhone:** same-origin `/husary/{code}` proxy + playsInline.
 - **Agreed product rules:** generic adult-male audience; no personal hardcoding; self-contained (no paid APIs at use time); clear practice history on new deploy.
 - **Optional next (not started):** soften stage-1 gate so near “Kul” can lock word-shape first, then polish ق as a sub-step — only if grinding Qul remains demoralising.
 
