@@ -29,10 +29,14 @@ It is **not a replacement for a teacher**. It locks one piece at a time (word �
 > We have a live English-first prototype that can lock beginner **Qul** on phone for an adult male when taught as **QUAL** (as in *quality*), including when phone speech-to-text wrongly writes ك. We are **not** yet at 80% across all four ayat of Al-Ikhlas. We want a respected UK tajweed scholar as partner for **real-world validation** once detection is tea-bone accurate across the surah.
 
 ### Breakthrough that unlocked Qul (keep forever)
-- Label “Qul” made English speakers say **cull/cool → ك**.  
-- Mouth cue **QUAL / QUA like *quality*** (hollow **qh**) unlocked correct **ق**.  
-- Formula: **QUAL** (onset) + **ul** (as in *pull*/*full*) → **Qul**.  
-- **Not** “ghwal” (that drifts toward **غ**).
+**Key descriptors for English-speaking students (lead every session):**
+1. ***quality*** — onset **QUAL / QUA** (hollow **qh**) for ق  
+2. ***pull*** — ending **ul** (short u + clear L)
+
+- Label “Qul” alone made English speakers say **cull/cool → ك**.  
+- Formula: **QUALITY** onset + **PULL** ending → **Qul** (teach split, not one mush).  
+- **Not** “ghwal” (that drifts toward **غ**).  
+- Next session must open with these two anchors (`SESSION.md` START HERE).
 
 ### Phone ASR problem (why scholars should care)
 Phone Whisper often **flattens ق → ك** (“Kull”) even when the learner produced back ق.  

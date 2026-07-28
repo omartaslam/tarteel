@@ -1,26 +1,28 @@
-Full handover (scholar summary + P0 + deploy): see `HANDOVER.md`.
-
 # Tarteel — session handoff
 
-Last updated: 2026-07-28 (QUAL English cue for ق; stage compare; Qu rescue play)
+Last updated: 2026-07-28 (Qul live lock; QUALITY + PULL cues; phone ASR rescue)
+
+Full handover (scholar summary + P0 + deploy): see `HANDOVER.md`.
+
+## START HERE NEXT SESSION — English mouth cues (non-negotiable)
+These two anchors unlocked adult-male **Qul** on phone. Lead with them every time:
+
+1. **QUALITY** — onset of ق / Qu / Qul = **QUAL / QUA** like the start of *quality* (hollow **qh**). Never teach “Qul” as cull/cool (that’s ك). Not “ghwal” (drifts to غ).
+2. **PULL** — ending **ul** = end of *pull* / *full* (short u + clear L).
+
+**Together:** QUALITY onset + PULL ending → **Qul**.  
+Split them when teaching; don’t mush into one vague “Quaull”.
+
+Apply the same standard to later words (HOO-wa, Al-LAA-hu, a-ḤAD). See `STABLE.md`.
 
 ## Live tester care
 Mom is testing production. **Do not wipe practice on deploy or header tap.**
 Clear only via explicit “Clear practice history” button.
 
 ## Freeze rule
-**Qu letter gate unchanged:** ASR ق pass / ك fail.
-**Qul lock also requires ق** in the take — shape-near without ق does not advance.
-
-## English phonetics — hard rule (this breakthrough)
-Written labels ≠ mouth cues. If English spelling makes beginners say the wrong sound, the tip failed.
-- ق / Qul → teach **QUAL / QUA like quality** (not cull/cool)
-- Qu → **QUA like quality**
-- ul → end of **pull / full**
-- huwa → **HOO-wa** (who + wa)
-- Allāhu → **Al-LAA-hu** (hold ll)
-- aḥad → **a-ḤAD** (fog-mirror Ḥ, not soft “ahead”)
-Apply on every future tip. See `STABLE.md`.
+**Qu / Qul:** letter-track / ASR **ق** pass; **ك** fail.
+**Phone rescue:** Whisper ك + XLSR onset ق (not ك) → pass.
+**Qul lock** needs ق evidence — shape-near without ق does not advance.
 
 ## Pedagogy (ayah 1) — word first
 1. **Qul** ×3 → pass with ق → **huwa** (locks qu+ul).
@@ -37,15 +39,14 @@ Apply on every future tip. See `STABLE.md`.
 - Fail tag **FOCUS**. Stage-clear still says NEXT STEP.
 
 ## Detection note (male Qul battery)
-Everyayah male murattal Qul cuts (Alafasy, Basit, Ghamadi, Maher, Shaatree, Minshawi bench,
-qul_correct_male) → pass when ASR shows ق. Kaf bench fails.
-**Phone rescue:** if Whisper writes ك but XLSR onset letters show ق (not ك), pass — phone ASR flatten must not lock out the audience.
+Everyayah male murattal Qul cuts → pass when ق evidence present. Kaf bench fails.
+Phone rescue live on build `4df95c7`+. Milestone: `20260728-163050` Qul → huwa (Whisper Kullu, letters قل).
 
-## Backlog
-- Fill incorrect clips for huwa / Allāhu / aḥad (Incorrect row already stage-scoped).
-- Fill `hear` + real `compare` clips for ayahs 2–4 using the same stage contract.
-- Word-first ×3 → syllables across rest of surah.
-- Progress UI ~17% stall.
+## Backlog / P0 (see HANDOVER.md §6)
+- Five UX decisions still open (first action, compare vs Record fold, fail×3, clear button, …).
+- Formal male-adult % for Qul; then huwa / Allāhu / aḥad; target ≥80% across Surah 112 before scholar cohort.
+- Mom / female voice = separate track.
+- Incorrect clips; ayat 2–4 stage contract fill; progress ~17% stall.
 
 ## Stack
-Railway from `main`. Practice store `tarteel_practice_v7`.
+Railway from `main`. Practice store `tarteel_practice_v7`. Live: https://tarteel-production.up.railway.app

@@ -16,6 +16,11 @@ See `STAGE CONTRACT` in `static/index.html` and `test_stage_contract.py`.
 ## Hard rule — English phonetics (learner lesson 2026-07-28)
 **Every coaching cue must use English sounds a beginner can actually make.**
 
+**Lead descriptors for ق / Qul (non-negotiable):**
+- ***quality*** → onset **QUAL / QUA** (hollow qh)
+- ***pull*** → ending **ul**
+- Together (taught split): QUALITY + PULL → **Qul**
+
 - Scholarly transliteration (Qul, Qu, aḥad) is a *label*, not always the mouth cue.
 - If the English spelling reads as the *wrong* sound to a native English speaker, the tip has failed
   (example: teaching “Qul” → people say cull/cool/ك; correct cue was **QUAL** like *quality*).
