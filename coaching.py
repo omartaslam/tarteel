@@ -291,15 +291,14 @@ WORD_IDENTITY = {
 # Fine letter tips — only after words are roughly right.
 FIX = {
     ("ك", "ق"): {
-        "heard": "a front K (like the K in “key” or “cool”)",
-        "want": "a deep Q from far back in the mouth (not an English K)",
+        "heard": "an English K (like “cull” / “cool”)",
+        "want": "Arabic Qul — deep Q, not English K or G",
         "fix": (
-            "On <b>Qul</b> — do this with your mouth, not jargon:<br>"
-            "1) Park the <b>tip</b> of your tongue lightly on the back of your bottom front teeth (so it can’t curl).<br>"
-            "2) Say English <b>“go”</b> / <b>“guh”</b>. Feel the thick part of the tongue jump up farther back than “key”.<br>"
-            "3) Same move, but aim that thick part even farther back — like you’re starting a soft gargle or almost gagging — then make a short dry <b>pop</b> there.<br>"
-            "4) Right after the pop, add a tiny <b>“u”</b> then <b>“l”</b>: <b>Qul</b>. Stop. Don’t say “Kulla…”.<br>"
-            "If it still sounds like “cool/cull”, you’re still on English K — redo step 2–3."
+            "Say only the word <b>Qul</b> (not “Gul”, not “Kull”).<br>"
+            "1) Tip of tongue rests on the back of your bottom front teeth.<br>"
+            "2) English “cool/cull” hits too far forward — that’s what we’re hearing now.<br>"
+            "3) For <b>Qul</b>, make the first letter deeper: soft-gargle place in the throat, short dry pop, then “ul”.<br>"
+            "4) One short word: <b>Qul</b>. Stop."
         ),
         "ar": ("ك", "ق"),
     },
