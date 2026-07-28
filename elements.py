@@ -43,12 +43,18 @@ VERSE_ELEMENTS = {
     },
 }
 
-# Every isolated word stage owns the letter it is teaching, the way Qul owns ق.
-# Word shape alone is too generous on two-letter words: a bare ه scored "near"
-# against هو, so aḥad (heard "هُ أَحَدٌ") cleared the huwa stage.
-# (stage_id, verse) -> (required letter, English cue, what a miss sounds like)
+# Every isolated word stage owns the letters it is teaching, the way Qul owns ق.
+# Word shape alone is far too generous on short words — measured against public
+# recordings of ordinary male speakers, these all cleared the wrong stage:
+#   هُ أَحَدٌ  cleared huwa   (a bare ه scored "near" هو)
+#   قَالَ / قَوْمَى cleared Qul  (any ق-initial word; قَوْمَى happened on Omar's phone)
+#   لَهُ        cleared Allāhu (له is within edit distance 2 of الله)
+# (stage_id, verse) -> (required letters, English cue, what a miss sounds like)
 STAGE_KEY_LETTER = {
     ("huwa", 1): ("و", "the <b>W</b> in <b>HOO-wa</b>", "“hoo-a” or “hoo-fa” with no W"),
+    ("qul", 1): ("ل", "the <b>L</b> at the end of <b>QUAL</b>", "a ق word that never lands on L"),
+    ("allahu", 1): ("لل", "the held double <b>L</b> in <b>Al-LAA-hu</b>", "a single quick L, like “lahu”"),
+    ("allahu", 2): ("لل", "the held double <b>L</b> in <b>Al-LAA-hu</b>", "a single quick L, like “lahu”"),
 }
 
 
@@ -287,7 +293,8 @@ def build_feedback(
     key_letter = STAGE_KEY_LETTER.get(((stage or {}).get("id"), verse))
     if key_letter and stage_passed and len(stage_words or []) == 1:
         letter, cue, miss_sounds_like = key_letter
-        if letter not in coach.normalize_ar(heard_arabic or ""):
+        heard_letters = coach.normalize_ar(heard_arabic or "").replace(" ", "")
+        if letter not in heard_letters:
             stage_passed = False
             say = (stage or {}).get("say_en") or focus_word or "this word"
             say_ar = (stage or {}).get("say_ar") or ""

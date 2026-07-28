@@ -343,6 +343,27 @@ def test_stage_detection_matrix_no_regression(label, heard_ar, heard_ph, stage, 
     assert passed is expect_pass, f"{label}: stage_passed={passed}, expected {expect_pass}"
 
 
+@pytest.mark.parametrize(
+    "stage,heard_ar,heard_ph,expect_pass,note",
+    [
+        # Measured against public recordings of ordinary male speakers.
+        ("qul", "قُل", "Qul", True, "correct Qul"),
+        ("qul", "قَوْلَهُ", "Qawlahu", True, "documented live pass — must survive"),
+        ("qul", "قَوْمَى", "Qawmā", False, "cleared Qul on Omar's phone; ق but no ل"),
+        ("allahu", "اللَّهُ", "Allahu", True, "correct Allāhu"),
+        ("allahu", "لَهُ", "lahu", False, "cleared Allāhu for 3 of 3 speakers"),
+        ("huwa", "هُوَ", "huwa", True, "correct huwa"),
+        ("huwa", "هِيَ", "hiya", False, "ه with no و"),
+    ],
+)
+def test_word_stages_need_their_own_letters(stage, heard_ar, heard_ph, expect_pass, note):
+    cards = build_feedback(
+        1, [], None, heard_arabic=heard_ar, heard_phonetic=heard_ph,
+        stage_id=stage, locked_stages=[],
+    )
+    assert bool(cards[0].get("stage_passed")) is expect_pass, f"{note}: {heard_ar}"
+
+
 def test_huwa_needs_its_waw_not_just_a_ha():
     """aḥad (heard "هُ أَحَدٌ") used to clear huwa — a bare ه scored near هو."""
     fail = build_feedback(
