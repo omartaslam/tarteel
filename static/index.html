@@ -156,7 +156,7 @@ const V=[
 ];
 let v=1, rec=null, chunks=[], hAudio=null;
 const $=id=>document.getElementById(id);
-const PRACTICE_STORE='tarteel_practice_v1';
+const PRACTICE_STORE='tarteel_practice_v2';
 const BUILD_STORE='tarteel_build_id';
 const VERSE_WORDS={
   1:['qul','huwa','Allāhu','aḥad'],
@@ -326,11 +326,14 @@ function flashBuildNote(msg){
 /** Wipe device practice log when a new deploy is detected. */
 async function syncBuildAndMaybeReset(){
   try{
+    // Drop legacy store key from earlier builds
+    try{ localStorage.removeItem('tarteel_practice_v1'); }catch(e){}
     const h=await fetch('/health',{cache:'no-store'}).then(r=>r.json());
     const build=(h && h.build) ? String(h.build) : '';
     if(!build) return;
     const prev=localStorage.getItem(BUILD_STORE)||'';
-    if(prev && prev!==build){
+    const hadPractice=!!localStorage.getItem(PRACTICE_STORE);
+    if((prev && prev!==build) || (!prev && hadPractice)){
       clearAllPractice();
       flashBuildNote('New build — practice history cleared on this device. Fresh start.');
     }
