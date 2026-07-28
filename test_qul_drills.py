@@ -24,6 +24,31 @@ def test_qu_fail_on_kaf():
     assert ev["passed"] is False
     assert ev["display_phonetic"] == "Ku"
     assert ev["cards"] and ev["cards"][0]["expected_letter"] == "ق"
+    assert ev["cards"][0]["key"] == "drill:qu:ق"
+
+
+def test_next_step_does_not_claim_holding_on_same_qu_fault():
+    # Switching between unclear vs kaf must not say "deep Q is holding".
+    err = {
+        "level": "error",
+        "rule": "drill",
+        "key": "drill:qu:ق",
+        "word_en": "Qu",
+        "heard_letter": "ك",
+        "expected_letter": "ق",
+        "plain": "heard middle K",
+        "fix": "use back Q",
+        "priority": 5,
+    }
+    nxt = coach.pick_next_step(
+        [err],
+        mastered=["drill:qu:onset"],  # old variant
+        last_focus="drill:qu:onset",
+    )
+    assert nxt is not None
+    plain = nxt.get("plain") or ""
+    assert "holding" not in plain.lower()
+    assert "steadied" not in plain.lower()
 
 
 def test_qu_fail_on_kul_whisper():

@@ -474,6 +474,8 @@ def evaluate_drill(
                 "compare_html": _drill_compare("Qu", "قُ", "Qu", "قُ", True),
                 "heard_match": "drill",
             }
+        # Stable key so mastery / last-focus doesn't thrash across onset vs kaf variants.
+        fail_key = "drill:qu:ق"
         if has_k:
             tip = {
                 "heard": "a middle K (kaf) — like English “cool/cull”",
@@ -486,7 +488,7 @@ def evaluate_drill(
                 "ar": ("ك", "ق"),
             }
             card = _card(5, verse, "Qu", "قُ", tip, "ك", "ق", rule="drill")
-            card["key"] = "drill:qu:ك→ق"
+            card["key"] = fail_key
             return {
                 "passed": False,
                 "cards": [card],
@@ -505,7 +507,7 @@ def evaluate_drill(
             "ar": ("?", "ق"),
         }
         card = _card(5, verse, "Qu", "قُ", tip, "?", "ق", rule="drill")
-        card["key"] = "drill:qu:onset"
+        card["key"] = fail_key
         return {
             "passed": False,
             "cards": [card],
@@ -942,10 +944,15 @@ def describe_skill(key: str | None, card: dict | None = None) -> str:
         if rule == "pronunciation":
             hc, ec = card.get("heard_letter"), card.get("expected_letter")
             if hc == "ك" and ec == "ق":
-                return f"the deep Q in {wen}"
+                return f"the back Q (not middle K) in {wen}"
             if hc == "ه" and ec == "ح":
                 return f"the strong Ḥ in {wen}"
             return f"the letter detail in {wen}"
+        if rule == "drill":
+            hc, ec = card.get("heard_letter"), card.get("expected_letter")
+            if hc == "ك" and ec == "ق":
+                return "the back Q in Qu (not middle K)"
+            return "the Qu onset (back Q)"
         if rule in ("madd",):
             return f"the vowel length in {wen}"
         if rule in ("qalqalah", "qalqalah_practice"):
@@ -970,7 +977,7 @@ def describe_skill(key: str | None, card: dict | None = None) -> str:
         wen = _tw(rest[0]) if rest else "this word"
         swap = rest[1] if len(rest) > 1 else ""
         if swap == "ك→ق":
-            return f"the deep Q in {wen}"
+            return f"the back Q (not middle K) in {wen}"
         if swap == "ه→ح":
             return f"the strong Ḥ in {wen}"
         return f"the letter detail in {wen}"
@@ -982,10 +989,22 @@ def describe_skill(key: str | None, card: dict | None = None) -> str:
         return f"the doubling in {_tw(rest[0]) if rest else 'this word'}"
     if head == "drill":
         if rest and rest[0] == "qu":
-            return "the deep Q in Qu"
+            return "the Qu onset (back Q)"
         if rest and rest[0] == "ul":
             return "the L in ul"
         return "this drill"
+    return key
+
+
+def _skill_family(key: str | None) -> str | None:
+    """Group related keys so we don't fake 'holding' across drill variants."""
+    if not key:
+        return None
+    parts = str(key).split(":")
+    if parts[0] == "drill" and len(parts) >= 2:
+        return f"drill:{parts[1]}"
+    if parts[0] == "pronunciation" and len(parts) >= 3 and parts[2] == "ك→ق":
+        return "drill:qu"
     return key
 
 
@@ -1007,12 +1026,24 @@ def pick_next_step(
         return None
 
     mastered_set = {m for m in (mastered or []) if m}
+    # Also treat old Qu-drill key variants as the same mastery family.
+    mastered_families = {_skill_family(m) for m in mastered_set}
     issue_keys = {c.get("key") for c in actionable if c.get("key")}
-    regressions = [c for c in actionable if c.get("key") and c["key"] in mastered_set]
+    issue_families = {_skill_family(k) for k in issue_keys}
+
+    regressions = [
+        c for c in actionable
+        if c.get("key") and (
+            c["key"] in mastered_set or _skill_family(c["key"]) in mastered_families
+        )
+    ]
     pool = regressions if regressions else actionable
     pool = sorted(pool, key=_issue_sort_key)
     top = dict(pool[0])
-    is_reg = bool(regressions) and top.get("key") in mastered_set
+    is_reg = bool(regressions) and (
+        top.get("key") in mastered_set
+        or _skill_family(top.get("key")) in mastered_families
+    )
     orig_rule = top.get("rule")
     need = describe_skill(top.get("key"), {**top, "rule": orig_rule})
 
@@ -1029,19 +1060,23 @@ def pick_next_step(
         if after_this
         else ""
     )
-    issue_keys = {c.get("key") for c in actionable if c.get("key")}
 
     fixed_key = None
-    if last_focus and last_focus not in issue_keys:
+    # Only claim a prior focus is "holding" if it's a different skill family.
+    if (
+        last_focus
+        and last_focus not in issue_keys
+        and _skill_family(last_focus) not in issue_families
+    ):
         fixed_key = last_focus
     keep_key = fixed_key
-    if is_reg and last_focus and top.get("key") != last_focus:
+    if is_reg and last_focus and _skill_family(last_focus) != _skill_family(top.get("key")):
         keep_key = last_focus
 
     kept = describe_skill(keep_key) if keep_key else None
     detail = top.get("plain", "")
 
-    if is_reg and kept and keep_key != top.get("key"):
+    if is_reg and kept and _skill_family(keep_key) != _skill_family(top.get("key")):
         if fixed_key:
             head = (
                 f"<b>You’ve steadied {kept}</b> — well done. "

@@ -179,7 +179,7 @@ const V=[
 ];
 let v=1, rec=null, chunks=[], hAudio=null;
 const $=id=>document.getElementById(id);
-const PRACTICE_STORE='tarteel_practice_v5';
+const PRACTICE_STORE='tarteel_practice_v6';
 const BUILD_STORE='tarteel_build_id';
 // Beginner ladder — keep in sync with stages.py
 const STAGE_LADDER={
@@ -480,6 +480,7 @@ async function syncBuildAndMaybeReset(){
       localStorage.removeItem('tarteel_practice_v2');
       localStorage.removeItem('tarteel_practice_v3');
       localStorage.removeItem('tarteel_practice_v4');
+      localStorage.removeItem('tarteel_practice_v5');
     }catch(e){}
     const h=await fetch('/health',{cache:'no-store'}).then(r=>r.json());
     const build=(h && h.build) ? String(h.build) : '';
