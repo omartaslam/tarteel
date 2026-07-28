@@ -562,13 +562,21 @@ function renderStageBox(stOverride){
     modeNote = `<div class="bridgebox"><p class="bt">Say only <b>ul</b> — like the end of “pull” / “full”. No Q/K onset.</p></div>`;
   }
   const modeLbl = onQul ? ' · word first' : (onQu && st.syllableRescue ? ' · syllable rescue' : '');
-  const wordPlay = stagePlayHtml(cur.id, cur.say_en, 'playStageCurrent');
+  // Hear only THIS stage sound — directly under Say: (never omit)
+  let wordPlay = stagePlayHtml(cur.id, cur.say_en, 'playStageCurrent');
+  if(!wordPlay){
+    // Fallback so the second play button never disappears
+    wordPlay = `<div class="stageplay">
+      <button type="button" id="playStageCurrent" data-stage="${cur.id}" aria-label="Play ${cur.say_en}"></button>
+      <div class="splbl"><b>Hear only ${cur.say_en}</b><span>Model for this step</span></div>
+    </div>`;
+  }
   box.innerHTML=`
     <div class="staglbl">Beginner path — stage ${idx+1} of ${ladder.length}${modeLbl}</div>
     <div class="stagsay">Say: ${cur.say_en}</div>
     <div class="stagar" dir="rtl" lang="ar">${cur.say_ar}</div>
-    <div class="staghint">${cur.hint}</div>
     ${wordPlay}
+    <div class="staghint">${cur.hint}</div>
     <div class="stagsteps">${chips}</div>
     ${modeNote}
     ${samp}`;
