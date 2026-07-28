@@ -28,3 +28,10 @@ INCORRECT  bench_incorrect_kaf_letter_alnatiq.*
 What success looks like when you play these into Tarteel on Ku/Qul:
   Correct  → app should show ق / Qul (back Q)
   Incorrect → app should show ك / Kul (middle K), not pretend it heard ق
+
+# Stage word clips (ayah 1) — sliced from real_ikhlas1_husary_full for next-step play
+stage_qul_husary.mp3
+stage_huwa_husary.mp3
+stage_allahu_husary.mp3
+stage_ahad_husary.mp3
+

@@ -35,6 +35,8 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .t-ok{background:#2c5f2d}.t-error{background:#c0392b}.t-defer{background:#c9a913;color:#3a3000}.t-measured{background:#e08a1e}
 .card.next{background:#e8f1ff;border-color:#1a5fb4;border-left-width:8px}
 .t-next{background:#1a5fb4}
+.card.next.cleared{background:#eef7ee;border-color:#2c5f2d;border-left-width:8px}
+.t-cleared{background:#2c5f2d}
 .card.next.regression,.card.regression{background:#fdecea;border-color:#c0392b;border-left-width:8px}
 .t-regression{background:#c0392b}
 .card .fix{font-size:15px;color:#1a1a1a;margin-top:8px;padding:10px 12px;background:rgba(255,255,255,.65);border-radius:8px}
@@ -62,6 +64,10 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .restbox .restbody{padding:0 12px 12px}
 #workbench{min-height:40px}
 .heard{background:#eef3f8;border:1px solid #c9d8e8;border-radius:10px;padding:12px 16px;margin:10px 0}
+.heard.fail{background:#fdecea;border-color:#e8a0a0}
+.heard.fail .hh{color:#8a3a3a}
+.heard.pass{background:#eef7ee;border-color:#9ccc9c}
+.heard.pass .hh{color:#2c5f2d}
 .heard .hh{font-size:12px;font-weight:bold;color:#2c5f8f;letter-spacing:.5px;margin-bottom:6px}
 .heard .har{font-size:28px;font-family:'Amiri','Traditional Arabic',serif;color:#1a1a1a;margin:6px 0;text-align:right;direction:rtl;line-height:1.6}
 .heard .hph{font-size:16px;color:#2c5f8f;font-style:italic;margin:4px 0}
@@ -106,10 +112,18 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .bridgebtn:active{opacity:.9}
 .bridgebtn.secondary{background:#fff;color:#2c5f8f;border:1px solid #2c5f8f;margin-top:8px}
 .advbanner{background:#eef7ee;border:2px solid #2c5f2d;border-radius:12px;padding:14px 16px;margin:0 0 14px;text-align:center}
+.advbanner.failbanner{background:#fdecea;border-color:#c0392b}
+.advbanner.failbanner .al{color:#8a3a3a}
 .advbanner .al{font-size:11px;font-weight:700;letter-spacing:.4px;color:#2c5f2d;text-transform:uppercase}
 .advbanner .as{font-size:28px;font-weight:700;color:#1a2a3a;margin:6px 0 2px}
 .advbanner .aa{font-family:Amiri,serif;font-size:26px;color:#3a4a5a;direction:rtl}
-.advbanner .an{font-size:13px;color:#456;margin-top:6px}
+.advbanner .an{font-size:13px;color:#456;margin-top:6px;line-height:1.4}
+.advbanner .stageplay{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px}
+.advbanner .stageplay button{flex-shrink:0;background:#2c5f2d;color:#fff;border:none;border-radius:50%;width:44px;height:44px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0}
+.advbanner .stageplay button::before{content:"";display:block;width:0;height:0;border-style:solid;border-width:8px 0 8px 13px;border-color:transparent transparent transparent #fff;margin-left:3px}
+.advbanner .stageplay button.playing::before{border-width:0;width:12px;height:12px;background:#fff;margin-left:0}
+.advbanner .stageplay .splbl{font-size:13px;color:#2c5f2d;text-align:left;line-height:1.35}
+.advbanner .stageplay .splbl b{display:block;font-size:14px}
 .stagwrap{margin:12px 0;padding:14px 16px;background:linear-gradient(180deg,#f4f7fb 0%,#eef3f8 100%);border:1px solid #d4dee8;border-radius:12px}
 .staglbl{font-size:11px;font-weight:700;letter-spacing:.4px;color:#6a7a8a;text-transform:uppercase;margin-bottom:6px}
 .stagsay{font-size:26px;font-weight:700;color:#1a2a3a;line-height:1.25;margin:4px 0}
@@ -245,6 +259,49 @@ const VERSE_WORDS={
   3:['lam','yalid','wa lam','yūlad'],
   4:['wa lam','yakun','lahu','kufuwan','aḥad'],
 };
+/** Husary (or bench) clips for the current stage word only — not the full ayah. */
+const STAGE_WORD_CLIPS={
+  1:{
+    qul:'/samples/stage_qul_husary.mp3',
+    qu:'/samples/stage_qul_husary.mp3',
+    ul:'/samples/stage_qul_husary.mp3',
+    huwa:'/samples/stage_huwa_husary.mp3',
+    allahu:'/samples/stage_allahu_husary.mp3',
+    ahad:'/samples/stage_ahad_husary.mp3',
+  },
+};
+let _stageClipAudio=null;
+function stopStageClip(){
+  if(_stageClipAudio){
+    try{ _stageClipAudio.pause(); }catch(e){}
+    _stageClipAudio=null;
+  }
+  document.querySelectorAll('.stageplay button.playing,.advbanner .stageplay button.playing').forEach(b=>b.classList.remove('playing'));
+}
+function playStageWordClip(stageId, btn){
+  const map=STAGE_WORD_CLIPS[v]||{};
+  const src=map[stageId];
+  if(!src){
+    // Fallback: full-ayah Husary at top
+    $('playH').click();
+    return;
+  }
+  stopSampleAudio();
+  stopStageClip();
+  if(hAudio){
+    try{ hAudio.pause(); }catch(e){}
+    hAudio=null;
+    const ph=$('playH'); if(ph) ph.classList.remove('playing');
+  }
+  const a=new Audio(src);
+  a.setAttribute('playsinline','true');
+  a.playsInline=true;
+  _stageClipAudio=a;
+  if(btn) btn.classList.add('playing');
+  a.onended=()=>{ if(btn) btn.classList.remove('playing'); if(_stageClipAudio===a) _stageClipAudio=null; };
+  a.onerror=()=>{ if(btn) btn.classList.remove('playing'); if(_stageClipAudio===a) _stageClipAudio=null; };
+  a.play().catch(()=>{ if(btn) btn.classList.remove('playing'); if(_stageClipAudio===a) _stageClipAudio=null; });
+}
 let _progBroughtIntoView=false;
 let _dispPct=0;
 let _srvPct=0;
@@ -799,6 +856,7 @@ $('rec').onclick=async()=>{
   // New take: kill any in-flight analysis so stale results can't overwrite.
   cancelActiveAnalysis();
   stopSampleAudio();
+  stopStageClip();
   const ha=$('heardAudio');
   if(ha){ try{ ha.pause(); }catch(e){} }
   if(hAudio){
@@ -956,6 +1014,13 @@ function render(data){
   else if(q){qd.className='bad';qd.textContent='⚠ Recording very quiet — hold phone closer, or use Voice Memos';}
   else {qd.className=''; qd.style.display='none';}
 
+  const stageMetaEarly=rs.find(r=>r.stage_action||r.stage_passed!=null)||{};
+  const willAdvance=stageMetaEarly.stage_action==='advance'||stageMetaEarly.stage_passed===true;
+  const curStageName=((loadPractice(v).stageId)||'this');
+  const curLadder=STAGE_LADDER[v]||[];
+  const curStageObj=curLadder.find(s=>s.id===curStageName);
+  const curSay=curStageObj?curStageObj.say_en:curStageName;
+
   let heardHtml='';
   if(view.heard_arabic!==undefined){
     const match=view.heard_match||'';
@@ -986,12 +1051,13 @@ function render(data){
       : '';
     const playBlock = (_lastRecUrl || data.session)
       ? `<div class="hplay">
-          <div class="hplaylbl">Your recording — play back &amp; compare to the text above</div>
+          <div class="hplaylbl">Your recording — play back &amp; compare</div>
           <audio id="heardAudio" controls preload="metadata" playsinline src="${_lastRecUrl || ('/sessions/'+data.session+'/audio')}"></audio>
         </div>`
       : '';
-    heardHtml=`<div class="heard" id="heardTop">
-      <div class="hh">What the app heard (your voice)</div>
+    const heardCls=willAdvance?'heard pass':'heard fail';
+    heardHtml=`<div class="${heardCls}" id="heardTop">
+      <div class="hh">${willAdvance?'Nice — what the app heard':'Not yet — what the app heard'}</div>
       <div class="har" dir="rtl" lang="ar">${view.heard_arabic||'(unclear)'}</div>
       <div class="hph">${view.heard_phonetic||''}</div>
       ${rawBlock}
@@ -1001,21 +1067,17 @@ function render(data){
     </div>`;
   }
 
-  const retryHtml=`<div class="retry">
-     <button id="hearRight" class="rbtn">▷ Hear it right — Al-Husary</button>
-     <button id="tryAgain" class="rbtn">↻ Try this ayah again</button>
-   </div>
-   <div class="notebox">
-     <input id="noteInput" placeholder="Label this take (e.g. 'did qalqalah right')" />
-     <button id="saveNote" class="rbtn">Save note</button>
-   </div>`;
-
   function cardHtml(r){
     const lvl=r.level||'defer';
     const isReg=!!(r.regression || r.tag==='REGRESSION');
-    const tag=r.tag||({ok:'✓ GOOD',error:'FIX',defer:'ASK YOUR TEACHER',measured:'TIP',next:'NEXT STEP'}[lvl]||'');
-    const tagClass=isReg ? 'regression' : lvl;
-    const cardClass=isReg && lvl==='next' ? 'next regression' : lvl;
+    const isClear=!!(r.stage_action==='advance' || (r.tag||'').includes('CLEARED') || (r.tag||'')==='STAGE CLEAR');
+    let tag=r.tag||({ok:'✓ GOOD',error:'FIX',defer:'ASK YOUR TEACHER',measured:'TIP',next:'NEXT STEP'}[lvl]||'');
+    if(isClear && !(r.tag||'').includes('CLEARED')){
+      const n=r.cleared_stage_n || (((r.stage||{}).index||0)+1);
+      tag=`STAGE ${n} CLEARED · NEXT STEP`;
+    }
+    const tagClass=isReg ? 'regression' : (isClear ? 'cleared' : lvl);
+    const cardClass=isReg && lvl==='next' ? 'next regression' : (isClear ? 'next cleared' : lvl);
     const sec=r.section||'';
     const fix=r.fix?`<div class="fix"><b>How to fix:</b> ${r.fix}</div>`:'';
     return `<div class="card ${cardClass}"><span class="tag t-${tagClass}">${tag}</span>
@@ -1026,8 +1088,11 @@ function render(data){
   }
 
   if(!rs.length){
+    const retryHtml=`<div class="retry">
+       <button id="tryAgain" class="rbtn">↻ Try ${curSay} again</button>
+     </div>`;
     $('results').innerHTML=heardHtml + '<p>No feedback cards returned. Tap the green header to refresh and try again.</p>' + retryHtml;
-    bindRetry(data);
+    bindRetry(data, {didAdvance:false, say:curSay});
     scrollToHeard();
     if(data.session) $('sessionInfo').textContent='session: '+data.session;
     return;
@@ -1037,25 +1102,52 @@ function render(data){
   paintAyahFocus(practice);
   renderStageBox(practice);
   const lastIt=(practice.iterations||[])[(practice.iterations||[]).length-1];
-  const didAdvance=!!(lastIt && lastIt.stageAction==='advance');
+  const didAdvance=!!(lastIt && lastIt.stageAction==='advance') || willAdvance;
+  const ladder=STAGE_LADDER[v]||[];
+  const to=practice.stageId||'next';
+  const nxt=ladder.find(s=>s.id===to);
+  const say=nxt ? nxt.say_en : to;
+  const sayAr=nxt ? nxt.say_ar : '';
+  const from=lastIt && lastIt.stage ? lastIt.stage : curStageName;
+  const fromObj=ladder.find(s=>s.id===from);
+  const fromSay=fromObj?fromObj.say_en:from;
+  const fromIdx=Math.max(0, ladder.findIndex(s=>s.id===from));
+  const stageN=fromIdx+1;
+  const clipSrc=(STAGE_WORD_CLIPS[v]||{})[to];
+
   let advanceBanner='';
   if(didAdvance){
-    const from=lastIt.stage||'stage';
-    const to=practice.stageId||'next';
-    const ladder=STAGE_LADDER[v]||[];
-    const nxt=ladder.find(s=>s.id===to);
-    const say=nxt ? nxt.say_en : to;
-    const sayAr=nxt ? nxt.say_ar : '';
-    flashBuildNote('Locked '+from+' → now say '+say+'.');
+    flashBuildNote('Stage '+stageN+' cleared → now say '+say+'.');
     advanceBanner=`<div class="advbanner" id="advanceBanner">
-      <div class="al">Stage locked — next</div>
+      <div class="al">Stage ${stageN} cleared · next step</div>
       <div class="as">Say: ${say}</div>
       ${sayAr?`<div class="aa" dir="rtl" lang="ar">${sayAr}</div>`:''}
-      <div class="an">Locked <b>${from}</b>. Record the next piece when ready.</div>
+      <div class="an">Fresh start on this piece — listen to <b>only ${say}</b>, then record.</div>
+      ${clipSrc?`<div class="stageplay">
+        <button type="button" id="playStageWord" aria-label="Play ${say}"></button>
+        <div class="splbl"><b>Hear only ${say}</b><span>Al-Husary · this word</span></div>
+      </div>`:''}
     </div>`;
   }
+
+  // On fail: keep coaching cards; retry is stage-specific (not full ayah).
+  const retryHtml=didAdvance
+    ? `<div class="retry">
+         <button id="tryAgain" class="rbtn">● Record ${say}</button>
+       </div>`
+    : `<div class="retry">
+         <button id="tryAgain" class="rbtn">↻ Try ${curSay} again</button>
+       </div>
+       <div class="notebox">
+         <input id="noteInput" placeholder="Label this take (optional)" />
+         <button id="saveNote" class="rbtn">Save note</button>
+       </div>`;
+
   const logHtml=practiceLogHtml(v, practice);
-  const nextCards = rs.filter(r => r.level === 'next');
+  // On advance, the green banner is the hero — hide duplicate blue NEXT card.
+  const nextCards = didAdvance
+    ? []
+    : rs.filter(r => r.level === 'next');
   const rest = rs.filter(r => r.level !== 'next');
   const restHtml = rest.length
     ? `<details class="restbox">
@@ -1064,17 +1156,16 @@ function render(data){
       </details>`
     : '';
 
-  // One paint — no staged reveals (those jumped on iPhone)
-  // Advance banner first so lock→next is visible without scrolling to the top stage box.
   $('results').innerHTML =
     advanceBanner +
     heardHtml +
-    logHtml +
+    (didAdvance ? '' : logHtml) +
     nextCards.map(cardHtml).join('') +
     retryHtml +
+    (didAdvance ? logHtml : '') +
     restHtml;
 
-  bindRetry(data);
+  bindRetry(data, {didAdvance, say, stageId:to});
   bindClearLog();
   bindHeardAudio();
   if(data.session) $('sessionInfo').textContent='session: '+data.session;
@@ -1091,6 +1182,7 @@ function bindHeardAudio(){
   if(!a) return;
   a.addEventListener('play', ()=>{
     stopSampleAudio();
+    stopStageClip();
     if(hAudio){
       try{ hAudio.pause(); }catch(e){}
       hAudio=null;
@@ -1105,10 +1197,27 @@ function scrollToHeard(){
   try{ el.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){}
 }
 
-function bindRetry(data){
-  const hr=$('hearRight'); if(hr) hr.onclick=()=>$('playH').click();
-  const ta=$('tryAgain'); if(ta) ta.onclick=()=>{$('results').innerHTML='';$('quality').style.display='none';$('rec').click();};
-  const sn=$('saveNote'); if(sn) sn.onclick=async()=>{
+function bindRetry(data, opts){
+  opts=opts||{};
+  const pw=$('playStageWord');
+  if(pw && opts.stageId){
+    pw.onclick=()=>playStageWordClip(opts.stageId, pw);
+  }
+  const ta=$('tryAgain');
+  if(ta) ta.onclick=()=>{
+    $('results').innerHTML='';
+    $('quality').style.display='none';
+    if(opts.didAdvance){
+      // Ready for next word — scroll to stage / record
+      const box=$('stageBox');
+      if(box) try{ box.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){}
+      $('rec').click();
+    } else {
+      $('rec').click();
+    }
+  };
+  const sn=$('saveNote');
+  if(sn) sn.onclick=async()=>{
     const note=$('noteInput').value; if(!note||!data.session)return;
     const fd=new FormData(); fd.append('session',data.session); fd.append('note',note);
     await fetch('/note',{method:'POST',body:fd});

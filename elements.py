@@ -323,10 +323,11 @@ def _finish_stage_cards(
             "stage": stage_info,
         })
     elif stage_passed and nxt_stage:
+        stage_n = ((stage_info or {}).get("index") or 0) + 1
         cards.append({
             "level": "next",
             "rule": "next_step",
-            "tag": "STAGE CLEAR",
+            "tag": f"STAGE {stage_n} CLEARED",
             "key": f"stage:{stage['id']}:clear",
             "priority": 0,
             "section": coach.section_html(
@@ -334,8 +335,8 @@ def _finish_stage_cards(
                 (nxt_stage.get("focus_word") or (nxt_stage.get("words") or [""])[0]),
             ),
             "plain": (
-                f"<b>Locked:</b> {stage['say_en']}. "
-                f"Next stage — say <b>{nxt_stage['say_en']}</b> "
+                f"<b>Stage {stage_n} cleared:</b> {stage['say_en']}. "
+                f"<b>Next step</b> — say only <b>{nxt_stage['say_en']}</b> "
                 f"<span class=\"arlight\">({nxt_stage['say_ar']})</span>."
             ),
             "fix": nxt_stage.get("hint"),
@@ -346,6 +347,11 @@ def _finish_stage_cards(
             "lock_also": (
                 ["qu", "ul"] if (stage or {}).get("id") == "qul" else []
             ),
+            "next_say_en": nxt_stage.get("say_en"),
+            "next_say_ar": nxt_stage.get("say_ar"),
+            "next_hint": nxt_stage.get("hint"),
+            "cleared_stage_n": stage_n,
+            "cleared_stage_id": (stage or {}).get("id"),
         })
     elif stage_passed and not nxt_stage:
         cards.append({
