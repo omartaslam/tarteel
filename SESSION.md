@@ -38,6 +38,7 @@ qul_correct_male) → pass when ASR shows ق. Kaf bench fails. Phone/mic takes t
 still fail by design.
 
 ## Backlog
+- Record real incorrect clips for huwa / Allāhu / aḥad (panel is stage-scoped; some bad buttons text-only until then).
 - Word-first ×3 → syllables across rest of surah.
 - Progress UI ~17% stall.
 - More stage word clips for ayahs 2–4.
