@@ -10,8 +10,15 @@ Clear only via explicit “Clear practice history” button.
 **Qu letter gate unchanged:** ASR ق pass / ك fail.
 **Qul lock also requires ق** in the take — shape-near without ق does not advance.
 
-## English cue for ق (learner discovery)
-Written word stays **Qul** (قُلْ). Teaching cue is **QUAL** / **QUA** like **quality** — not “Qul/cull/cool” (those map to middle ك).
+## English phonetics — hard rule (this breakthrough)
+Written labels ≠ mouth cues. If English spelling makes beginners say the wrong sound, the tip failed.
+- ق / Qul → teach **QUAL / QUA like quality** (not cull/cool)
+- Qu → **QUA like quality**
+- ul → end of **pull / full**
+- huwa → **HOO-wa** (who + wa)
+- Allāhu → **Al-LAA-hu** (hold ll)
+- aḥad → **a-ḤAD** (fog-mirror Ḥ, not soft “ahead”)
+Apply on every future tip. See `STABLE.md`.
 
 ## Pedagogy (ayah 1) — word first
 1. **Qul** ×3 → pass with ق → **huwa** (locks qu+ul).

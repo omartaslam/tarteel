@@ -1,5 +1,15 @@
 # Deploy markers
 
+## Hard rule — English phonetics (learner lesson 2026-07-28)
+**Every coaching cue must use English sounds a beginner can actually make.**
+
+- Scholarly transliteration (Qul, Qu, aḥad) is a *label*, not always the mouth cue.
+- If the English spelling reads as the *wrong* sound to a native English speaker, the tip has failed
+  (example: teaching “Qul” → people say cull/cool/ك; correct cue was **QUAL** like *quality*).
+- Prefer: familiar English word anchors (“quality”, “who”, “lot”, “ahead”) over abstract
+  “deep / heavy / throat” jargon alone.
+- Apply on **every** future tip — word, syllable, letter, join — big or small. Do not ship vague phonetics.
+
 ## stable-qu-detection — 2026-07-28
 
 **Commit / build:** `e6878cde0424`  
@@ -18,3 +28,7 @@ Detection rule on this build: analyse each take — **ق passes, ك fails**. No 
 
 ### Do not regress
 Do not reintroduce `pass if ك OR ق` on the Qu drill, and do not demote full-word `ك→ق` to a non-blocking tip on the Qul stage.
+
+### Phonetic breakthrough (same journey)
+Lock succeeded when the English cue became **QUAL / QUA like quality**, not “Qul/cull/cool”.
+Keep that cue in coaching. Extend the same standard to all later stages.

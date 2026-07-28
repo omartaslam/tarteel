@@ -44,7 +44,7 @@ STAGES = {
             "title": "ul",
             "say_en": "ul",
             "say_ar": "ـُلْ",
-            "hint": "Only the ending: “ul” — short u + clear L. Yellow mark on the ayah shows where you are.",
+            "hint": "Only the ending: <b>ul</b> — like the end of “pull” / “full” (short u + clear L). No Q/K at the front.",
             "words": [],
             "idxs": [0],
             "drill": "ul",
@@ -56,7 +56,10 @@ STAGES = {
             "title": "huwa",
             "say_en": "huwa",
             "say_ar": "هُوَ",
-            "hint": "Say only huwa — round the lips for the W.",
+            "hint": (
+                "Say only <b>huwa</b>. English cue: <b>HOO-wa</b> — like “who” then “wa” "
+                "(round lips on the W). Not “hoo-fa” or “boo-a”."
+            ),
             "words": ["huwa"],
             "idxs": [1],
         },
@@ -65,7 +68,10 @@ STAGES = {
             "title": "Qul huwa",
             "say_en": "Qul huwa",
             "say_ar": "قُلْ هُوَ",
-            "hint": "Join the two words you locked.",
+            "hint": (
+                "Join: <b>QUAL</b> (like quality) then <b>HOO-wa</b>. "
+                "Keep the ق from Qul and the W from huwa."
+            ),
             "words": ["qul", "huwa"],
             "idxs": [0, 1],
         },
@@ -74,7 +80,10 @@ STAGES = {
             "title": "Allāhu",
             "say_en": "Allāhu",
             "say_ar": "ٱللَّهُ",
-            "hint": "Say only Allāhu — hold the doubled L.",
+            "hint": (
+                "Say only <b>Allāhu</b>. English cue: <b>Al-LAA-hu</b> — hold the doubled L "
+                "(like a long “ll” in “Allah”), then “hu”. Don’t rush it like English “Allah!”."
+            ),
             "words": ["Allāhu"],
             "idxs": [2],
         },
@@ -83,7 +92,7 @@ STAGES = {
             "title": "Qul huwa Allāhu",
             "say_en": "Qul huwa Allāhu",
             "say_ar": "قُلْ هُوَ ٱللَّهُ",
-            "hint": "Join through Allāhu.",
+            "hint": "Join through Allāhu — QUAL · HOO-wa · Al-LAA-hu.",
             "words": ["qul", "huwa", "Allāhu"],
             "idxs": [0, 1, 2],
         },
@@ -92,7 +101,10 @@ STAGES = {
             "title": "aḥad",
             "say_en": "aḥad",
             "say_ar": "أَحَدٌ",
-            "hint": "Say only aḥad — finish with a light bounce on the D.",
+            "hint": (
+                "Say only <b>aḥad</b>. English cue: <b>a-ḤAD</b> — the Ḥ is a fog-the-mirror breath "
+                "(stronger than the H in “ahead”), then a light bounce on the D."
+            ),
             "words": ["aḥad"],
             "idxs": [3],
         },
@@ -101,7 +113,7 @@ STAGES = {
             "title": "Full ayah",
             "say_en": "Qul huwa Allāhu aḥad",
             "say_ar": "قُلْ هُوَ ٱللَّهُ أَحَدٌ",
-            "hint": "The whole ayah — keep every locked piece.",
+            "hint": "Whole ayah: QUAL · HOO-wa · Al-LAA-hu · a-ḤAD. Keep every locked piece.",
             "words": ["qul", "huwa", "Allāhu", "aḥad"],
             "idxs": [0, 1, 2, 3],
         },

@@ -4,6 +4,12 @@ Compare what Whisper heard vs the expected ayah → plain coaching.
 Style for learners who aren't fluent in Arabic:
   English sound first, Arabic lightly in brackets.
 
+HARD RULE — English phonetics must be spot-on (2026-07-28 lesson):
+  Transliteration labels (Qul, Qu, aḥad) are NOT always the mouth cue.
+  If an English reader would say the wrong sound from our spelling, rewrite the tip.
+  Example: “Qul” → cull/cool/ك. Working cue: QUAL / QUA like “quality”.
+  Use familiar English anchors on every tip (word, syllable, letter, join).
+
 Iteration order for the student:
   1) Get words roughly right and in order (word_shape)
   2) Then fine letter tips (throat-K, etc.)
@@ -281,38 +287,40 @@ def _align_words(
 # Word-identity swaps — coach these BEFORE fine tajweed (throat-K, etc.).
 WORD_IDENTITY = {
     ("ف", "و"): {
-        "heard": "an F sound (fa)",
-        "want": "a W sound (waw)",
+        "heard": "an F sound (fa) — teeth on lip, like “fan”",
+        "want": "a W sound (waw) — round lips, like “we” / “woo”",
         "fix": (
-            "Get the word shape first: round the lips for “w” like “we”. "
-            "Go slow on huwa before finer letter tips."
+            "Get the word shape first: round the lips for “w” like “we” / “woo”. "
+            "On <b>huwa</b>, English cue <b>HOO-wa</b> (like “who” + “wa”). "
+            "Go slow before finer letter tips."
         ),
         "ar": ("ف", "و"),
     },
     ("و", "ف"): {
-        "heard": "a W sound (waw)",
-        "want": "an F sound (fa)",
-        "fix": "Use the upper teeth lightly on the lip for “f”.",
+        "heard": "a W sound (waw) — like “we”",
+        "want": "an F sound (fa) — like “fan”",
+        "fix": "Upper teeth lightly on the lip for “f” as in “fan”.",
         "ar": ("و", "ف"),
     },
     ("ب", "و"): {
-        "heard": "a B sound (ba)",
-        "want": "a W sound (waw)",
+        "heard": "a B sound (ba) — lips closed, like “bee”",
+        "want": "a W sound (waw) — round lips, like “we”",
         "fix": (
             "Get the word shape first: round your lips for “w” like “we” — "
-            "don’t close them for “b”."
+            "don’t close them for “b” as in “bee”. On huwa: <b>HOO-wa</b>."
         ),
         "ar": ("ب", "و"),
     },
     ("و", "ب"): {
-        "heard": "a W sound (waw)",
-        "want": "a B sound (ba)",
-        "fix": "Close the lips for a clear “b”.",
+        "heard": "a W sound (waw) — like “we”",
+        "want": "a B sound (ba) — like “bee”",
+        "fix": "Close the lips for a clear “b” as in “bee”.",
         "ar": ("و", "ب"),
     },
 }
 
 # Fine letter tips — only after words are roughly right.
+# Each tip MUST include an English mouth cue a beginner can imitate.
 FIX = {
     ("ك", "ق"): {
         "heard": "an English K (like “cull” / “cool”)",
@@ -328,57 +336,61 @@ FIX = {
         "ar": ("ك", "ق"),
     },
     ("ق", "ك"): {
-        "heard": "a deep throat K (qaf)",
-        "want": "a lighter front K (kaf)",
-        "fix": "Use a lighter K, like the K in “key”.",
+        "heard": "a deep throat K (qaf) — QUAL-like",
+        "want": "a lighter front K (kaf) — like the K in “key” / “cool”",
+        "fix": "Use a lighter K, like the K in “key” — further forward than QUAL.",
         "ar": ("ق", "ك"),
     },
     ("ه", "ح"): {
-        "heard": "a soft breathy H (ha)",
-        "want": "a stronger throat H (ḥa)",
-        "fix": "In aḥad, press a stronger H from the middle of the throat — not a light sigh.",
+        "heard": "a soft breathy H (like the H in “ahead” / “hello”)",
+        "want": "a stronger throat Ḥ — like a quiet fog-the-mirror breath",
+        "fix": (
+            "In <b>aḥad</b>, the Ḥ is stronger than English “h”. "
+            "Cue: gentle fog-on-a-mirror breath from the middle of the throat — "
+            "not the soft H in “ahead”."
+        ),
         "ar": ("ه", "ح"),
     },
     ("ح", "ه"): {
-        "heard": "a strong throat H (ḥa)",
-        "want": "a soft breathy H (ha)",
-        "fix": "Use a lighter H, like a soft breath.",
+        "heard": "a strong throat Ḥ (fog-mirror breath)",
+        "want": "a soft breathy H (like “hello”)",
+        "fix": "Use a lighter H, like the H in “hello” — not the strong fog-mirror Ḥ.",
         "ar": ("ح", "ه"),
     },
     ("ت", "ط"): {
-        "heard": "a light T (ta)",
-        "want": "a heavier T (ṭa)",
-        "fix": "Make the T heavier — tongue slightly back.",
+        "heard": "a light T (like “tea”)",
+        "want": "a heavier Ṭ — fuller / darker, tongue slightly back (not “tea”)",
+        "fix": "Make the T fuller than English “tea” — tongue a touch back, darker tone.",
         "ar": ("ت", "ط"),
     },
     ("س", "ص"): {
-        "heard": "a light S (seen)",
-        "want": "a heavier S (ṣad)",
-        "fix": "Make the S heavier / slightly darker.",
+        "heard": "a light S (like “see”)",
+        "want": "a heavier Ṣ — darker “ss”, like a strong “saw” (not thin “see”)",
+        "fix": "Make the S darker/fuller than English “see” — closer to a strong “saw”.",
         "ar": ("س", "ص"),
     },
     ("د", "ض"): {
-        "heard": "a light D (dal)",
-        "want": "a heavier D (ḍad)",
-        "fix": "Make the D heavier.",
+        "heard": "a light D (like “day”)",
+        "want": "a heavier Ḍ — fuller / darker D (not light “day”)",
+        "fix": "Make the D fuller than English “day” — darker, tongue slightly back.",
         "ar": ("د", "ض"),
     },
     ("ز", "ظ"): {
-        "heard": "a Z sound (zay)",
-        "want": "a heavier DH/Z (ẓa)",
-        "fix": "Make it heavier, tongue slightly back.",
+        "heard": "a Z sound (like “zoo”)",
+        "want": "a heavier Ẓ — darker DH/Z, tongue slightly back",
+        "fix": "Darker than English “zoo” — tongue slightly back, heavier buzz.",
         "ar": ("ز", "ظ"),
     },
     ("ذ", "ز"): {
-        "heard": "a TH-as-in-this sound (dhal)",
-        "want": "a buzzing Z (zay)",
-        "fix": "Use a buzzing “z”, not “th”.",
+        "heard": "TH as in “this” / “the”",
+        "want": "a buzzing Z (like “zoo”)",
+        "fix": "Use a buzzing “z” as in “zoo” — not “th” as in “this”.",
         "ar": ("ذ", "ز"),
     },
     ("ث", "س"): {
-        "heard": "a TH-as-in-think sound (tha)",
-        "want": "a plain S (seen)",
-        "fix": "Use a plain “s”, not “th”.",
+        "heard": "TH as in “think” / “thin”",
+        "want": "a plain S (like “see”)",
+        "fix": "Use a plain “s” as in “see” — not “th” as in “think”.",
         "ar": ("ث", "س"),
     },
 }
@@ -601,9 +613,9 @@ def evaluate_drill(
                     else "something without a clear L ending"
                 )
             ),
-            "want": "just “ul” (u + L)",
+            "want": "just “ul” — like the end of “pull” / “full”",
             "fix": (
-                "Say only <b>ul</b> — short “u”, then a clear L. "
+                "Say only <b>ul</b> — short “u” + clear L, like the ending of <b>pull</b> / <b>full</b>. "
                 "No first letter (no K / Q) yet."
             ),
             "ar": ("?", "ل"),
