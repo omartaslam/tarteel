@@ -857,12 +857,13 @@ function render(data){
     const matchedAr=(view.matched_arabic||'').trim();
     const matchedPh=(view.matched_phonetic||'').trim();
     const compare=(view.compare_html||'').trim();
+    const rawAr=(view.heard_raw||'').trim();
     const showMatch = matchedAr && (match==='exact'||match==='close');
     let note;
     if(match==='raw'||match==='empty'){
       note='Showing the literal capture of this take. Could not cleanly match a known ayah.';
     } else if(match==='drill'){
-      note='This drill only — showing the piece we scored, not a full-word guess.';
+      note='This drill only — top line is the piece we scored. Literal Whisper capture is under it when different.';
     } else if(showMatch || compare){
       note='English-first word compare below — green match, amber close, red different.';
     } else {
@@ -874,6 +875,10 @@ function render(data){
          ${matchedPh?`<div class="hmatchph">${matchedPh}</div>`:''}
          ${compare||''}</div>`
       : '';
+    const rawBlock = (match==='drill' && rawAr && rawAr!==(view.heard_arabic||''))
+      ? `<div class="hmatch"><div class="hmatchlbl">Literal capture (Whisper)</div>
+         <div class="hmatchar" dir="rtl" lang="ar">${rawAr}</div></div>`
+      : '';
     const playBlock = data.session
       ? `<div class="hplay">
           <div class="hplaylbl">Your recording — play back &amp; compare to the text above</div>
@@ -884,6 +889,7 @@ function render(data){
       <div class="hh">What the app heard (your voice)</div>
       <div class="har" dir="rtl" lang="ar">${view.heard_arabic||'(unclear)'}</div>
       <div class="hph">${view.heard_phonetic||''}</div>
+      ${rawBlock}
       ${matchBlock}
       ${playBlock}
       <div class="hnote">${note}</div>

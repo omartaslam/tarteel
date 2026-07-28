@@ -517,8 +517,8 @@ def evaluate_drill(
                 "qu_decision": decision,
             }
 
-        # fail — middle ك or unclear onset
-        if has_k or decision.get("reason") == "acoustic_kaf":
+        # fail — only claim Ku when ASR actually heard ك (or ku…)
+        if has_k:
             tip = {
                 "heard": "a middle K (kaf) — like English “cool/cull”",
                 "want": "a deep back Q (qaf) — hollow / further back",
@@ -557,6 +557,11 @@ def evaluate_drill(
         card = _card(5, verse, "Qu", "قُ", tip, "?", "ق", rule="drill")
         card["key"] = fail_key
         card["qu_decision"] = decision
+        # Prefer honest unclear display — never invent Ku when ASR didn't hear ك.
+        if decision.get("verdict") == "defer":
+            card["level"] = "defer"
+            if decision.get("plain"):
+                card["plain"] = decision["plain"]
         return {
             "passed": False,
             "cards": [card],

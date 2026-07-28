@@ -278,23 +278,16 @@ def decide(
             "acoustic_k": ac_k,
         }
 
-    if ac_k:
-        return {
-            **base,
-            "verdict": "fail",
-            "reason": "acoustic_kaf",
-            "plain": "",
-            "acoustic_q": ac_q,
-            "acoustic_k": ac_k,
-        }
-
+    # ASR heard neither ق nor ك (garbage / other letter). Do NOT invent “Ku”
+    # from acoustics alone — that falsely accused a take of middle-K.
     return {
         **base,
         "verdict": "defer",
-        "reason": "unclear",
+        "reason": "asr_unclear",
         "plain": (
-            "I’m not sure about this Qu yet — couldn’t clearly hear a deep back Q. "
-            "Try one short Qu closer to the phone, or ask a teacher if it keeps happening."
+            "I couldn’t clearly hear Qu on this take — not confident enough to judge. "
+            "Say one short <b>Qu</b> (deep back Q + “u”) closer to the phone, "
+            "or ask a teacher if this keeps happening."
         ),
         "acoustic_q": ac_q,
         "acoustic_k": ac_k,
