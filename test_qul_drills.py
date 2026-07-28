@@ -343,6 +343,23 @@ def test_stage_detection_matrix_no_regression(label, heard_ar, heard_ph, stage, 
     assert passed is expect_pass, f"{label}: stage_passed={passed}, expected {expect_pass}"
 
 
+def test_huwa_needs_its_waw_not_just_a_ha():
+    """aḥad (heard "هُ أَحَدٌ") used to clear huwa — a bare ه scored near هو."""
+    fail = build_feedback(
+        1, [], None, heard_arabic="هُ أَحَدٌ", heard_phonetic="Hu ahadu",
+        stage_id="huwa", locked_stages=["qul", "qu", "ul"],
+    )
+    assert fail[0].get("stage_passed") is False
+    assert any(
+        (c.get("key") or "").startswith("pronunciation:huwa:need_") for c in fail
+    )
+    ok = build_feedback(
+        1, [], None, heard_arabic="هُوَ", heard_phonetic="huwa",
+        stage_id="huwa", locked_stages=["qul", "qu", "ul"],
+    )
+    assert ok[0].get("stage_passed") is True
+
+
 def test_allahu_is_not_false_wrong_stage_qul():
     """Allāhu letters must not left-align as near-Qul (wrong_stage:allahu:qul)."""
     # Same shape as the live false fail: heard panel shows Allahu / اللَّهُ

@@ -43,6 +43,14 @@ VERSE_ELEMENTS = {
     },
 }
 
+# Every isolated word stage owns the letter it is teaching, the way Qul owns ق.
+# Word shape alone is too generous on two-letter words: a bare ه scored "near"
+# against هو, so aḥad (heard "هُ أَحَدٌ") cleared the huwa stage.
+# (stage_id, verse) -> (required letter, English cue, what a miss sounds like)
+STAGE_KEY_LETTER = {
+    ("huwa", 1): ("و", "the <b>W</b> in <b>HOO-wa</b>", "“hoo-a” or “hoo-fa” with no W"),
+}
+
 
 def build_feedback(
     verse,
@@ -273,6 +281,37 @@ def build_feedback(
             regress_to = None
 
     stage_passed = not blocking and not miss_words
+
+    # Isolated word stages must contain their teaching letter, not just a
+    # roughly similar shape. Only applies when the stage is that single word.
+    key_letter = STAGE_KEY_LETTER.get(((stage or {}).get("id"), verse))
+    if key_letter and stage_passed and len(stage_words or []) == 1:
+        letter, cue, miss_sounds_like = key_letter
+        if letter not in coach.normalize_ar(heard_arabic or ""):
+            stage_passed = False
+            say = (stage or {}).get("say_en") or focus_word or "this word"
+            say_ar = (stage or {}).get("say_ar") or ""
+            miss = coach._card(
+                5,
+                verse,
+                say,
+                say_ar,
+                {
+                    "heard": f"no {letter} in this take — {miss_sounds_like}",
+                    "want": f"{say} with {cue}",
+                    "fix": (
+                        f"Say <b>{say}</b> <span class=\"arlight\">({say_ar})</span> "
+                        f"with {cue}. Tap Hear only {say} and copy the ending."
+                    ),
+                    "ar": ("?", letter),
+                },
+                "?",
+                letter,
+                rule="pronunciation",
+            )
+            miss["key"] = f"pronunciation:{(stage or {}).get('id')}:need_{letter}"
+            errors.insert(0, miss)
+            blocking = [c for c in errors if _blocks_stage(c)]
 
     # Phone ASR flatten rescue: Whisper often writes ك while the audio is ق.
     # Honour acoustic ق for phone users — do not lock out the main audience.
