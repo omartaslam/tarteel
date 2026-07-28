@@ -536,14 +536,38 @@ function draw(){
 $('prev').onclick=()=>{if(v>1){v--;draw();}};
 $('next').onclick=()=>{if(v<4){v++;draw();}};
 
-// Al-Husary playback from everyayah
+// Al-Husary playback (same-origin proxy — more reliable on iPhone Safari)
 $('playH').onclick=()=>{
-  if(hAudio){hAudio.pause();hAudio=null;$('playH').classList.remove('playing');return;}
+  if(hAudio){
+    try{ hAudio.pause(); }catch(e){}
+    hAudio=null;
+    $('playH').classList.remove('playing');
+    return;
+  }
   const code=V[v-1].h;
-  hAudio=new Audio('https://everyayah.com/data/Husary_128kbps/'+code+'.mp3');
+  // Prefer same-origin; fall back to CDN if proxy missing on old deploy
+  hAudio=new Audio('/husary/'+code);
+  hAudio.setAttribute('playsinline','true');
+  hAudio.playsInline=true;
+  hAudio.preload='auto';
+  const fail=()=>{
+    $('playH').classList.remove('playing');
+    // one retry via direct CDN
+    if(hAudio && !hAudio._retried){
+      hAudio._retried=true;
+      hAudio.src='https://everyayah.com/data/Husary_128kbps/'+code+'.mp3';
+      hAudio.load();
+      hAudio.play().then(()=>$('playH').classList.add('playing')).catch(()=>{
+        hAudio=null;
+        alert('Could not play Al-Husary on this phone. Check Wi‑Fi and try again.');
+      });
+      return;
+    }
+    hAudio=null;
+  };
   hAudio.onended=()=>{$('playH').classList.remove('playing');hAudio=null;};
-  hAudio.onerror=()=>{$('playH').classList.remove('playing');hAudio=null;};
-  hAudio.play().then(()=>$('playH').classList.add('playing')).catch(()=>{});
+  hAudio.onerror=fail;
+  hAudio.play().then(()=>$('playH').classList.add('playing')).catch(fail);
 };
 
 $('rec').onclick=async()=>{

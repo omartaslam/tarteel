@@ -317,6 +317,32 @@ def session_audio(sid: str):
     return JSONResponse({"error": "not found"}, status_code=404)
 
 
+@app.get("/husary/{code}")
+def husary_proxy(code: str):
+    """Same-origin proxy — iOS Safari often fails on cross-origin Audio URLs."""
+    import re
+    import urllib.request
+    if not re.fullmatch(r"\d{6}", code or ""):
+        return JSONResponse({"error": "bad code"}, status_code=400)
+    url = f"https://everyayah.com/data/Husary_128kbps/{code}.mp3"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Tarteel/1.0"})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = resp.read()
+            ctype = resp.headers.get("Content-Type") or "audio/mpeg"
+    except Exception as e:
+        return JSONResponse({"error": f"husary fetch failed: {e}"}, status_code=502)
+    from fastapi.responses import Response
+    return Response(
+        content=data,
+        media_type=ctype,
+        headers={
+            "Cache-Control": "public, max-age=86400",
+            "Accept-Ranges": "bytes",
+        },
+    )
+
+
 @app.get("/health")
 def health():
     build = (

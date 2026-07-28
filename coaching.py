@@ -295,11 +295,12 @@ FIX = {
         "want": "a deep Q from far back in the mouth (not an English K)",
         "fix": (
             "On <b>Qul</b>: English “key/cool” hits mid-mouth (where “k” usually lives). "
-            "Arabic <b>qaf</b> is farther back. Find the spot: say “ah” and look in a mirror — "
-            "the little soft punch-bag hanging at the back of the throat is the <b>uvula</b>. "
-            "Your tongue should stop the air against that far-back area (soft gag-point), not the mid roof. "
-            "Sound: hollow short “Qool” → “ul”. One clean hit — <b>Qul</b> — not “Kulla…”. "
-            "Normal speaking breath; no big inhale."
+            "Arabic <b>qaf</b> is farther back. Find the spot: say “ah” in a mirror — "
+            "the little soft punch-bag hanging down at the back of the throat is the <b>uvula</b> "
+            "(not the epiglottis — that’s a different flap lower down that closes when you swallow). "
+            "Do <b>not</b> curl/roll the tongue tip. Keep the tip down; pull the <b>whole back of the tongue</b> "
+            "toward that punch-bag until you almost feel a soft gag, then make a short dry pop there → “u” → “l”: <b>Qul</b>. "
+            "Normal speaking breath; one clean hit — not “Kulla…”."
         ),
         "ar": ("ك", "ق"),
     },
