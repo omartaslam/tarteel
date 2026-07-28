@@ -19,7 +19,15 @@ If STAGE CLEAR but prompt stuck, hard-refresh and say — that was a client UI b
 
 Reply `chk log` after the batch.
 
+## Pause point (Omar on break — resume here)
+- Live build had Qu→ul visibility fix (`42e3832`).
+- Still on ayah 1 Qu gate / bridge; ul+ not proven end-to-end yet.
+- Usage ~40% month — stay blocker-only.
+
 ## Backlog (later — do not burn usage now)
+- **Pedagogy flip (Omar):** starting Qul as Qu+ul syllables made it harder.
+  Preferred order: **3 attempts on full word first** → if stuck, **2nd set of 3 on syllables** → then **tutor defer**.
+  Once that pattern works on Qul, **roll the same pattern out to the rest of the ayat**.
 - If a Qul take clearly has both **ق** and **L**, skip Qu+ul → start at **huwa**.
 - Progress UI: **~17% sits stuck for a few seconds, then jumps** — smooth/phase timing.
 
