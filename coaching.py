@@ -261,7 +261,7 @@ WORD_IDENTITY = {
         "want": "a W sound (waw)",
         "fix": (
             "Get the word shape first: round the lips for “w” like “we”. "
-            "Dentures make this harder — go slow on huwa before finer letters."
+            "Go slow on huwa before finer letter tips."
         ),
         "ar": ("ف", "و"),
     },
@@ -838,6 +838,13 @@ def pick_next_step(
     top["regression"] = is_reg
     top["key"] = top.get("key")
     n_left = len(actionable)
+    after_this = max(0, n_left - 1)
+    # Quiet progress note — count is "more after this focus", not including it.
+    more_note = (
+        f' <span class="arlight">({after_this} more after this on the ayah)</span>'
+        if after_this
+        else ""
+    )
     issue_keys = {c.get("key") for c in actionable if c.get("key")}
 
     fixed_key = None
@@ -885,18 +892,15 @@ def pick_next_step(
     elif kept:
         head = (
             f"<b>Nice — {kept} is holding.</b> "
-            f"One thing next: <b>{need}</b> "
-            f"<span class=\"arlight\">({n_left} left on this ayah)</span>."
+            f"One thing next: <b>{need}</b>{more_note}."
         )
         top["plain"] = head + "<br>" + detail
     else:
-        head = (
-            f"<b>One thing next:</b> {need} "
-            f"<span class=\"arlight\">({n_left} left on this ayah)</span>."
-        )
+        head = f"<b>One thing next:</b> {need}{more_note}."
         top["plain"] = head + "<br>" + detail
 
     top["steps_remaining"] = n_left
+    top["steps_after"] = after_this
     top["fixed_key"] = fixed_key
     top["keep_key"] = keep_key
     return top
