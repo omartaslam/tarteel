@@ -644,6 +644,12 @@ $('rec').onclick=async()=>{
   if(rec&&rec.state==='recording'){rec.stop();return;}
   // New take: kill any in-flight analysis so stale results can't overwrite.
   cancelActiveAnalysis();
+  stopSampleAudio();
+  if(hAudio){
+    try{ hAudio.pause(); }catch(e){}
+    hAudio=null;
+    $('playH').classList.remove('playing');
+  }
   $('results').innerHTML='';
   $('quality').style.display='none';
   $('sessionInfo').textContent='';
