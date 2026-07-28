@@ -442,7 +442,8 @@ function renderStageBox(){
   const roundN = nextAttempt<=3 ? 1 : 2;
   const tryInRound = nextAttempt<=3 ? nextAttempt : nextAttempt-3;
   const isolationFails = quIsolationFailCount(st);
-  const offerBridge = onQu && !bridgeOn && !st.quBridgeExhausted && isolationFails>=3;
+  const offerBridge = onQu && !bridgeOn && !st.quBridgeExhausted;
+  const strongOffer = isolationFails >= 3;
   const showQafKaf = onQu || (v===1 && cur.id==='qul') || bridgeOn;
   const samp = showQafKaf ? `
     <div class="sampbox">
@@ -470,7 +471,10 @@ function renderStageBox(){
     bridgeHtml = `<div class="bridgebox"><p class="bt">Bridge mode: say the <b>full word Qul</b>. Same ق rule — no fake locks.</p>
       <button type="button" class="bridgebtn secondary" id="exitBridge">Back to isolated Qu</button></div>`;
   } else if(offerBridge){
-    bridgeHtml = `<div class="bridgebox"><p class="bt">Stuck on isolated Qu? Try the full word <b>Qul</b> instead — up to 2 rounds of 3. A clear back ق unlocks you to <b>ul</b>.</p>
+    const msg = strongOffer
+      ? 'Stuck on isolated Qu? Try the full word <b>Qul</b> — up to 2 rounds of 3. A clear back ق unlocks you to <b>ul</b>.'
+      : 'Optional: try full <b>Qul</b> instead (2×3 tries). Clear back ق still required to unlock <b>ul</b>.';
+    bridgeHtml = `<div class="bridgebox"><p class="bt">${msg}</p>
       <button type="button" class="bridgebtn" id="startBridge">Try full Qul (3 + 3 tries)</button></div>`;
   } else if(onQu && st.quBridgeExhausted){
     bridgeHtml = `<div class="bridgebox"><p class="bt"><b>Ask a teacher</b> to check your deep Q before continuing. You can still retry isolated Qu anytime.</p></div>`;
