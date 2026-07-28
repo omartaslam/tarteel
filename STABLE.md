@@ -32,3 +32,7 @@ Do not reintroduce `pass if ك OR ق` on the Qu drill, and do not demote full-wo
 ### Phonetic breakthrough (same journey)
 Lock succeeded when the English cue became **QUAL / QUA like quality**, not “Qul/cull/cool”.
 Keep that cue in coaching. Extend the same standard to all later stages.
+### Teach ↔ measure (qhul)
+- Romanize **ق → qh** so heard display shows **Qhul / Qhu** (the hollow h learners feel) — not bare “Qul/Qu”.
+- Clear **qh / QUAL** phonetics can pass Qu when Arabic ق is missing; **ك / cull** still never passes.
+- When ASR writes ك but the learner aimed for QUAL: coaching must say phone ASR often flattens ق→ك — do not pretend we “heard” the hollow qh if the transcript is Kull.

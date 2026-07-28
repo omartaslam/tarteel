@@ -14,8 +14,26 @@ def test_verse1_starts_word_first():
 def test_qu_pass_on_qaf():
     ev = coach.evaluate_drill("qu", 1, "قُ", "qu")
     assert ev["passed"] is True
-    assert ev["display_phonetic"] == "Qu"
+    assert ev["display_phonetic"] == "Qhu"
     assert ev["display_arabic"] == "قُ"
+
+
+def test_qu_pass_on_qhul_phonetics_without_arabic_qaf():
+    """Hollow qh/QUAL in English phonetics must count — teach ↔ measure."""
+    ev = coach.evaluate_drill("qu", 1, "", "Qhul")
+    assert ev["passed"] is True
+    ev2 = coach.evaluate_drill("qu", 1, "", "Qual")
+    assert ev2["passed"] is True
+    # Still never pass clear kaf
+    ev3 = coach.evaluate_drill("qu", 1, "كُ", "Qhul")
+    assert ev3["passed"] is False
+
+
+def test_romanize_qaf_shows_qh_not_bare_q():
+    from transcribe_quran import romanize_ar
+    assert romanize_ar("قُلْ") == "Qhul"
+    assert romanize_ar("قُ") == "Qhu"
+    assert romanize_ar("كُلّ") == "Kull"
 
 
 def test_qu_fail_on_kaf():
@@ -167,7 +185,7 @@ def test_qul_near_without_qaf_does_not_pass():
 def test_compare_html_stage_only_marks_qul_not_whole_ayah():
     """One-word Qul fail must not yellow the entire ayah as 'needs work'."""
     html = coach.compare_html(1, "كل", "Kull", stage_words=["qul"])
-    assert 'class="marky">Qul</span>' in html
+    assert 'class="marky">Qhul</span>' in html
     assert 'class="marky">قُلْ</span>' in html or "قُلْ" in html
     # Other ayah words must not appear as yellow targets
     low = html.lower()
@@ -180,14 +198,14 @@ def test_compare_html_stage_only_marks_qul_not_whole_ayah():
 def test_compare_html_full_ayah_still_shows_all_words():
     html = coach.compare_html(1, "كل", "Kull", stage_words=None)
     assert "huwa" in html.lower() or "Huwa" in html
-    assert "Qul" in html
+    assert "Qhul" in html
 
 
 def test_qu_section_highlights_onset_not_full_qul():
     html = coach.section_html(1, "qul", highlight="qu")
-    assert 'focusw">Qu</span>' in html or ">Qu</span>" in html
-    # Must not wrap the entire English Qul as one focus span
-    assert '<span class="focusw">Qul</span>' not in html
+    assert "focusw" in html and "Qhu" in html
+    # Must not wrap the entire English Qhul as one focus span
+    assert '<span class="focusw">Qhul</span>' not in html
 
 
 def test_syllable_rescue_copy_says_qu_not_qul_only():
@@ -196,7 +214,7 @@ def test_syllable_rescue_copy_says_qu_not_qul_only():
     assert "only" in plain.lower() and "Qu" in plain
     assert "quality" in plain.lower()
     assert "not full Qul" in plain or "not</b> say the full word" in plain
-    assert "focusw\">Qu" in (ev["cards"][0].get("section") or "")
+    assert "focusw\">Qhu" in (ev["cards"][0].get("section") or "")
 
 
 def test_qul_kaf_tip_teaches_qual_not_cull():

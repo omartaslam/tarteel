@@ -202,7 +202,7 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 
 <script>
 const V=[
- {ar:"قُلْ هُوَ ٱللَّهُ أَحَدٌ", ph:"Qul huwa Allāhu aḥad", tr:"Say: He is Allah, the One", h:"112001"},
+ {ar:"قُلْ هُوَ ٱللَّهُ أَحَدٌ", ph:"Qhul huwa Allāhu aḥad", tr:"Say: He is Allah, the One", h:"112001"},
  {ar:"ٱللَّهُ ٱلصَّمَدُ", ph:"Allāhu ṣ-ṣamad", tr:"Allah, the Eternal Refuge", h:"112002"},
  {ar:"لَمْ يَلِدْ وَلَمْ يُولَدْ", ph:"Lam yalid wa lam yūlad", tr:"He neither begets nor is born", h:"112003"},
  {ar:"وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ", ph:"Wa lam yakun lahu kufuwan aḥad", tr:"Nor is there to Him any equivalent", h:"112004"}
@@ -215,7 +215,7 @@ const BUILD_STORE='tarteel_build_id';
 // Beginner ladder — keep in sync with stages.py
 // Word-split ayah lines (keep in sync with coaching.AYAH_LINE) — used to yellow-mark where you are
 const AYAH_WORDS={
-  1:{ph:['Qul','huwa','Allāhu','aḥad'], ar:['قُلْ','هُوَ','ٱللَّهُ','أَحَدٌ']},
+  1:{ph:['Qhul','huwa','Allāhu','aḥad'], ar:['قُلْ','هُوَ','ٱللَّهُ','أَحَدٌ']},
   2:{ph:['Allāhu','aṣ-ṣamad'], ar:['ٱللَّهُ','ٱلصَّمَدُ']},
   3:{ph:['Lam','yalid','wa lam','yūlad'], ar:['لَمْ','يَلِدْ','وَلَمْ','يُولَدْ']},
   4:{ph:['Wa lam','yakun','lahu','kufuwan','aḥad'], ar:['وَلَمْ','يَكُن','لَّهُ','كُفُوًا','أَحَدٌ']},
@@ -804,8 +804,8 @@ function paintAyahFocus(stOverride){
   const phParts=words.ph.map((w,i)=>{
     if(!idxs.has(i)) return escHtml(w);
     if(hl==='qu' && i===0){
-      // Mark Qu inside Qul — where you are on the ayah
-      return '<span class="focusw">Qu</span>'+escHtml(w.slice(2));
+      // Mark Qu inside Qhul — where you are on the ayah
+      return '<span class="focusw">Qhu</span>'+escHtml(w.slice(3));
     }
     if(hl==='ul' && i===0){
       // Mark ul inside Qul

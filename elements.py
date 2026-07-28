@@ -271,34 +271,43 @@ def build_feedback(
 
     stage_passed = not blocking and not miss_words
 
-    # Qul lock requires Arabic ق in this take (same stable gate as Qu drill).
-    # Shape-near without ق (طل, garbled Whisper, etc.) must NOT skip to huwa.
+    # Qul lock requires back ق — Arabic letter, or clear qh/QUAL phonetics.
+    # Shape-near without ق/qh (طل, garbled Whisper) must NOT skip to huwa.
     needs_qaf = (stage or {}).get("id") == "qul" or (
         {(w or "").lower() for w in (stage_words or [])} == {"qul"}
     )
-    if stage_passed and needs_qaf and "ق" not in (heard_arabic or ""):
-        stage_passed = False
-        q_err = coach._card(
-            5,
-            verse,
-            "qul",
-            "قُلْ",
-            {
-                "heard": "no clear back Q (qaf) in this take",
-                "want": "Arabic Qul — English cue <b>QUAL</b> like <b>quality</b>",
-                "fix": (
-                    "Say the full word <b>Qul</b> (قُلْ). Think <b>QUAL</b> like the start of "
-                    "<b>quality</b> — not “cull/cool”. I need to hear back <b>ق</b>."
-                ),
-                "ar": ("?", "ق"),
-            },
-            "?",
-            "ق",
-            rule="pronunciation",
-        )
-        q_err["key"] = "pronunciation:qul:need_ق"
-        errors.insert(0, q_err)
-        blocking = [c for c in errors if _blocks_stage(c)]
+    has_qaf = "ق" in (heard_arabic or "") or coach.phonetic_back_q(heard_phonetic or "")
+    has_kaf = "ك" in (heard_arabic or "")
+    if stage_passed and needs_qaf and (not has_qaf or has_kaf):
+        if has_kaf or not has_qaf:
+            stage_passed = False
+            q_err = coach._card(
+                5,
+                verse,
+                "qul",
+                "قُلْ",
+                {
+                    "heard": (
+                        "middle K (kaf) — like “cull/cool”"
+                        if has_kaf
+                        else "no clear back Q (qaf / qh) in this take"
+                    ),
+                    "want": "Arabic Qul — English cue <b>QUAL / qhul</b> like <b>quality</b>",
+                    "fix": (
+                        "Say the full word <b>Qul</b> (قُلْ). Think <b>QUAL</b> / <b>qhul</b> "
+                        "like the start of <b>quality</b> — hollow qh, not “cull/cool”.<br>"
+                        "If you felt QUAL but the app shows Kull: phone ASR often flattens ق→ك. "
+                        "Closer mic, retry — we lock on ق or clear qh, never on ك."
+                    ),
+                    "ar": ("ك" if has_kaf else "?", "ق"),
+                },
+                "ك" if has_kaf else "?",
+                "ق",
+                rule="pronunciation",
+            )
+            q_err["key"] = "pronunciation:qul:ك→ق" if has_kaf else "pronunciation:qul:need_ق"
+            errors.insert(0, q_err)
+            blocking = [c for c in errors if _blocks_stage(c)]
 
     return _finish_stage_cards(
         verse=verse,

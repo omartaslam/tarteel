@@ -40,12 +40,14 @@ CANONICAL = {
 }
 
 # Consonant → Latin for readable phonetics of whatever Whisper actually heard.
+# ق → qh (not bare "q"): learners feel a hollow 'h' in QUAL/qhul; showing only "Qul"
+# hid that quality and made teaching vs measurement disagree.
 _CONS = {
     "ء": "ʾ", "أ": "ʾ", "إ": "ʾ", "ؤ": "ʾ", "ئ": "ʾ", "آ": "ʾā",
     "ا": "ā", "ٱ": "a", "ى": "ā", "ب": "b", "ت": "t", "ث": "th",
     "ج": "j", "ح": "ḥ", "خ": "kh", "د": "d", "ذ": "dh", "ر": "r",
     "ز": "z", "س": "s", "ش": "sh", "ص": "ṣ", "ض": "ḍ", "ط": "ṭ",
-    "ظ": "ẓ", "ع": "ʿ", "غ": "gh", "ف": "f", "ق": "q", "ك": "k",
+    "ظ": "ẓ", "ع": "ʿ", "غ": "gh", "ف": "f", "ق": "qh", "ك": "k",
     "ل": "l", "م": "m", "ن": "n", "ه": "h", "ة": "h", "و": "w", "ي": "y",
 }
 _SHORT = {"َ": "a", "ُ": "u", "ِ": "i", "ً": "an", "ٌ": "un", "ٍ": "in"}
@@ -117,7 +119,7 @@ def romanize_ar(text: str) -> str:
             if c in ("أ", "إ", "ؤ", "ئ"):
                 cons = "ʾ"
             if geminate:
-                if cons.startswith(("th", "kh", "dh", "sh", "gh")):
+                if cons.startswith(("th", "kh", "dh", "sh", "gh", "qh")):
                     cons = cons + cons
                 elif cons:
                     cons = cons + cons

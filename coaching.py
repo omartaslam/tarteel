@@ -50,7 +50,7 @@ EXPECTED = {
 # Full ayah lines for the in-card section (English-led).
 AYAH_LINE = {
     1: {
-        "ph": ["Qul", "huwa", "Allāhu", "aḥad"],
+        "ph": ["Qhul", "huwa", "Allāhu", "aḥad"],
         "ar": ["قُلْ", "هُوَ", "ٱللَّهُ", "أَحَدٌ"],
         "key": ["qul", "huwa", "Allāhu", "aḥad"],
     },
@@ -90,17 +90,22 @@ def section_html(verse: int, word_en: str, *, highlight: str | None = None) -> s
         k = key.lower().replace("ā", "a").replace("ḥ", "h").replace("ṣ", "s")
         # Syllable marks inside first word (Qul)
         if hl == "qu" and k == "qul":
-            # Qu + l  /  قُ + لْ
-            ph_parts.append(f'<span class="focusw">Qu</span>{ph[2:] if len(ph) > 2 else ""}')
+            # Qhu + l  /  قُ + لْ  (phonetic is Qhul — hollow qh)
+            ph_parts.append(
+                f'<span class="focusw">{ph[:3] if len(ph) >= 3 else ph}</span>'
+                f'{ph[3:] if len(ph) > 3 else ""}'
+            )
             ar_parts.append(
                 f'<span class="focusw">{ar[:2] if len(ar) >= 2 else ar}</span>'
                 f'{ar[2:] if len(ar) > 2 else ""}'
             )
             continue
         if hl == "ul" and k == "qul":
+            # Keep onset unmarked; mark ul tail (after Qhu / قُ)
+            cut = 3 if ph.lower().startswith("qhu") else 1
             ph_parts.append(
-                f'{ph[:1] if ph else ""}'
-                f'<span class="focusw">{ph[1:] if len(ph) > 1 else ph}</span>'
+                f'{ph[:cut] if ph else ""}'
+                f'<span class="focusw">{ph[cut:] if len(ph) > cut else ph}</span>'
             )
             ar_parts.append(
                 f'{ar[:1] if ar else ""}'
@@ -326,12 +331,13 @@ FIX = {
         "heard": "an English K (like “cull” / “cool”)",
         "want": "Arabic ق — say it like English <b>QUAL</b> (start of “quality”), not “Qul/cull”",
         "fix": (
-            "The written word is <b>Qul</b> (قُلْ). The English sound cue is <b>QUAL</b> — "
+            "The written word is <b>Qul</b> (قُلْ). The English sound cue is <b>QUAL / qhul</b> — "
             "like the opening of <b>quality</b> / <b>quad</b>, not “cull” or “cool”.<br>"
             "1) Tip of tongue rests on the back of your bottom front teeth.<br>"
             "2) English “Qul/cull/cool” hits too far forward (middle ك) — that’s what we’re hearing.<br>"
-            "3) Make the first letter like <b>QUAL</b>: deeper / hollower in the throat, short dry pop, then finish the L.<br>"
-            "4) One short word. Stop."
+            "3) Make the first letter like <b>QUAL</b>: hollow <b>qh</b> deeper in the throat, short dry pop, then finish the L.<br>"
+            "4) One short word. Stop.<br>"
+            "Note: if you felt QUAL/qhul but the app shows Kull, phone ASR often flattens ق→ك — retry closer."
         ),
         "ar": ("ك", "ق"),
     },
@@ -481,6 +487,24 @@ def compare_html(
     )
 
 
+def phonetic_back_q(heard_phonetic: str) -> bool:
+    """True if English phonetics clearly cue hollow back ق (qh / QUAL), not middle K."""
+    ph = (heard_phonetic or "").lower()
+    if not ph.strip():
+        return False
+    ph_compact = re.sub(r"[^a-zāḥṣṭḍẓ]", "", ph)
+    if re.search(r"(^|[^a-z])(k|c)(oo|u|o|a|ull)", ph) or ph_compact.startswith(
+        ("ku", "coo", "cul", "kol", "ko", "kull", "kul")
+    ):
+        return False
+    if "qh" in ph_compact or ph_compact.startswith(("qual", "qhul", "qhu", "qaf")):
+        return True
+    # bare q + u/a (Qul / Qu) without kaf — weak but better than ignoring
+    if re.search(r"(^|[^a-z])q(u|ū|o|a)", ph) and "k" not in ph_compact:
+        return True
+    return False
+
+
 def evaluate_drill(
     drill: str,
     verse: int,
@@ -490,8 +514,9 @@ def evaluate_drill(
     """
     Score syllable micro-drills (Qu / ul) without full-word ayah alignment.
 
-    Qu (stable gate): ASR letters only — ق passes, ك fails. Acoustic cluster
-    is NOT used for lock/fail (reverted — unreliable on phone Qu).
+    Qu gate: Arabic ق passes; Arabic ك fails. Clear qh/QUAL phonetics can pass
+    when ق letter is missing — but never when Arabic ك / cull phonetics win.
+    Acoustic cluster is NOT used for lock/fail.
     Returns passed/cards plus display_* for the UI (onset only — not Whisper's
     full-word guess like كل/Kul when the drill is Qu alone).
     """
@@ -522,31 +547,34 @@ def evaluate_drill(
         )
 
     if drill == "qu":
-        # Stable gate (stable-qu-detection): analyse this take — ق passes, ك fails.
-        # Do not invent Ku; do not let acoustic veto an ASR ق lock.
+        # Stable: Arabic ق passes; Arabic ك fails.
+        # Honour clear qh/QUAL phonetics when ASR omitted ق (align teach ↔ measure).
+        # Never pass on middle-K Arabic or cull/cool phonetics.
         has_q = "ق" in letters
-        has_k = "ك" in letters or bool(
+        has_k_ar = "ك" in letters
+        has_k_ph = bool(
             re.search(r"(^|[^a-z])(k|c)(oo|u|o|a|ull)", ph)
         ) or ph_compact.startswith(("ku", "coo", "cul", "kol", "ko", "kull", "kul"))
-        if has_q:
+        has_qh_ph = phonetic_back_q(heard_phonetic)
+        if has_q or (has_qh_ph and not has_k_ar):
             return {
                 "passed": True,
                 "cards": [],
                 "display_arabic": "قُ",
-                "display_phonetic": "Qu",
-                "compare_html": _drill_compare("Qu", "قُ", "Qu", "قُ", True),
+                "display_phonetic": "Qhu",
+                "compare_html": _drill_compare("Qhu", "قُ", "Qhu", "قُ", True),
                 "heard_match": "drill",
             }
-        # Stable key so mastery / last-focus doesn't thrash across onset vs kaf variants.
         fail_key = "drill:qu:ق"
-        if has_k:
+        if has_k_ar or has_k_ph:
             tip = {
                 "heard": "a middle K (kaf) — like English “cool/cull”",
-                "want": "back ق — English cue <b>QUA</b> (as in “quality”), not “coo/cu”",
+                "want": "back ق — English cue <b>QUA / qhul</b> (as in “quality”), not “coo/cu”",
                 "fix": (
-                    "Say only the onset <b>Qu</b> (قُ). English cue: <b>QUA</b> like the start of "
-                    "<b>quality</b> — not “coo”, “cu”, or “cool”.<br>"
-                    "Middle K is too far forward. Deeper / hollower throat place, short dry pop + “u”. Stop there."
+                    "Say only the onset <b>Qu</b> (قُ). English cue: <b>QUA</b> like <b>quality</b> "
+                    "(hollow <b>qh</b>, not “coo/cull”).<br>"
+                    "If you felt that hollow QUAL but the app shows Kull: phone ASR often flattens "
+                    "ق→ك — hold the phone closer and retry. We only lock when we hear ق / qh."
                 ),
                 "ar": ("ك", "ق"),
             }
@@ -557,7 +585,7 @@ def evaluate_drill(
                 "cards": [card],
                 "display_arabic": "كُ",
                 "display_phonetic": "Ku",
-                "compare_html": _drill_compare("Ku", "كُ", "Qu", "قُ", False),
+                "compare_html": _drill_compare("Ku", "كُ", "Qhu", "قُ", False),
                 "heard_match": "drill",
             }
         tip = {
@@ -566,9 +594,9 @@ def evaluate_drill(
                 if not (letters or ph.strip())
                 else "something without a clear Q onset"
             ),
-            "want": "short Qu (قُ) — English cue <b>QUA</b> (as in “quality”)",
+            "want": "short Qu (قُ) — English cue <b>QUA / qhul</b> (as in “quality”)",
             "fix": (
-                "Say only <b>Qu</b> — think <b>QUA</b> like <b>quality</b>, not “coo/cu”. "
+                "Say only <b>Qu</b> — think <b>QUA</b> like <b>quality</b> (hollow qh), not “coo/cu”. "
                 "Deep back ق + short “u”. Stop after the short u."
             ),
             "ar": ("?", "ق"),
@@ -580,7 +608,7 @@ def evaluate_drill(
             "cards": [card],
             "display_arabic": "(unclear)",
             "display_phonetic": "—",
-            "compare_html": _drill_compare("—", "(unclear)", "Qu", "قُ", False),
+            "compare_html": _drill_compare("—", "(unclear)", "Qhu", "قُ", False),
             "heard_match": "drill",
         }
 
