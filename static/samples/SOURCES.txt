@@ -1,0 +1,18 @@
+Real-world sample sources (NOT TTS)
+
+CORRECT — real_qul_minshawi.*
+  Reciter: Muhammad Siddiq al-Minshawi (male, classical murattal)
+  Source: https://everyayah.com/data/Minshawy_Murattal_128kbps/112001.mp3
+  Content: first word only (Qul) cut from Surah al-Ikhlas ayah 1
+  Also in app via everyayah / Husary proxy for full ayah reference.
+
+REFERENCE — real_ikhlas1_husary_full.*
+  Reciter: Mahmoud Khalil al-Husary (male)
+  Source: https://everyayah.com/data/Husary_128kbps/112001.mp3
+  Full ayah 1, uncut.
+
+INCORRECT — real_cool_grendelkhan.*
+  Speaker: Wikimedia / Lingua Libre volunteer "Grendelkhan" (public contributor)
+  Source: https://commons.wikimedia.org/wiki/File:LL-Q1860_(eng)-Grendelkhan-cool.wav
+  License: CC BY-SA 4.0
+  Content: the English word "cool" (English K) — the realistic beginner error vs Arabic Q.
