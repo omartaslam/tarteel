@@ -50,8 +50,9 @@ Do not reintroduce `pass if ك OR ق` on the Qu drill, and do not demote full-wo
 ### Phonetic breakthrough (same journey)
 Lock succeeded when the English cue became **QUAL / QUA like quality**, not “Qul/cull/cool”.
 Keep that cue in coaching. Extend the same standard to all later stages.
-### Teach ↔ measure (qhul)
-- Romanize **ق → qh** so heard display shows **Qhul / Qhu** (the hollow h learners feel) — not bare “Qul/Qu”.
-- Clear **qh / QUAL** phonetics can pass Qu when Arabic ق is missing; **ك / cull** still never passes.
-- **Phone ASR flatten:** Whisper often writes ك for real ق on phone mics. If XLSR letter-track onset shows **ق** (and not ك), **pass** — do not lock out phone users on Whisper-ك alone.
-- When ASR writes ك but the learner aimed for QUAL: coaching must say phone ASR often flattens ق→ك — do not pretend we “heard” the hollow qh if the transcript is Kull *and* the letter track also lacks ق.
+### Teach ↔ measure
+- Written label: **Qul / Qu** (not “Qhul” on the ayah line).
+- Mouth cue: **QUAL / QUA like *quality*** (hollow qh) — never cull/cool.
+- Clear **qh / QUAL** phonetics can still pass Qu when Arabic ق is missing; **ك / cull** still never passes.
+- **Phone ASR flatten:** Whisper often writes ك for real ق on phone mics. If XLSR letter-track onset shows **ق** (and not ك), **pass**.
+- When ASR writes ك but the learner aimed for QUAL: coaching must say phone ASR often flattens ق→ك — do not pretend we “heard” hollow qh if the transcript is Kull *and* the letter track also lacks ق.

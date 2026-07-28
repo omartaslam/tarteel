@@ -50,7 +50,7 @@ EXPECTED = {
 # Full ayah lines for the in-card section (English-led).
 AYAH_LINE = {
     1: {
-        "ph": ["Qhul", "huwa", "Allāhu", "aḥad"],
+        "ph": ["Qul", "huwa", "Allāhu", "aḥad"],
         "ar": ["قُلْ", "هُوَ", "ٱللَّهُ", "أَحَدٌ"],
         "key": ["qul", "huwa", "Allāhu", "aḥad"],
     },
@@ -90,10 +90,10 @@ def section_html(verse: int, word_en: str, *, highlight: str | None = None) -> s
         k = key.lower().replace("ā", "a").replace("ḥ", "h").replace("ṣ", "s")
         # Syllable marks inside first word (Qul)
         if hl == "qu" and k == "qul":
-            # Qhu + l  /  قُ + لْ  (phonetic is Qhul — hollow qh)
+            # Qu + l  /  قُ + لْ  (written label Qul; mouth cue remains QUAL)
             ph_parts.append(
-                f'<span class="focusw">{ph[:3] if len(ph) >= 3 else ph}</span>'
-                f'{ph[3:] if len(ph) > 3 else ""}'
+                f'<span class="focusw">{ph[:2] if len(ph) >= 2 else ph}</span>'
+                f'{ph[2:] if len(ph) > 2 else ""}'
             )
             ar_parts.append(
                 f'<span class="focusw">{ar[:2] if len(ar) >= 2 else ar}</span>'
@@ -101,8 +101,8 @@ def section_html(verse: int, word_en: str, *, highlight: str | None = None) -> s
             )
             continue
         if hl == "ul" and k == "qul":
-            # Keep onset unmarked; mark ul tail (after Qhu / قُ)
-            cut = 3 if ph.lower().startswith("qhu") else 1
+            # Keep onset unmarked; mark ul tail
+            cut = 1
             ph_parts.append(
                 f'{ph[:cut] if ph else ""}'
                 f'<span class="focusw">{ph[cut:] if len(ph) > cut else ph}</span>'
@@ -599,8 +599,8 @@ def evaluate_drill(
                 "passed": True,
                 "cards": [],
                 "display_arabic": "قُ",
-                "display_phonetic": "Qhu",
-                "compare_html": _drill_compare("Qhu", "قُ", "Qhu", "قُ", True),
+                "display_phonetic": "Qu",
+                "compare_html": _drill_compare("Qu", "قُ", "Qu", "قُ", True),
                 "heard_match": "drill",
                 "qaf_rescue": bool(align_rescues and not has_q),
             }
@@ -624,7 +624,7 @@ def evaluate_drill(
                 "cards": [card],
                 "display_arabic": "كُ",
                 "display_phonetic": "Ku",
-                "compare_html": _drill_compare("Ku", "كُ", "Qhu", "قُ", False),
+                "compare_html": _drill_compare("Ku", "كُ", "Qu", "قُ", False),
                 "heard_match": "drill",
             }
         tip = {
@@ -647,7 +647,7 @@ def evaluate_drill(
             "cards": [card],
             "display_arabic": "(unclear)",
             "display_phonetic": "—",
-            "compare_html": _drill_compare("—", "(unclear)", "Qhu", "قُ", False),
+            "compare_html": _drill_compare("—", "(unclear)", "Qu", "قُ", False),
             "heard_match": "drill",
         }
 

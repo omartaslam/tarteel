@@ -125,7 +125,7 @@ A **stage pass** = app advances (or locks) when the take deserves it for that st
 |------|------|
 | `server.py` | FastAPI: analyze jobs, sessions, husary, static |
 | `analyze_xlsr.py` | Pipeline: decode → Whisper ASR → XLSR align → feedback |
-| `transcribe_quran.py` | Quran ASR + romanize (**ق → qh** → Qhul/Qhu) |
+| `transcribe_quran.py` | Quran ASR + romanize (ق → q → Qul/Qu); mouth cue stays QUAL |
 | `coaching.py` | Tips, compare HTML, drills, `align_onset_qaf`, QUAL copy |
 | `elements.py` | Stage pass/fail, Qul ق gate + phone rescue, cards |
 | `stages.py` | Ladder definition (ids/hints; UI hear/compare in HTML) |
