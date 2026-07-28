@@ -179,14 +179,14 @@ const V=[
 ];
 let v=1, rec=null, chunks=[], hAudio=null;
 const $=id=>document.getElementById(id);
-const PRACTICE_STORE='tarteel_practice_v4';
+const PRACTICE_STORE='tarteel_practice_v5';
 const BUILD_STORE='tarteel_build_id';
 // Beginner ladder — keep in sync with stages.py
 const STAGE_LADDER={
   1:[
-    {id:'qu', title:'Ku', say_en:'Ku', say_ar:'كُ', hint:'Only the first half: “Ku” — clear K + short “u”. No L yet. (Deep Q comes after shape locks.)'},
+    {id:'qu', title:'Qu', say_en:'Qu', say_ar:'قُ', hint:'Only the first half: deep back Q + short “u”. Not English / middle K. No L yet.'},
     {id:'ul', title:'ul', say_en:'ul', say_ar:'ـُلْ', hint:'Only the ending: “ul” — short u + clear L. No first letter yet.'},
-    {id:'qul', title:'Qul', say_en:'Qul', say_ar:'قُلْ', hint:'Join Ku + ul into one short word (Kul/Qul shape). Deep Q is polish after.'},
+    {id:'qul', title:'Qul', say_en:'Qul', say_ar:'قُلْ', hint:'Join Qu + ul. Keep the deep back Q — middle K fails.'},
     {id:'huwa', title:'huwa', say_en:'huwa', say_ar:'هُوَ', hint:'Say only huwa — round the lips for the W.'},
     {id:'qul_huwa', title:'Qul huwa', say_en:'Qul huwa', say_ar:'قُلْ هُوَ', hint:'Join the two words you locked.'},
     {id:'allahu', title:'Allāhu', say_en:'Allāhu', say_ar:'ٱللَّهُ', hint:'Say only Allāhu — hold the doubled L.'},
@@ -410,7 +410,7 @@ function renderStageBox(){
   const samp = showQafKaf ? `
     <div class="sampbox">
       <div class="samplbl">Hear the difference — back ق vs middle ك</div>
-      <p class="sampnote">Correct is deeper / more hollow (further back). Incorrect is a lighter English-style K.</p>
+      <p class="sampnote">Correct is deeper / more hollow (back ق). Incorrect is middle ك — the app must fail that.</p>
       <div class="samprow">
         <div class="samp ok">
           <button type="button" data-samp="/samples/bench_correct_qaf_qul_minshawi.mp3" aria-label="Play correct Qul"></button>
@@ -479,6 +479,7 @@ async function syncBuildAndMaybeReset(){
       localStorage.removeItem('tarteel_practice_v1');
       localStorage.removeItem('tarteel_practice_v2');
       localStorage.removeItem('tarteel_practice_v3');
+      localStorage.removeItem('tarteel_practice_v4');
     }catch(e){}
     const h=await fetch('/health',{cache:'no-store'}).then(r=>r.json());
     const build=(h && h.build) ? String(h.build) : '';

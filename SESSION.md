@@ -1,17 +1,17 @@
 # Tarteel — session handoff
 
-Last updated: 2026-07-28 (Ku/ul shape-first after Qu gate stuck)
+Last updated: 2026-07-28 (require back ق — stop accepting ك as pass)
 
-## Where we left off
-- **Live logs (build `ce0e7dd`):** stage correctly `qu`, but takes heard as `كُل`/`Kul` and `كُفْرَةٌ`. Qu required ق → still stuck on same ك→ق grind.
-- **Product rule reminder:** word shape before fine throat-Q.
-- **Fix:** Ku (ك or ق onset) → ul → Qul. `Kul` is **near** and advances. ك→ق is a polish tip, not a stage blocker / not a step-back.
+## Bug fixed
+- Qu drill had been coded `pass if ك OR ق` — incorrect middle-K clips locked.
+- Full Qul demoted ك→ق to a tip so `Kull` could still advance.
+- Now: analyse each take. **ق passes. ك fails + coaches.** No sample hard-wiring.
 
-## How to resume
-1. Hard-refresh after deploy (green header).
-2. Stage 1: say only **Ku** (first half). Then **ul**. Then join **Qul** (Kul shape OK).
-3. Deep Arabic Q is coaching polish after shape locks — don’t grind it as the gate.
+## Stages (ayah 1)
+Qu (قُ) → ul → Qul. Practice store `tarteel_practice_v5`.
 
-## Stack reminder
-- Railway deploys from `main`.
-- Practice store: `tarteel_practice_v4`.
+## Samples in UI
+On Qu/Qul: Minshawi قُلْ vs Arabic-speaker كُل (hear-the-difference).
+
+## Stack
+Railway from `main`. Hard-refresh after deploy.

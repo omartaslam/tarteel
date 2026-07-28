@@ -10,16 +10,15 @@ from __future__ import annotations
 # word_idxs: indices into EXPECTED[verse]
 STAGES = {
     1: [
-        # Micro-drills: lock word SHAPE first (Ku + ul → Kul), then polish deep Q as a tip.
-        # Fine ك→ق must not block the ladder (identity/shape before throat-Q).
+        # Micro-drills: Qu (back ق) → ul → join Qul. Middle ك fails — analyse each take.
         {
             "id": "qu",
-            "title": "Ku",
-            "say_en": "Ku",
-            "say_ar": "كُ",
+            "title": "Qu",
+            "say_en": "Qu",
+            "say_ar": "قُ",
             "hint": (
-                "Only the first half: “Ku” — clear K + short “u”. "
-                "No L yet. (Deep Arabic Q comes after the word shape locks.)"
+                "Only the first half: deep back Q + short “u”. "
+                "Not English / middle K. No L yet."
             ),
             "words": [],
             "idxs": [],
@@ -42,7 +41,7 @@ STAGES = {
             "title": "Qul",
             "say_en": "Qul",
             "say_ar": "قُلْ",
-            "hint": "Join Ku + ul into one short word (Kul/Qul shape). Deep Q is polish after.",
+            "hint": "Join Qu + ul. Keep the deep back Q — middle K fails.",
             "words": ["qul"],
             "idxs": [0],
         },

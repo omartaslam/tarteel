@@ -426,11 +426,11 @@ def evaluate_drill(
     heard_phonetic: str = "",
 ) -> dict:
     """
-    Score syllable micro-drills (Ku / ul) without full-word ayah alignment.
+    Score syllable micro-drills (Qu / ul) without full-word ayah alignment.
 
-    Returns passed/cards plus display_* fields for the UI.
-    Whisper often hallucinates a full word (e.g. كل/Kul) for a short syllable —
-    never show that inventedness to the user on drill stages.
+    Qu: pass only on back ق. Middle ك fails with coaching (analyse this take).
+    Returns passed/cards plus display_* for the UI (onset only — not Whisper's
+    full-word guess like كل/Kul when the drill is Qu alone).
     """
     ar = normalize_ar(heard_arabic or "")
     letters = _letters_only(ar)
@@ -459,65 +459,59 @@ def evaluate_drill(
         )
 
     if drill == "qu":
-        # Shape-first: lock the Ku onset (ك or ق). Deep ق is polish later, not a gate.
+        # First syllable of Qul: MUST be back ق (qaf). Middle ك (kaf) fails.
+        # Analyse this take — do not treat ك as a pass.
         has_q = "ق" in letters
-        has_k = (
-            "ك" in letters
-            or bool(re.search(r"(^|[^a-z])(k|c)(oo|u|o|a)", ph))
-            or ph_compact.startswith(("ku", "coo", "cul", "kol", "ko", "q"))
-        )
-        if has_q or has_k:
-            cards = []
-            # Display only the onset we scored — never Whisper's extra L (كل/Kul).
-            if has_q:
-                disp_ar, disp_ph = "قُ", "Qu"
-            else:
-                disp_ar, disp_ph = "كُ", "Ku"
-                cards.append({
-                    "level": "measured",
-                    "rule": "drill",
-                    "key": "drill:qu:deeper_q",
-                    "priority": 40,
-                    "verse": verse,
-                    "word_en": "Ku",
-                    "word_ar": "كُ",
-                    "section": section_html(verse, "qul"),
-                    "plain": (
-                        "Onset shape locked as <b>Ku</b>. "
-                        "Later we’ll deepen that K toward Arabic <b>Q</b> (ق) — "
-                        "soft-gargle place — but not yet."
-                    ),
-                    "fix": (
-                        "For now: short <b>Ku</b> only. No L. "
-                        "Deep Q is a polish step after Kul/Qul shape is locked."
-                    ),
-                    "scholarly": None,
-                })
+        has_k = "ك" in letters or bool(
+            re.search(r"(^|[^a-z])(k|c)(oo|u|o|a|ull)", ph)
+        ) or ph_compact.startswith(("ku", "coo", "cul", "kol", "ko", "kull", "kul"))
+        if has_q:
             return {
                 "passed": True,
-                "cards": cards,
-                "display_arabic": disp_ar,
-                "display_phonetic": disp_ph,
-                "compare_html": _drill_compare(disp_ph, disp_ar, "Ku", "كُ", True),
+                "cards": [],
+                "display_arabic": "قُ",
+                "display_phonetic": "Qu",
+                "compare_html": _drill_compare("Qu", "قُ", "Qu", "قُ", True),
+                "heard_match": "drill",
+            }
+        if has_k:
+            tip = {
+                "heard": "a middle K (kaf) — like English “cool/cull”",
+                "want": "a deep back Q (qaf) — hollow / further back",
+                "fix": (
+                    "Say only <b>Qu</b> (قُ) — not English K.<br>"
+                    "Middle K is too far forward. Soft-gargle place in the throat: "
+                    "short dry pop + “u”. Stop. No L yet."
+                ),
+                "ar": ("ك", "ق"),
+            }
+            card = _card(5, verse, "Qu", "قُ", tip, "ك", "ق", rule="drill")
+            card["key"] = "drill:qu:ك→ق"
+            return {
+                "passed": False,
+                "cards": [card],
+                "display_arabic": "كُ",
+                "display_phonetic": "Ku",
+                "compare_html": _drill_compare("Ku", "كُ", "Qu", "قُ", False),
                 "heard_match": "drill",
             }
         tip = {
-            "heard": "almost nothing clear" if not (letters or ph.strip()) else "something without a clear K/Q onset",
-            "want": "a short Ku (كُ) — K + “u” only",
+            "heard": "almost nothing clear" if not (letters or ph.strip()) else "something without a clear Q onset",
+            "want": "a short Qu (قُ) — deep Q + “u” only",
             "fix": (
-                "Say only <b>Ku</b> — clear K + short “u”. Stop. "
+                "Say only <b>Qu</b> — deep back Q + short “u”. Stop. "
                 "Do <b>not</b> add the L yet."
             ),
-            "ar": ("?", "ك"),
+            "ar": ("?", "ق"),
         }
-        card = _card(5, verse, "Ku", "كُ", tip, "?", "ك", rule="drill")
+        card = _card(5, verse, "Qu", "قُ", tip, "?", "ق", rule="drill")
         card["key"] = "drill:qu:onset"
         return {
             "passed": False,
             "cards": [card],
             "display_arabic": "(unclear)",
             "display_phonetic": "—",
-            "compare_html": _drill_compare("—", "(unclear)", "Ku", "كُ", False),
+            "compare_html": _drill_compare("—", "(unclear)", "Qu", "قُ", False),
             "heard_match": "drill",
         }
 
