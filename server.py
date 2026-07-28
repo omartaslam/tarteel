@@ -311,7 +311,13 @@ def session_audio(sid: str):
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    build = (
+        os.environ.get("RAILWAY_GIT_COMMIT_SHA")
+        or os.environ.get("RAILWAY_GIT_COMMIT")
+        or os.environ.get("GIT_COMMIT")
+        or "dev"
+    )
+    return {"ok": True, "build": build[:12]}
 
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

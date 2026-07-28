@@ -93,6 +93,9 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .plog .pli .bad{color:#c0392b;font-weight:bold}
 .plog .pmast{margin-top:8px;font-size:12px;color:#667}
 .plog button{font-size:12px;padding:4px 10px;margin-top:8px;background:#eee;color:#444}
+.clearhist{font-size:12px;padding:6px 12px;margin:8px 0 0;background:transparent;color:#6a7a8a;border:1px solid #d0d7e0;border-radius:8px;width:100%}
+.clearhist:active{background:#f0f3f7}
+.buildnote{font-size:12px;color:#2c5f2d;background:#eef7ee;border:1px solid #c5e0c5;border-radius:8px;padding:8px 10px;margin:8px 0;display:none}
 .rbtn{background:#2c5f2d;color:#fff;flex:1;min-width:150px}
 .notebox{display:flex;gap:8px;margin:10px 0}
 .notebox input{flex:1;padding:10px;border:1px solid #ccc;border-radius:8px;font-family:inherit;font-size:14px}
@@ -123,6 +126,8 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 </div>
 
 <div class="controls"><button class="rec" id="rec">● Record</button><span id="status"></span></div>
+<div id="buildNote" class="buildnote"></div>
+<button type="button" class="clearhist" id="clearHistory">Clear practice history (this device)</button>
 <div id="quality"></div>
 <div id="workbench">
   <div class="spin" id="spin">Analysing your recitation…</div>
@@ -152,6 +157,7 @@ const V=[
 let v=1, rec=null, chunks=[], hAudio=null;
 const $=id=>document.getElementById(id);
 const PRACTICE_STORE='tarteel_practice_v1';
+const BUILD_STORE='tarteel_build_id';
 const VERSE_WORDS={
   1:['qul','huwa','Allāhu','aḥad'],
   2:['Allāhu','aṣ-ṣamad'],
@@ -307,6 +313,30 @@ function savePractice(verse, st){
 function clearPractice(verse){
   savePractice(verse, {mastered:[], iterations:[], lastFocus:null});
 }
+function clearAllPractice(){
+  try{ localStorage.removeItem(PRACTICE_STORE); }catch(e){}
+}
+function flashBuildNote(msg){
+  const el=$('buildNote');
+  if(!el) return;
+  el.textContent=msg;
+  el.style.display='block';
+  setTimeout(()=>{ el.style.display='none'; }, 5000);
+}
+/** Wipe device practice log when a new deploy is detected. */
+async function syncBuildAndMaybeReset(){
+  try{
+    const h=await fetch('/health',{cache:'no-store'}).then(r=>r.json());
+    const build=(h && h.build) ? String(h.build) : '';
+    if(!build) return;
+    const prev=localStorage.getItem(BUILD_STORE)||'';
+    if(prev && prev!==build){
+      clearAllPractice();
+      flashBuildNote('New build — practice history cleared on this device. Fresh start.');
+    }
+    localStorage.setItem(BUILD_STORE, build);
+  }catch(e){}
+}
 function prettyKey(k){
   if(!k) return '—';
   const p=String(k).split(':');
@@ -383,6 +413,16 @@ function practiceLogHtml(verse, st){
     <div class="pmast">Wins to protect: ${mast}</div>
     <button type="button" id="clearLog">Clear log for this ayah</button>
   </div>`;
+}
+
+function bindClearLog(){
+  const cl=$('clearLog');
+  if(!cl) return;
+  cl.onclick=()=>{
+    clearPractice(v);
+    const box=$('plog');
+    if(box) box.outerHTML='<div class="plog"><div class="plh">Practice log cleared for this ayah</div></div>';
+  };
 }
 
 function draw(){
@@ -632,8 +672,7 @@ function render(data){
     restHtml;
 
   bindRetry(data);
-  const cl=$('clearLog');
-  if(cl) cl.onclick=()=>{ clearPractice(v); cl.textContent='Cleared'; cl.disabled=true; };
+  bindClearLog();
   if(data.session) $('sessionInfo').textContent='session: '+data.session;
   scrollToHeard();
 }
@@ -655,6 +694,17 @@ function bindRetry(data){
   };
 }
 draw();
+syncBuildAndMaybeReset();
+
+$('clearHistory').onclick=()=>{
+  if(!confirm('Clear all practice history on this device? Next take starts fresh.')) return;
+  clearAllPractice();
+  cancelActiveAnalysis();
+  $('results').innerHTML='';
+  $('quality').style.display='none';
+  $('sessionInfo').textContent='';
+  flashBuildNote('Practice history cleared. Record a clean take when ready.');
+};
 
 // Hard refresh for iOS/testing — bust cache via query string
 $('hardRefresh').onclick=()=>{
