@@ -1,6 +1,6 @@
 # Tarteel — session handoff
 
-Last updated: 2026-07-28 (wrong-stage false-fail; FOCUS vs Hear only)
+Last updated: 2026-07-28 (full-word Husary stage clips; wrong-stage coaching)
 
 ## Live tester care
 Mom is testing production. **Do not wipe practice on deploy or header tap.**
@@ -19,6 +19,7 @@ Clear only via explicit “Clear practice history” button.
 - Fail: **FOCUS** (not NEXT STEP). Hear only for the word you’re on.
 - If you re-say a locked word (Qul again on huwa): **Wrong word for this step** — not a mystery huwa miss.
 - Word/drill stages do not require final dal / qalqalah.
+- **Hear only** clips: full word from Husary (rebuild via `scripts/rebuild_stage_word_clips.py`). Huwa must not be a mid-cut.
 
 ## If a “correct” take fails
 1. Check the pink **what the app heard** line (Arabic + English).

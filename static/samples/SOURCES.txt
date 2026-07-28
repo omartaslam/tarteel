@@ -29,7 +29,14 @@ What success looks like when you play these into Tarteel on Ku/Qul:
   Correct  → app should show ق / Qul (back Q)
   Incorrect → app should show ك / Kul (middle K), not pretend it heard ق
 
-# Stage word clips (ayah 1) — sliced from real_ikhlas1_husary_full for next-step play
+# Stage word clips (ayah 1) — sliced from real_ikhlas1_husary_full for Hear only {word}
+# Rebuild: python scripts/rebuild_stage_word_clips.py
+# Teaching rule: each clip must contain the WHOLE word (pad + fade). Never mid-word chops.
+# Verified windows (ASR hears target clearly):
+#   qul   0.72–1.28  → قُلْ
+#   huwa  1.15–1.95  → هُوَ   (old 0.5s mid-cut was clipped / unusable for teaching)
+#   allahu 1.95–3.60 → اللَّهُ
+#   ahad  3.40–4.75  → أَحَدٌ
 stage_qul_husary.mp3
 stage_huwa_husary.mp3
 stage_allahu_husary.mp3
