@@ -61,3 +61,27 @@ stage_huwa_word.mp3
   Reciter is the word-by-word reciter, not al-Husary — do not label it Husary.
 
 Ayah 2 Husary full + stage cuts (Allāhu, aṣ-ṣamad) from EveryAyah Husary 112002.
+
+INCORRECT example clips (Compare panel) — ordinary speakers, not reciters
+------------------------------------------------------------------------
+Chosen from Lingua Libre so the learner hears the miss from a normal voice.
+All Lingua Libre recordings are CC BY-SA; attribute the speaker if reused.
+Processing for each: trim to speech, normalize to ~RMS 0.17 (ladder parity),
+0.12s silence bookends, 20ms fades.
+
+stage_huwa_incorrect_no_waw.mp3
+  What: هي (hiya) — ه with no و, i.e. the W never happens
+  Who:  Spotless_Mind1988 (male, median F0 ~116 Hz)
+  From: LL-Q13955_(ara)-Spotless_Mind1988-هي.wav
+
+stage_allahu_incorrect_single_l.mp3
+  What: لَهُ (lahu) — one quick L instead of the held doubled ll
+  Who:  Spotless_Mind1988 (male, median F0 ~116 Hz)
+  From: LL-Q13955_(ara)-Spotless_Mind1988-له.wav
+  Note: this exact clip cleared the Allāhu stage for 3/3 male speakers before
+        the doubled-ل gate was added — it is a real failure case, not a mock-up.
+
+stage_ahad_incorrect_soft_h.mp3
+  What: the letter ه — soft "ahead" H where throat ح belongs
+  Who:  AlNatiq (same speaker as our ق and ك letter benchmarks)
+  From: LL-Q13955_(ara)-AlNatiq-ه.wav

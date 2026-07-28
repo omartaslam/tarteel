@@ -25,6 +25,9 @@ MIN_DUR = {
     "stage_huwa_word.mp3": 0.80,
     "stage_allahu_husary.mp3": 1.4,
     "stage_ahad_husary.mp3": 1.2,
+    "stage_huwa_incorrect_no_waw.mp3": 0.40,
+    "stage_allahu_incorrect_single_l.mp3": 0.40,
+    "stage_ahad_incorrect_soft_h.mp3": 0.50,
 }
 
 # A teaching clip nobody can hear is a broken clip.
@@ -81,6 +84,23 @@ def test_stage_word_clips_are_not_clipped_stubs(name):
     assert dur >= MIN_SPEECH_DUR[name], (
         f"{name} speech only {dur:.3f}s — word onset likely cut"
     )
+
+
+def test_every_ayah1_stage_shows_a_correct_and_an_incorrect_example():
+    """Compare is a teaching aid — an empty Incorrect row teaches nothing."""
+    html = (Path(__file__).resolve().parent / "static" / "index.html").read_text()
+    ladder = re.search(r"const STAGE_LADDER\s*=\s*\{(.*?)\n\s*\};", html, re.S).group(1)
+    v1 = re.search(r"\n\s*1:\s*\[(.*?)\n\s*\],\n\s*2:\s*\[", ladder, re.S).group(1)
+    empty = []
+    for chunk in re.split(r"\n\s*\{\s*\n?\s*(?=id:')", v1):
+        sid = re.search(r"id:'([a-z_]+)'", chunk)
+        pair = re.search(r"stageComparePair\((.*?)\n\s*\),", chunk, re.S)
+        if not sid or not pair:
+            continue
+        args = re.findall(r"'((?:[^'\\]|\\.)*)'", pair.group(1))
+        if len(args) >= 8 and not args[5].strip():
+            empty.append(sid.group(1))
+    assert not empty, f"ayah-1 stages with no Incorrect example: {empty}"
 
 
 def test_every_clip_referenced_by_the_ui_exists():
