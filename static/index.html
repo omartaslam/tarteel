@@ -131,7 +131,7 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 <div class="hero" id="hardRefresh" title="Tap to hard-refresh (bypass cache)">
   <span class="ar">ترتيل</span><h1>Tarteel</h1>
   <div class="sub">Recitation practice — Surah Al-Ikhlas</div>
-  <div class="hint">Tap header to refresh latest build</div>
+  <div class="hint">Tap header to refresh + clear practice history</div>
 </div>
 
 <div class="banner">A practice aid for beginners — lock one piece at a time, then join. Not a teacher. Hafs an Asim.</div>
@@ -1003,8 +1003,10 @@ $('clearHistory').onclick=()=>{
   flashBuildNote('Practice history cleared. Starting at stage 1.');
 };
 
-// Hard refresh for iOS/testing — bust cache via query string
+// Hard refresh for iOS/testing — wipe practice history + bust cache
 $('hardRefresh').onclick=()=>{
+  clearAllPractice();
+  try{ localStorage.removeItem(BUILD_STORE); }catch(e){}
   const u=new URL(location.href);
   u.searchParams.set('v', String(Date.now()));
   location.replace(u.toString());
