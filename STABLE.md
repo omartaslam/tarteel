@@ -1,8 +1,25 @@
 # Deploy markers
 
+## KNOWN BROKEN — ق/ك rescue gate is vacuous (2026-07-28 evening)
+The rule below ("ك must not pass as ق") is **not being enforced on live**.
+`coach.align_onset_qaf` reads its letters from forced alignment against the
+expected ayah, which can only ever emit ق. It returns `has_qaf=True,
+has_kaf=False` for the kaf benchmark, English "cool", white noise and digital
+silence, so the rescue fires on every take and the kaf benchmark passes Qul.
+Rebuild it on unconstrained decoding and add the benchmark pair as a test
+before quoting any accuracy number. Details in `CONTINUE.md`.
+
 ## Hard rule — do not ship unheard audio (2026-07-28 evening)
-Hear-only / Compare clips must be **listened to on live** after `/health` bumps before asking Omar to test.
-RMS / ASR / md5 checks are not enough. Huwa `?v=3` and `?v=4` both failed Omar’s ear.
+Hear-only / Compare clips must be verified after `/health` bumps before asking Omar to test.
+RMS / md5 checks are not enough — huwa `?v=4` passed an RMS check and was still wrong.
+Verify the **encoded, served bytes**: decode them, check level parity with the other
+clips, speech duration, and silence bookends. Husary recites "Qul huwa" joined, so
+huwa cannot be sliced from the ayah — it uses an isolated word recording.
+
+## Hard rule — never change alignment without the detection matrix
+Qul is the ayah's first word, so whole-ayah alignment never hurt it while Allāhu and
+aḥad were silently broken. Run `test_stage_detection_matrix_no_regression` (documented
+live takes, incl. `قَوْلَهُ`) before shipping any alignment change.
 
 ## Hard rule — stage UI prototype (2026-07-28)
 **Every practice stage owns its own Hear only + Correct/Incorrect.**

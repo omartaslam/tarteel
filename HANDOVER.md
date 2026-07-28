@@ -5,9 +5,9 @@
 **Live app:** https://tarteel-production.up.railway.app  
 **Repo:** https://github.com/omartaslam/tarteel  
 **Branch that deploys:** `main` (Railway)  
-**Live build at handoff:** `2aa0cd0c406d` (`/health`)
+**Live build at handoff:** `b32755d1b0fa` (`/health`)
 
-**→ New agent: open `CONTINUE.md` first.** P0 is broken Hear-only **huwa** on live. Omar will not test Allāhu until huwa is fixed. Do not ask him to test until you play the live clip yourself.
+**→ New agent: open `CONTINUE.md` first.** Hear-only huwa and the Allāhu card are fixed and verified on live. P0 is now the **vacuous ق/ك rescue gate**, which makes the Qul accuracy claim in §1 unsupported.
 
 If you are new: read **CONTINUE.md**, then **§0 Summary**, then **§8 Do not break**.
 
@@ -72,7 +72,16 @@ A **stage pass** = app advances (or locks) when the take deserves it for that st
 | Phone Qul fails pre-rescue (Whisper ك, letters قل) | Failed wrongly until `4df95c7` |
 | Phone Qul `20260728-163050` post-rescue (Whisper ك, letters قل) | Pass Qul → huwa |
 
-**Working claim for sharing:** adult-male **Qul-on-phone** is in a **promising ~70–80% band** under QUAL teaching + letter-track rescue — **pending formal protocol** (N takes, labeled by teacher, confusion matrix ق vs ك).
+> **RETRACTED 2026-07-28 evening — do not quote the number below.**
+> The phone-ASR rescue that produced several of these passes reads its letters
+> from **forced alignment against the expected ayah**, so it reports "ق present,
+> ك absent" for *any* input — including the kaf benchmark, English "cool",
+> white noise and digital silence. The Qul stage therefore passes the
+> `bench_incorrect_kaf_*` clip on live. Until that gate is rebuilt on
+> unconstrained decoding and the ق/ك benchmark passes as an automated test,
+> we have **no defensible Qul accuracy figure**. See `CONTINUE.md` P0.
+
+**Former claim (now unsupported):** adult-male **Qul-on-phone** in a ~70–80% band under QUAL teaching + letter-track rescue.
 
 **Not claimed:** 80% on huwa / Allāhu / aḥad / joins / full ayah / whole surah / female voices.
 
@@ -178,9 +187,10 @@ A **stage pass** = app advances (or locks) when the take deserves it for that st
 6. **Ayah 2:** word isolate → join (English cues); ×3 rescue optional later.
 
 ### P0 product / detection
-- [ ] **P0 BLOCKER:** Hear-only **huwa** still wrong on live (`?v=4`, build `2aa0cd0`). Omar: “even worse”. Fix + listen on live before anything else. See `CONTINUE.md`.
-- [ ] After huwa: Omar retests Allāhu false-`wrong_stage:qul` fix (code already on `2aa0cd0`, untested by him).
-- [ ] Formal male-adult accuracy protocol for Qul (N≥30).  
+- [ ] **P0 BLOCKER:** `align_onset_qaf` reads forced-aligned letters, so the ق/ك rescue fires on any audio (kaf bench, noise, silence all "pass"). Rebuild on unconstrained decoding; add the benchmark pair as a test. See `CONTINUE.md`.
+- [x] Hear-only **huwa** — replaced with an isolated word recording (`b32755d`), verified on live.
+- [x] Allāhu (and aḥad) scoring a miss on their own stage / card blaming Qul — fixed and verified live.
+- [ ] Formal male-adult accuracy protocol for Qul (N≥30) — only meaningful after the gate is fixed.  
 - [ ] Huwa / Allāhu / aḥad batteries; ayah 2 aṣ-ṣamad.  
 - [ ] Mobile Chrome UX pass on live.  
 - [ ] Incorrect clips where still TBD.  
