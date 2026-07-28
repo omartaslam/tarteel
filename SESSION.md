@@ -27,6 +27,7 @@ Apply on every future tip. See `STABLE.md`.
 
 ## Pass / fail UX
 - Every stage shows **Hear only {current}** (word or syllable) in the stage box + fail retry.
+- **Correct / Incorrect compare** is always for the **current stage** (Qul ق/ك, Qu, ul, huwa, Allāhu, aḥad, joins) — never a hard-coded Qul-only block when practicing something else.
 - Syllable rescue entry: banner **Say: Qu** + Hear only Qu (not mixed Qul copy).
 - Card ayah snippet for Qu marks **Qu** inside Qul, not the whole word.
 - **Heard vs target** on a word stage only shows that stage’s word(s) — never yellow the whole ayah for a one-word take.
