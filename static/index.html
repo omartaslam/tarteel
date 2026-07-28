@@ -415,18 +415,18 @@ function quIsolationFailCount(st){
     it.stage==='qu' && it.stageAction==='stay' && !it.bridge
   ).length;
 }
-function currentStage(verse){
-  const st=loadPractice(verse);
+function currentStage(verse, stOverride){
+  const st=stOverride || loadPractice(verse);
   const ladder=STAGE_LADDER[verse]||[];
   const id=st.stageId || (ladder[0]&&ladder[0].id);
   const idx=Math.max(0, ladder.findIndex(s=>s.id===id));
   const cur=ladder[idx]||ladder[0]||null;
   return {st, ladder, id, idx, cur};
 }
-function renderStageBox(){
+function renderStageBox(stOverride){
   const box=$('stageBox');
   if(!box) return;
-  const {st, ladder, idx, cur}=currentStage(v);
+  const {st, ladder, idx, cur}=currentStage(v, stOverride);
   if(!cur){ box.innerHTML=''; return; }
   const locked=new Set(st.lockedStages||[]);
   const chips=ladder.map((s,i)=>{
@@ -607,14 +607,18 @@ function updatePracticeLog(verse, data){
   }
 
   const next=rs.find(r=>r.level==='next') || {};
-  const meta=rs.find(r=>r.stage_action||r.next_stage_id) || next;
-  const action=meta.stage_action || next.stage_action || 'stay';
-  const nextStageId=meta.next_stage_id || next.stage_id || st.stageId;
+  // Server attaches stage_passed / stage_action / next_stage_id on cards[0]
+  const stageMeta=rs.find(r=>
+    r.stage_action || r.next_stage_id!=null || r.stage_passed!=null
+  ) || next;
+  const action=stageMeta.stage_action || next.stage_action || 'stay';
+  const nextStageId=stageMeta.next_stage_id || next.stage_id || st.stageId;
   const curStage=st.stageId;
 
-  if(action==='advance' && curStage){
+  if((action==='advance' || stageMeta.stage_passed===true) && curStage){
     locked.add(curStage);
-    st.stageId=nextStageId || curStage;
+    const dest=nextStageId || curStage;
+    st.stageId=dest;
   } else if(action==='regress' && nextStageId){
     st.stageId=nextStageId;
   } else if(action==='complete' && curStage){
@@ -626,9 +630,10 @@ function updatePracticeLog(verse, data){
 
   const nextKey=next.key || null;
   const bridgeInfo = (rs.find(r=>r.bridge) || {}).bridge
-    || (meta && meta.bridge)
+    || (stageMeta && stageMeta.bridge)
     || null;
   const wasBridge = !!(st.quBridgeActive || bridgeInfo);
+  const advanced = action==='advance' || stageMeta.stage_passed===true;
   st.iterations.push({
     t: Date.now(),
     session: data.session||'',
@@ -637,7 +642,7 @@ function updatePracticeLog(verse, data){
     focusPassed,
     nextKey,
     stage: curStage,
-    stageAction: action,
+    stageAction: advanced ? 'advance' : action,
     regression: action==='regress' || !!(next && next.regression),
     issueKeys,
     bridge: wasBridge,
@@ -645,11 +650,11 @@ function updatePracticeLog(verse, data){
   if(st.iterations.length>30) st.iterations=st.iterations.slice(-30);
   st.mastered=[...mastered];
   st.lockedStages=[...locked];
-  st.lastFocus=(action==='advance'||action==='complete') ? null : nextKey;
+  st.lastFocus=(advanced||action==='complete') ? null : nextKey;
 
   // Qul bridge bookkeeping (Qu stage only)
   if(curStage==='qu'){
-    if(action==='advance'){
+    if(advanced){
       st.quBridgeActive=false;
       st.quBridgeFails=0;
       st.quBridgeExhausted=false;
@@ -705,9 +710,9 @@ function escHtml(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 /** Yellow-mark the current stage on Arabic + English ayah lines. */
-function paintAyahFocus(){
+function paintAyahFocus(stOverride){
   const d=V[v-1];
-  const {st, cur}=currentStage(v);
+  const {st, cur}=currentStage(v, stOverride);
   const words=AYAH_WORDS[v];
   const idxs=new Set((cur && cur.idxs) || []);
   const bridgeOn = cur && cur.id==='qu' && st.quBridgeActive && !st.quBridgeExhausted;
@@ -1029,8 +1034,16 @@ function render(data){
   }
 
   const practice=updatePracticeLog(v, data);
-  paintAyahFocus();
-  renderStageBox();
+  paintAyahFocus(practice);
+  renderStageBox(practice);
+  const lastIt=(practice.iterations||[])[(practice.iterations||[]).length-1];
+  if(lastIt && lastIt.stageAction==='advance'){
+    const from=lastIt.stage||'stage';
+    const to=practice.stageId||'next';
+    flashBuildNote('Locked '+from+' → now say '+to+'. Scroll up if you don’t see the new prompt.');
+    const box=$('stageBox');
+    if(box) try{ box.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){}
+  }
   const logHtml=practiceLogHtml(v, practice);
   const nextCards = rs.filter(r => r.level === 'next');
   const rest = rs.filter(r => r.level !== 'next');
