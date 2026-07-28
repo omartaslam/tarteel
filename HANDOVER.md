@@ -5,9 +5,9 @@
 **Live app:** https://tarteel-production.up.railway.app  
 **Repo:** https://github.com/omartaslam/tarteel  
 **Branch that deploys:** `main` (Railway)  
-**Live build at handoff:** `b32755d1b0fa` (`/health`)
+**Live build at handoff:** `ebc810a79b9c` (`/health`)
 
-**→ New agent: open `CONTINUE.md` first.** Hear-only huwa and the Allāhu card are fixed and verified on live. P0 is now the **vacuous ق/ك rescue gate**, which makes the Qul accuracy claim in §1 unsupported.
+**→ New agent: open `CONTINUE.md` first.** Hear-only huwa, the Allāhu card and the ق/ك gate are all fixed and verified on live. Next up is re-measuring Qul accuracy properly — the old figure was scored by the broken gate and is void.
 
 If you are new: read **CONTINUE.md**, then **§0 Summary**, then **§8 Do not break**.
 
@@ -72,16 +72,20 @@ A **stage pass** = app advances (or locks) when the take deserves it for that st
 | Phone Qul fails pre-rescue (Whisper ك, letters قل) | Failed wrongly until `4df95c7` |
 | Phone Qul `20260728-163050` post-rescue (Whisper ك, letters قل) | Pass Qul → huwa |
 
-> **RETRACTED 2026-07-28 evening — do not quote the number below.**
-> The phone-ASR rescue that produced several of these passes reads its letters
-> from **forced alignment against the expected ayah**, so it reports "ق present,
-> ك absent" for *any* input — including the kaf benchmark, English "cool",
-> white noise and digital silence. The Qul stage therefore passes the
-> `bench_incorrect_kaf_*` clip on live. Until that gate is rebuilt on
-> unconstrained decoding and the ق/ك benchmark passes as an automated test,
-> we have **no defensible Qul accuracy figure**. See `CONTINUE.md` P0.
+> **RETRACTED 2026-07-28 evening — do not quote the old number.**
+> The phone-ASR rescue behind several of those passes read its letters from
+> **forced alignment against the expected ayah**, so it reported "ق present, ك
+> absent" for *any* input — the kaf benchmark, English "cool", white noise and
+> digital silence all passed Qul on live.
+>
+> **Gate rebuilt and live (`ebc810a`).** ق/ك now comes from an unconstrained
+> decode of the onset. On live, real ق Qul (Husary, male, Minshawi) passes while
+> the kaf benchmark, kaf letter and English "cool" fail. But the takes that
+> produced the old figure were scored by the broken gate, so **the number itself
+> is void** — it has to be re-measured from scratch under the protocol below
+> before anything is quoted to a scholar or a backer.
 
-**Former claim (now unsupported):** adult-male **Qul-on-phone** in a ~70–80% band under QUAL teaching + letter-track rescue.
+**Former claim (now void, must be re-measured):** adult-male **Qul-on-phone** in a ~70–80% band.
 
 **Not claimed:** 80% on huwa / Allāhu / aḥad / joins / full ayah / whole surah / female voices.
 
@@ -187,10 +191,11 @@ A **stage pass** = app advances (or locks) when the take deserves it for that st
 6. **Ayah 2:** word isolate → join (English cues); ×3 rescue optional later.
 
 ### P0 product / detection
-- [ ] **P0 BLOCKER:** `align_onset_qaf` reads forced-aligned letters, so the ق/ك rescue fires on any audio (kaf bench, noise, silence all "pass"). Rebuild on unconstrained decoding; add the benchmark pair as a test. See `CONTINUE.md`.
+- [x] ق/ك rescue rebuilt on unconstrained decoding (`ebc810a`); benchmark pair, "cool", noise and silence covered by `test_qaf_kaf_benchmark.py`.
 - [x] Hear-only **huwa** — replaced with an isolated word recording (`b32755d`), verified on live.
 - [x] Allāhu (and aḥad) scoring a miss on their own stage / card blaming Qul — fixed and verified live.
-- [ ] Formal male-adult accuracy protocol for Qul (N≥30) — only meaningful after the gate is fixed.  
+- [ ] **NOW UNBLOCKED — do this next:** formal male-adult accuracy protocol for Qul (N≥30, teacher-labelled, ق/ك confusion matrix). The old figure was produced by the broken gate and is void.
+- [ ] Extend the benchmark battery beyond ق/ك: و/ف on huwa, ح/ه on aḥad, doubled ل on Allāhu.  
 - [ ] Huwa / Allāhu / aḥad batteries; ayah 2 aṣ-ṣamad.  
 - [ ] Mobile Chrome UX pass on live.  
 - [ ] Incorrect clips where still TBD.  

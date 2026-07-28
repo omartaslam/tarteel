@@ -1,13 +1,17 @@
 # Deploy markers
 
-## KNOWN BROKEN — ق/ك rescue gate is vacuous (2026-07-28 evening)
-The rule below ("ك must not pass as ق") is **not being enforced on live**.
-`coach.align_onset_qaf` reads its letters from forced alignment against the
-expected ayah, which can only ever emit ق. It returns `has_qaf=True,
-has_kaf=False` for the kaf benchmark, English "cool", white noise and digital
-silence, so the rescue fires on every take and the kaf benchmark passes Qul.
-Rebuild it on unconstrained decoding and add the benchmark pair as a test
-before quoting any accuracy number. Details in `CONTINUE.md`.
+## Hard rule — ق/ك must be decided from unconstrained audio (fixed `ebc810a`)
+**Never** derive a letter identity from forced alignment. Forced alignment is
+constrained to the expected ayah, so it can only emit the letters you asked
+for. The old `align_onset_qaf` did exactly that and reported "ق present, ك
+absent" for the kaf benchmark, English "cool", white noise and digital silence
+— every take passed Qul.
+
+Now `analyze_xlsr.onset_probe` reads the free emissions and
+`coach.onset_qaf_verdict` requires p(ق) ≥ 0.60 with p(ك) ≤ 0.30 (and the
+mirror). An ambiguous onset locks nothing. `test_qaf_kaf_benchmark.py` runs the
+real clips: ق clips must pass, and the kaf pair, "cool", noise and silence must
+all fail. Do not loosen those thresholds to make a single clip pass.
 
 ## Hard rule — do not ship unheard audio (2026-07-28 evening)
 Hear-only / Compare clips must be verified after `/health` bumps before asking Omar to test.

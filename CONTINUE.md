@@ -3,7 +3,33 @@
 **Owner:** Omar (`omartanveeraslam@gmail.com`)
 **Live:** https://tarteel-production.up.railway.app
 **Deploy:** `main` → Railway. A branch is not live. Check `GET /health`.
-**Live build:** `b32755d1b0fa`
+**Live build:** `ebc810a79b9c`
+
+---
+
+## Status — three fixes, all verified on live
+
+### 3. ق vs ك gate — FIXED (`ebc810a`)
+The rescue used to read letters from **forced alignment against the expected
+ayah**, which can only emit the letters you ask for. It reported "ق present, ك
+absent" for the kaf benchmark, English "cool", white noise and **digital
+silence**, so the Qul stage passed anything.
+
+Now `analyze_xlsr.onset_probe` reads the **free** emissions and
+`coach.onset_qaf_verdict` needs p(ق) ≥ 0.60 with p(ك) ≤ 0.30. Live results:
+
+| Input | live | p(ق) / p(ك) |
+|-------|------|-------------|
+| Husary Qul / male Qul | pass | 1.00 / 0.00 |
+| Minshawi Qul | pass (Whisper reads قُلْ; no rescue needed) | 0.00 / 0.00 |
+| kaf benchmark | **fail** | 0.00 / 1.00 |
+| kaf letter | **fail** | 0.00 / 1.00 |
+| English "cool" | **fail** | 0.00 / 0.98 |
+| white noise / silence | **fail** | 0.00 / 0.00 |
+
+Guarded by `test_qaf_kaf_benchmark.py`. **Do not loosen the thresholds** to make
+one clip pass — `real_qul_minshawi` is deliberately excluded from the acoustic
+list because XLSR does not resolve ق on that 0.55s cut, and Whisper covers it.
 
 ---
 
@@ -36,44 +62,21 @@ returns "Stage 6 cleared: Allāhu", no `wrong_stage` card.
 
 ---
 
-## P0 — the phone-ASR rescue gate is vacuous (PRE-EXISTING, still live)
+## P0 next — re-measure Qul accuracy from scratch
 
-**This is now the most important accuracy issue in the project.**
+The gate is fixed, but every take that produced the old "~70–80%" figure was
+scored by the broken gate, so **that number is void** (retracted in
+`HANDOVER.md` §1). Nothing may be quoted to a scholar or backer until it is
+re-measured on the current build:
 
-`coach.align_onset_qaf` decides the phone rescue: "if the XLSR letter track
-shows ق and not ك, pass". But the letters it reads come from **forced
-alignment against the expected ayah text** (`VTEXT[1] = "قل هو الله احد"`).
-Forced alignment is constrained to emit the target letters, so it can only ever
-produce ق and can never produce ك — **whatever the audio contains.**
+- N ≥ 30 adult-male phone takes, teacher-labelled, ق vs ك confusion matrix.
+- Report per stage, not just Qul.
+- Re-check how often the rescue is actually needed now — if Whisper's ق is
+  usually present, the rescue should be rare, and a rescue that fires
+  constantly is a warning sign that it has gone vacuous again.
 
-Measured on build `b32755d` (identical on the pre-change build `54460c9`, so
-this is not from the recent alignment work):
-
-| Input | `align_onset_qaf` |
-|-------|-------------------|
-| real ق Qul | `has_qaf=True, has_kaf=False` |
-| kaf benchmark `bench_incorrect_kaf_kul_fjmustak` | `has_qaf=True, has_kaf=False` |
-| English "cool" | `has_qaf=True, has_kaf=False` |
-| aḥad / Allāhu (wrong word entirely) | `has_qaf=True, has_kaf=False` |
-| **white noise** | `has_qaf=True, has_kaf=False` |
-| **digital silence** | `has_qaf=True, has_kaf=False` |
-
-Consequence: the rescue fires on every take, so **the Qul stage passes the kaf
-benchmark on live** — confirmed by POSTing it to `/analyze`. That directly
-violates the `STABLE.md` rule "ك must not pass as ق", and it means the
-"~70–80% male-adult Qul" figure in `HANDOVER.md` cannot be trusted: we do not
-know how much of that was the gate passing everything.
-
-**Deliberately not fixed in this session.** Omar asked that the audio analysis
-not be changed without justification, and repairing this changes pass/fail for
-the stage he is actively testing. It needs his go-ahead.
-
-Fix direction when approved:
-- Judge ق vs ك from **free CTC decoding** of the onset (unconstrained), or from
-  the acoustic classifier — never from forced alignment against expected text.
-- Re-run the ق/ك benchmark pair as an automated test: `bench_correct_*` must
-  pass, `bench_incorrect_*` must fail. Add white noise and silence as must-fail.
-- Only then re-state any accuracy number.
+Then extend the benchmark battery to the other confusable pairs: و/ف on huwa,
+ح/ه on aḥad, doubled ل on Allāhu.
 
 ---
 
@@ -133,9 +136,11 @@ Practice store `tarteel_practice_v7`; resume `tarteel_last_verse_v1`.
 ## Tests
 
 ```bash
-python -m pytest -q          # 58 tests
+python -m pytest -q          # 75 tests
 ```
 
+- `test_qaf_kaf_benchmark.py` — real audio: ق passes, ك / "cool" / noise /
+  silence fail. **The guard that was missing.**
 - `test_qul_drills.py` — detection matrix, Qul ق/ك, Allāhu/aḥad regressions
 - `test_stage_clips.py` — clip duration, **audible level**, speech length,
   clean bookends, and that every clip the UI references exists
@@ -151,7 +156,9 @@ python -m pytest -q          # 58 tests
 | `HANDOVER.md` | full project / scholar-facing |
 | `SESSION.md` | short live status |
 | `STABLE.md` | hard rules |
-| `coaching.py` | `_align_stage`, `align_onset_qaf` (**vacuous — see P0**), compare |
+| `coaching.py` | `_align_stage`, `onset_qaf_verdict` (ق/ك thresholds), compare |
+| `analyze_xlsr.py` | `onset_probe` — free-emission ق/ك evidence |
 | `elements.py` | `build_feedback`, stage pass/fail, rescue wiring |
+| `test_qaf_kaf_benchmark.py` | real-audio ق/ك guard — keep it green |
 | `scripts/rebuild_stage_word_clips.py` | ayah-1 slices (no huwa — isolated source) |
 | `static/samples/SOURCES.txt` | provenance, incl. why huwa is not Husary |
