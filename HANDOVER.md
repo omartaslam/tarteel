@@ -85,7 +85,35 @@ A **stage pass** = app advances (or locks) when the take deserves it for that st
 > is void** — it has to be re-measured from scratch under the protocol below
 > before anything is quoted to a scholar or a backer.
 
-**Former claim (now void, must be re-measured):** adult-male **Qul-on-phone** in a ~70–80% band.
+**Former claim (now void):** adult-male **Qul-on-phone** in a ~70–80% band.
+
+### First measured benchmark — public recordings, ordinary adult males (2026-07-28, build `13917d5`)
+
+30 clips from 5 volunteer male speakers on Lingua Libre (median F0 116–140 Hz),
+**not reciters and not scholars**, each POSTed to the **live** `/analyze`.
+Speakers: Spotless_Mind1988, Nehaoua, Fjmustak, Ov3for, Fenakhay.
+
+| What was measured | Score |
+|---|---|
+| **A. The pronunciation confusions the app teaches** | **23 / 24 (96%)** |
+| **B. Wrong-word robustness** (a different Arabic word at that step) | **1 / 6 (17%)** |
+| Overall | 24 / 30 (80%) |
+
+**A covers:** ق vs ك on Qul and on the Qu drill (6/6 rejected ك, 3/3 accepted ق),
+huwa with and without its و (6/6), Allāhu vs a single quick L (6/6), aḥad (2/3).
+The one A miss is Nehaoua's aḥad, rejected on **qalqalah** — he says the word
+conversationally with no bounce on the د, so that rejection is arguably correct
+for a tajweed app. Expect ordinary speakers to fail aḥad on the bounce.
+
+**B is the real gap.** The Qul stage accepts any ق…ل word — `قَالَ` (qāla) and
+`قَوْلٌ` (qawl) all cleared it, and `وَاحِدٌ` cleared aḥad. This is hard to fix from
+the transcript alone, because Whisper renders Omar's own correct Qul as `قَوْلَهُ`
+— the documented live pass. Telling `قَوْلَهُ` from `قَوْلٌ` is beyond the current
+transcript. Low severity in practice (a learner at the Qul step is trying to
+say Qul, not qāla) but a tutor would notice.
+
+**Still not measured:** learner takes at scale (N≥30 from real beginners with
+teacher labels), female/child voices, ayat 2–4, and the joins.
 
 **Not claimed:** 80% on huwa / Allāhu / aḥad / joins / full ayah / whole surah / female voices.
 
