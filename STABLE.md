@@ -48,4 +48,5 @@ Keep that cue in coaching. Extend the same standard to all later stages.
 ### Teach ↔ measure (qhul)
 - Romanize **ق → qh** so heard display shows **Qhul / Qhu** (the hollow h learners feel) — not bare “Qul/Qu”.
 - Clear **qh / QUAL** phonetics can pass Qu when Arabic ق is missing; **ك / cull** still never passes.
-- When ASR writes ك but the learner aimed for QUAL: coaching must say phone ASR often flattens ق→ك — do not pretend we “heard” the hollow qh if the transcript is Kull.
+- **Phone ASR flatten:** Whisper often writes ك for real ق on phone mics. If XLSR letter-track onset shows **ق** (and not ك), **pass** — do not lock out phone users on Whisper-ك alone.
+- When ASR writes ك but the learner aimed for QUAL: coaching must say phone ASR often flattens ق→ك — do not pretend we “heard” the hollow qh if the transcript is Kull *and* the letter track also lacks ق.

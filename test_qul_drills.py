@@ -45,6 +45,42 @@ def test_qu_fail_on_kaf():
     assert ev["cards"][0]["key"] == "drill:qu:ق"
 
 
+def test_qu_phone_asr_flatten_rescued_by_align_qaf():
+    """Whisper ك + XLSR onset ق → pass (phone audience must not be locked out)."""
+    letters = [{"c": "ق", "t": 0.0}, {"c": "ل", "t": 0.05}, {"c": "|", "t": 0.1}]
+    ev = coach.evaluate_drill("qu", 1, "كُ", "Ku", align_letters=letters)
+    assert ev["passed"] is True
+    assert ev["display_arabic"] == "قُ"
+    assert ev.get("qaf_rescue") is True
+
+
+def test_qu_align_kaf_still_fails():
+    letters = [{"c": "ك", "t": 0.0}, {"c": "ل", "t": 0.05}]
+    ev = coach.evaluate_drill("qu", 1, "كُ", "Ku", align_letters=letters)
+    assert ev["passed"] is False
+
+
+def test_qul_phone_asr_flatten_rescued_by_align_qaf():
+    letters = [
+        {"c": "ق", "t": 0.0},
+        {"c": "ل", "t": 0.05},
+        {"c": "|", "t": 0.1},
+        {"c": "ه", "t": 0.2},
+        {"c": "و", "t": 0.3},
+    ]
+    cards = build_feedback(
+        1,
+        letters,
+        None,
+        heard_arabic="كُلّ",
+        heard_phonetic="Kull",
+        stage_id="qul",
+    )
+    assert cards and cards[0].get("stage_passed") is True
+    assert cards[0].get("stage_action") == "advance"
+    assert cards[0].get("next_stage_id") == "huwa"
+
+
 def test_next_step_does_not_claim_holding_on_same_qu_fault():
     err = {
         "level": "error",

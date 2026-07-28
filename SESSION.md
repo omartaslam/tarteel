@@ -36,8 +36,8 @@ Apply on every future tip. See `STABLE.md`.
 
 ## Detection note (male Qul battery)
 Everyayah male murattal Qul cuts (Alafasy, Basit, Ghamadi, Maher, Shaatree, Minshawi bench,
-qul_correct_male) → pass when ASR shows ق. Kaf bench fails. Phone/mic takes that ASR as ك
-still fail by design.
+qul_correct_male) → pass when ASR shows ق. Kaf bench fails.
+**Phone rescue:** if Whisper writes ك but XLSR onset letters show ق (not ك), pass — phone ASR flatten must not lock out the audience.
 
 ## Backlog
 - Fill incorrect clips for huwa / Allāhu / aḥad (Incorrect row already stage-scoped).

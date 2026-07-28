@@ -78,6 +78,7 @@ def build_feedback(
                 heard_arabic or "",
                 heard_phonetic or "",
                 attempt=qu_bridge_attempt,
+                align_letters=letters,
             )
         else:
             ev = coach.evaluate_drill(
@@ -85,6 +86,7 @@ def build_feedback(
                 verse,
                 heard_arabic or "",
                 heard_phonetic or "",
+                align_letters=letters,
             )
         errors.extend(ev.get("cards") or [])
         # defer blocks advance (no false lock) but still feeds next-step coaching
@@ -271,13 +273,39 @@ def build_feedback(
 
     stage_passed = not blocking and not miss_words
 
-    # Qul lock requires back ق — Arabic letter, or clear qh/QUAL phonetics.
+    # Phone ASR flatten rescue: Whisper often writes ك while XLSR onset is ق.
+    # Honour letter-track ق for phone users — do not lock out the main audience.
+    align_q = coach.align_onset_qaf(letters)
+    align_rescues_qaf = bool(align_q.get("has_qaf") and not align_q.get("has_kaf"))
+
+    # Qul lock requires back ق — Whisper ق, clear qh/QUAL, or XLSR onset ق.
     # Shape-near without ق/qh (طل, garbled Whisper) must NOT skip to huwa.
     needs_qaf = (stage or {}).get("id") == "qul" or (
         {(w or "").lower() for w in (stage_words or [])} == {"qul"}
     )
-    has_qaf = "ق" in (heard_arabic or "") or coach.phonetic_back_q(heard_phonetic or "")
+    has_qaf = (
+        "ق" in (heard_arabic or "")
+        or coach.phonetic_back_q(heard_phonetic or "")
+        or align_rescues_qaf
+    )
     has_kaf = "ك" in (heard_arabic or "")
+    if align_rescues_qaf:
+        # Drop Whisper-only ك→ق blocks — letter track confirmed back ق.
+        errors = [
+            e
+            for e in errors
+            if not (
+                (e.get("key") or "").endswith("ك→ق")
+                or (
+                    e.get("rule") == "pronunciation"
+                    and e.get("heard_letter") == "ك"
+                    and e.get("expected_letter") == "ق"
+                )
+            )
+        ]
+        blocking = [c for c in errors if _blocks_stage(c)]
+        stage_passed = not blocking and not miss_words
+        has_kaf = False
     if stage_passed and needs_qaf and (not has_qaf or has_kaf):
         if has_kaf or not has_qaf:
             stage_passed = False
@@ -296,8 +324,8 @@ def build_feedback(
                     "fix": (
                         "Say the full word <b>Qul</b> (قُلْ). Think <b>QUAL</b> / <b>qhul</b> "
                         "like the start of <b>quality</b> — hollow qh, not “cull/cool”.<br>"
-                        "If you felt QUAL but the app shows Kull: phone ASR often flattens ق→ك. "
-                        "Closer mic, retry — we lock on ق or clear qh, never on ك."
+                        "If you felt QUAL but the app shows Kull: we also check the letter track. "
+                        "Retry closer to the mic — we lock on ق (or clear qh), never on ك alone."
                     ),
                     "ar": ("ك" if has_kaf else "?", "ق"),
                 },
@@ -308,6 +336,13 @@ def build_feedback(
             q_err["key"] = "pronunciation:qul:ك→ق" if has_kaf else "pronunciation:qul:need_ق"
             errors.insert(0, q_err)
             blocking = [c for c in errors if _blocks_stage(c)]
+
+    # If Whisper ك blocked word-shape/pass before needs_qaf, but align has ق,
+    # recompute pass after stripping kaf pronunciation (handled above when align_rescues).
+    if (not stage_passed) and needs_qaf and align_rescues_qaf and not miss_words:
+        blocking = [c for c in errors if _blocks_stage(c)]
+        if not blocking:
+            stage_passed = True
 
     return _finish_stage_cards(
         verse=verse,

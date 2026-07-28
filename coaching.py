@@ -487,6 +487,34 @@ def compare_html(
     )
 
 
+def align_onset_qaf(align_letters: list | None) -> dict:
+    """XLSR letter-track onset: phone ASR often writes ك for real ق.
+
+    Returns {has_qaf, has_kaf, onset} from the first aligned word's letters.
+    Used to rescue phone-mic takes where Whisper flattens ق→ك.
+    """
+    onset: list[str] = []
+    for item in align_letters or []:
+        c = (item or {}).get("c") if isinstance(item, dict) else None
+        if not c:
+            continue
+        if c == "|":
+            if onset:
+                break
+            continue
+        if c in (" ",):
+            continue
+        onset.append(c)
+        if len(onset) >= 4:
+            break
+    onset_s = "".join(onset)
+    return {
+        "has_qaf": "ق" in onset_s,
+        "has_kaf": "ك" in onset_s,
+        "onset": onset_s,
+    }
+
+
 def phonetic_back_q(heard_phonetic: str) -> bool:
     """True if English phonetics clearly cue hollow back ق (qh / QUAL), not middle K."""
     ph = (heard_phonetic or "").lower()
@@ -510,12 +538,15 @@ def evaluate_drill(
     verse: int,
     heard_arabic: str,
     heard_phonetic: str = "",
+    align_letters: list | None = None,
 ) -> dict:
     """
     Score syllable micro-drills (Qu / ul) without full-word ayah alignment.
 
     Qu gate: Arabic ق passes; Arabic ك fails. Clear qh/QUAL phonetics can pass
     when ق letter is missing — but never when Arabic ك / cull phonetics win.
+    Phone rescue: if Whisper wrote ك but XLSR onset shows ق (not ك), pass —
+    phone ASR flatten must not lock out the main audience.
     Acoustic cluster is NOT used for lock/fail.
     Returns passed/cards plus display_* for the UI (onset only — not Whisper's
     full-word guess like كل/Kul when the drill is Qu alone).
@@ -524,6 +555,7 @@ def evaluate_drill(
     letters = _letters_only(ar)
     ph = (heard_phonetic or "").lower()
     ph_compact = re.sub(r"[^a-zāḥṣṭḍẓ]", "", ph)
+    align_q = align_onset_qaf(align_letters)
 
     def _drill_compare(you_ph: str, you_ar: str, tgt_ph: str, tgt_ar: str, ok: bool) -> str:
         you_cls = "" if ok else "marky"
@@ -549,14 +581,20 @@ def evaluate_drill(
     if drill == "qu":
         # Stable: Arabic ق passes; Arabic ك fails.
         # Honour clear qh/QUAL phonetics when ASR omitted ق (align teach ↔ measure).
-        # Never pass on middle-K Arabic or cull/cool phonetics.
+        # Phone rescue: XLSR onset ق beats Whisper ك (flatten). Never pass align ك.
         has_q = "ق" in letters
         has_k_ar = "ك" in letters
         has_k_ph = bool(
             re.search(r"(^|[^a-z])(k|c)(oo|u|o|a|ull)", ph)
         ) or ph_compact.startswith(("ku", "coo", "cul", "kol", "ko", "kull", "kul"))
         has_qh_ph = phonetic_back_q(heard_phonetic)
-        if has_q or (has_qh_ph and not has_k_ar):
+        align_rescues = bool(align_q.get("has_qaf") and not align_q.get("has_kaf"))
+        if align_q.get("has_kaf") and not align_q.get("has_qaf"):
+            # Letter track agrees this is middle ك — real fail
+            has_k_ar = True
+            has_q = False
+            align_rescues = False
+        if has_q or align_rescues or (has_qh_ph and not has_k_ar):
             return {
                 "passed": True,
                 "cards": [],
@@ -564,6 +602,7 @@ def evaluate_drill(
                 "display_phonetic": "Qhu",
                 "compare_html": _drill_compare("Qhu", "قُ", "Qhu", "قُ", True),
                 "heard_match": "drill",
+                "qaf_rescue": bool(align_rescues and not has_q),
             }
         fail_key = "drill:qu:ق"
         if has_k_ar or has_k_ph:
@@ -667,10 +706,11 @@ def evaluate_qu_qul_bridge(
     heard_arabic: str,
     heard_phonetic: str = "",
     attempt: int = 1,
+    align_letters: list | None = None,
 ) -> dict:
     """Syllable-rescue Qu attempts after word-first Qul failed.
 
-    Same stable gate: ASR ق passes, ك fails. Never pass on kaf.
+    Same stable gate: ق passes, ك fails. Phone ASR ك is rescued when XLSR onset is ق.
     attempt is 1..3. The 3rd miss → tutor defer.
     """
     try:
@@ -678,7 +718,13 @@ def evaluate_qu_qul_bridge(
     except (TypeError, ValueError):
         n = 1
     n = max(1, min(3, n))
-    ev = evaluate_drill("qu", verse, heard_arabic or "", heard_phonetic or "")
+    ev = evaluate_drill(
+        "qu",
+        verse,
+        heard_arabic or "",
+        heard_phonetic or "",
+        align_letters=align_letters,
+    )
     left = 3 - n
 
     if ev.get("passed"):
