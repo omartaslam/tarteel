@@ -171,7 +171,7 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 
 <div class="husary" id="husaryTop">
   <button id="playH" type="button" aria-label="Play full ayah"></button>
-  <div class="lbl"><b>Listen first</b> — Sheikh Al-Husary reciting this ayah (full)</div>
+  <div class="lbl"><b>1 · Listen first (full ayah)</b><br>Sheikh Al-Husary — whole ayah model</div>
 </div>
 
 <div id="stageBox" class="stagwrap"></div>
@@ -288,10 +288,10 @@ function stagePlayHtml(stageId, say, btnId){
   const src=(STAGE_WORD_CLIPS[v]||{})[stageId];
   if(!src || !say) return '';
   const id=btnId?` id="${btnId}"`:'';
-  const kind=(stageId==='qu'||stageId==='ul') ? 'this syllable' : 'this word';
-  return `<div class="stageplay">
+  const kind=(stageId==='qu'||stageId==='ul') ? 'this syllable only' : 'this word only';
+  return `<div class="stageplay" data-role="hear-only">
     <button type="button"${id} data-stage="${stageId}" aria-label="Play ${say}"></button>
-    <div class="splbl"><b>Hear only ${say}</b><span>Al-Husary · ${kind}</span></div>
+    <div class="splbl"><b>2 · Hear only ${say}</b><span>Al-Husary · ${kind}</span></div>
   </div>`;
 }
 function playStageWordClip(stageId, btn){
@@ -566,9 +566,9 @@ function renderStageBox(stOverride){
   let wordPlay = stagePlayHtml(cur.id, cur.say_en, 'playStageCurrent');
   if(!wordPlay){
     // Fallback so the second play button never disappears
-    wordPlay = `<div class="stageplay">
+    wordPlay = `<div class="stageplay" data-role="hear-only">
       <button type="button" id="playStageCurrent" data-stage="${cur.id}" aria-label="Play ${cur.say_en}"></button>
-      <div class="splbl"><b>Hear only ${cur.say_en}</b><span>Model for this step</span></div>
+      <div class="splbl"><b>2 · Hear only ${cur.say_en}</b><span>Model for this step</span></div>
     </div>`;
   }
   box.innerHTML=`
