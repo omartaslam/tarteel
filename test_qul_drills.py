@@ -48,39 +48,74 @@ def test_qu_fail_on_kaf():
 
 
 def test_qu_phone_asr_flatten_rescued_by_align_qaf():
-    """Whisper ك + XLSR onset ق → pass (phone audience must not be locked out)."""
-    letters = [{"c": "ق", "t": 0.0}, {"c": "ل", "t": 0.05}, {"c": "|", "t": 0.1}]
-    ev = coach.evaluate_drill("qu", 1, "كُ", "Ku", align_letters=letters)
+    """Whisper ك + acoustic onset ق → pass (phone audience must not be locked out)."""
+    ev = coach.evaluate_drill(
+        "qu", 1, "كُ", "Ku", onset_probe={"p_qaf": 0.99, "p_kaf": 0.00, "onset": "قل"}
+    )
     assert ev["passed"] is True
     assert ev["display_arabic"] == "قُ"
     assert ev.get("qaf_rescue") is True
 
 
 def test_qu_align_kaf_still_fails():
-    letters = [{"c": "ك", "t": 0.0}, {"c": "ل", "t": 0.05}]
-    ev = coach.evaluate_drill("qu", 1, "كُ", "Ku", align_letters=letters)
+    ev = coach.evaluate_drill(
+        "qu", 1, "كُ", "Ku", onset_probe={"p_qaf": 0.00, "p_kaf": 0.97, "onset": "كل"}
+    )
     assert ev["passed"] is False
 
 
-def test_qul_phone_asr_flatten_rescued_by_align_qaf():
-    letters = [
-        {"c": "ق", "t": 0.0},
-        {"c": "ل", "t": 0.05},
-        {"c": "|", "t": 0.1},
-        {"c": "ه", "t": 0.2},
-        {"c": "و", "t": 0.3},
-    ]
+def test_no_acoustic_evidence_never_rescues():
+    """Silence and noise score ~0 on both letters — that must not pass as ق."""
+    for probe in (None, {"p_qaf": 0.0, "p_kaf": 0.0, "onset": ""}):
+        v = coach.onset_qaf_verdict(probe)
+        assert v["has_qaf"] is False and v["has_kaf"] is False
+        assert coach.evaluate_drill("qu", 1, "كُ", "Ku", onset_probe=probe)["passed"] is False
+
+
+def test_onset_verdict_thresholds():
+    strong_q = coach.onset_qaf_verdict({"p_qaf": 1.0, "p_kaf": 0.0})
+    strong_k = coach.onset_qaf_verdict({"p_qaf": 0.0, "p_kaf": 0.97})
+    ambiguous = coach.onset_qaf_verdict({"p_qaf": 0.55, "p_kaf": 0.45})
+    assert strong_q["has_qaf"] is True and strong_q["has_kaf"] is False
+    assert strong_k["has_kaf"] is True and strong_k["has_qaf"] is False
+    # Never lock a stage on a coin-flip onset.
+    assert ambiguous["has_qaf"] is False and ambiguous["has_kaf"] is False
+
+
+def test_qul_phone_asr_flatten_rescued_by_acoustic_qaf():
+    """Whisper flattened ق→ك but the onset really is ق — phone users must pass."""
     cards = build_feedback(
         1,
-        letters,
+        [],
         None,
         heard_arabic="كُلّ",
         heard_phonetic="Kull",
         stage_id="qul",
+        onset_probe={"p_qaf": 1.0, "p_kaf": 0.0, "onset": "قل"},
     )
     assert cards and cards[0].get("stage_passed") is True
     assert cards[0].get("stage_action") == "advance"
     assert cards[0].get("next_stage_id") == "huwa"
+
+
+def test_qul_kaf_without_acoustic_qaf_must_fail():
+    """The live bug: Whisper ك used to be rescued by forced-aligned letters.
+
+    Forced alignment can only emit the expected ayah, so it "found" ق in the
+    kaf benchmark, in white noise and in silence. With no acoustic ق, a ك take
+    must fail.
+    """
+    for probe in (
+        None,
+        {"p_qaf": 0.0, "p_kaf": 0.97, "onset": "كل"},   # kaf benchmark
+        {"p_qaf": 0.0, "p_kaf": 0.0, "onset": ""},      # silence / noise
+    ):
+        cards = build_feedback(
+            1, [], None, heard_arabic="كُلّ", heard_phonetic="Kull",
+            stage_id="qul", onset_probe=probe,
+        )
+        assert cards[0].get("stage_passed") is False, probe
+        assert cards[0].get("stage_action") != "advance", probe
 
 
 def test_next_step_does_not_claim_holding_on_same_qu_fault():

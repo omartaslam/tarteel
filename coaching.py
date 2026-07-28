@@ -521,31 +521,33 @@ def compare_html(
     )
 
 
-def align_onset_qaf(align_letters: list | None) -> dict:
-    """XLSR letter-track onset: phone ASR often writes ك for real ق.
+# Onset ق/ك decision thresholds, set from the benchmark battery: real ق clips
+# score p_qaf ≈ 1.00 / p_kaf ≈ 0.00, ك clips score p_kaf 0.76–1.00 / p_qaf ≈ 0.00,
+# and noise, silence and other words score ~0 on both.
+QAF_ONSET_MIN = 0.60
+QAF_ONSET_RIVAL_MAX = 0.30
 
-    Returns {has_qaf, has_kaf, onset} from the first aligned word's letters.
-    Used to rescue phone-mic takes where Whisper flattens ق→ك.
+
+def onset_qaf_verdict(probe: dict | None) -> dict:
+    """Read ق vs ك from an UNCONSTRAINED decode of the take's onset.
+
+    Never derive this from forced alignment. Forced alignment is constrained to
+    the expected ayah text, so it can only ever emit ق and never ك — it reported
+    "ق present, ك absent" for the kaf benchmark, English "cool", white noise and
+    digital silence, which let the Qul stage pass anything (fixed 2026-07-28).
+
+    `probe` comes from analyze_xlsr and carries free-decode probabilities:
+    {p_qaf, p_kaf, onset}. No probe (e.g. unit tests, no audio) means no
+    acoustic evidence either way, so no rescue.
     """
-    onset: list[str] = []
-    for item in align_letters or []:
-        c = (item or {}).get("c") if isinstance(item, dict) else None
-        if not c:
-            continue
-        if c == "|":
-            if onset:
-                break
-            continue
-        if c in (" ",):
-            continue
-        onset.append(c)
-        if len(onset) >= 4:
-            break
-    onset_s = "".join(onset)
+    pq = float((probe or {}).get("p_qaf") or 0.0)
+    pk = float((probe or {}).get("p_kaf") or 0.0)
     return {
-        "has_qaf": "ق" in onset_s,
-        "has_kaf": "ك" in onset_s,
-        "onset": onset_s,
+        "has_qaf": pq >= QAF_ONSET_MIN and pk <= QAF_ONSET_RIVAL_MAX,
+        "has_kaf": pk >= QAF_ONSET_MIN and pq <= QAF_ONSET_RIVAL_MAX,
+        "p_qaf": round(pq, 3),
+        "p_kaf": round(pk, 3),
+        "onset": (probe or {}).get("onset") or "",
     }
 
 
@@ -572,15 +574,16 @@ def evaluate_drill(
     verse: int,
     heard_arabic: str,
     heard_phonetic: str = "",
-    align_letters: list | None = None,
+    onset_probe: dict | None = None,
 ) -> dict:
     """
     Score syllable micro-drills (Qu / ul) without full-word ayah alignment.
 
     Qu gate: Arabic ق passes; Arabic ك fails. Clear qh/QUAL phonetics can pass
     when ق letter is missing — but never when Arabic ك / cull phonetics win.
-    Phone rescue: if Whisper wrote ك but XLSR onset shows ق (not ك), pass —
-    phone ASR flatten must not lock out the main audience.
+    Phone rescue: if Whisper wrote ك but the onset is acoustically ق (not ك),
+    pass — phone ASR flatten must not lock out the main audience. The onset
+    evidence is an unconstrained decode; align_letters cannot supply it.
     Acoustic cluster is NOT used for lock/fail.
     Returns passed/cards plus display_* for the UI (onset only — not Whisper's
     full-word guess like كل/Kul when the drill is Qu alone).
@@ -589,7 +592,7 @@ def evaluate_drill(
     letters = _letters_only(ar)
     ph = (heard_phonetic or "").lower()
     ph_compact = re.sub(r"[^a-zāḥṣṭḍẓ]", "", ph)
-    align_q = align_onset_qaf(align_letters)
+    align_q = onset_qaf_verdict(onset_probe)
 
     def _drill_compare(you_ph: str, you_ar: str, tgt_ph: str, tgt_ar: str, ok: bool) -> str:
         you_cls = "" if ok else "marky"
@@ -740,7 +743,7 @@ def evaluate_qu_qul_bridge(
     heard_arabic: str,
     heard_phonetic: str = "",
     attempt: int = 1,
-    align_letters: list | None = None,
+    onset_probe: dict | None = None,
 ) -> dict:
     """Syllable-rescue Qu attempts after word-first Qul failed.
 
@@ -757,7 +760,7 @@ def evaluate_qu_qul_bridge(
         verse,
         heard_arabic or "",
         heard_phonetic or "",
-        align_letters=align_letters,
+        onset_probe=onset_probe,
     )
     left = 3 - n
 

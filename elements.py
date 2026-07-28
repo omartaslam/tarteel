@@ -55,6 +55,7 @@ def build_feedback(
     stage_id=None,
     locked_stages=None,
     qu_bridge_attempt=None,
+    onset_probe=None,
 ):
     spec = VERSE_ELEMENTS.get(verse, {})
     stage = stg.get_stage(verse, stage_id)
@@ -78,7 +79,7 @@ def build_feedback(
                 heard_arabic or "",
                 heard_phonetic or "",
                 attempt=qu_bridge_attempt,
-                align_letters=letters,
+                onset_probe=onset_probe,
             )
         else:
             ev = coach.evaluate_drill(
@@ -86,7 +87,7 @@ def build_feedback(
                 verse,
                 heard_arabic or "",
                 heard_phonetic or "",
-                align_letters=letters,
+                onset_probe=onset_probe,
             )
         errors.extend(ev.get("cards") or [])
         # defer blocks advance (no false lock) but still feeds next-step coaching
@@ -273,9 +274,11 @@ def build_feedback(
 
     stage_passed = not blocking and not miss_words
 
-    # Phone ASR flatten rescue: Whisper often writes ك while XLSR onset is ق.
-    # Honour letter-track ق for phone users — do not lock out the main audience.
-    align_q = coach.align_onset_qaf(letters)
+    # Phone ASR flatten rescue: Whisper often writes ك while the audio is ق.
+    # Honour acoustic ق for phone users — do not lock out the main audience.
+    # The evidence must come from an unconstrained decode of the onset; forced
+    # alignment cannot answer this (it only ever emits the expected letters).
+    align_q = coach.onset_qaf_verdict(onset_probe)
     align_rescues_qaf = bool(align_q.get("has_qaf") and not align_q.get("has_kaf"))
 
     # Qul lock requires back ق — Whisper ق, clear qh/QUAL, or XLSR onset ق.

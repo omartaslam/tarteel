@@ -48,6 +48,47 @@ class AnalysisCancelled(Exception):
     """Raised when the user starts a new recording and cancels this job."""
 
 
+ONSET_WINDOW_S = 0.50
+
+
+def onset_probe(emissions, proc, dur: float) -> dict:
+    """Unconstrained read of the take's onset, for the ق vs ك decision.
+
+    `emissions` are free log-softmax outputs — NOT forced-aligned. Forced
+    alignment is constrained to the expected ayah, so it can only ever emit ق
+    and would report ق for silence; that bug let the Qul stage pass anything.
+
+    Returns {p_qaf, p_kaf, onset} where the probabilities are the strongest
+    frame-level evidence for each letter inside the first ONSET_WINDOW_S of
+    voiced audio.
+    """
+    vocab = proc.tokenizer.get_vocab()
+    qaf, kaf = vocab.get("ق"), vocab.get("ك")
+    blank = proc.tokenizer.pad_token_id
+    if qaf is None or kaf is None:
+        return {"p_qaf": 0.0, "p_kaf": 0.0, "onset": ""}
+    probs = emissions.exp()[0]
+    T = probs.shape[0]
+    if not T or dur <= 0:
+        return {"p_qaf": 0.0, "p_kaf": 0.0, "onset": ""}
+    best = torch.argmax(probs, dim=-1)
+    voiced = (best != blank).nonzero().flatten()
+    start = int(voiced[0]) if len(voiced) else 0
+    end = min(T, start + max(1, int(ONSET_WINDOW_S / dur * T)))
+    win = probs[start:end]
+    inv = {v: k for k, v in vocab.items()}
+    letters, prev = [], None
+    for tok in torch.argmax(win, dim=-1).tolist():
+        if tok != prev and tok != blank:
+            letters.append(inv.get(tok, ""))
+        prev = tok
+    return {
+        "p_qaf": round(float(win[:, qaf].max()), 3),
+        "p_kaf": round(float(win[:, kaf].max()), 3),
+        "onset": "".join(letters)[:8],
+    }
+
+
 def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None, cancel_check=None, stage_id=None, locked_stages=None, qu_bridge_attempt=None):
     def prog(pct, phase, msg):
         if cancel_check and cancel_check():
@@ -117,6 +158,12 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
                 )
         except Exception:
             heard_info["compare_html"] = ""
+        # Read ق vs ك from the free emissions BEFORE forced alignment, which
+        # would only ever hand back the expected ayah's letters.
+        try:
+            probe=onset_probe(emissions, proc, len(wav)/16000)
+        except Exception:
+            probe={"p_qaf":0.0,"p_kaf":0.0,"onset":""}
         prog(70, "align", "Lining up letters to the expected ayah…")
         vocab=proc.tokenizer.get_vocab()
         text=VTEXT[verse]
@@ -154,7 +201,7 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
         heard_ar = heard_info.get("heard_arabic","") or heard_info.get("heard_raw","")
         heard_ph = heard_info.get("heard_phonetic","")
         diag={"audio_quality":quality,"peak":round(peak,3),"rms_level":round(rmslev,4),
-              "duration":round(dur,2),"letters":letters,
+              "duration":round(dur,2),"letters":letters,"onset_probe":probe,
               "heard_arabic":heard_info.get("heard_arabic",""),
               "heard_phonetic":heard_ph,
               "heard_raw":heard_info.get("heard_raw",""),
@@ -209,6 +256,7 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
             stage_id=stage_id,
             locked_stages=locked_stages,
             qu_bridge_attempt=qu_bridge_attempt,
+            onset_probe=probe,
         )
         # Keep literal Whisper in heard_raw; drill stages override the shown heard_*.
         if cards:
