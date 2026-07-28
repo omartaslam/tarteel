@@ -1,6 +1,16 @@
-"""Stage word clips must be long enough to teach the whole word (not mid-cuts)."""
+"""Stage word clips must be teachable: whole word, audible, clean bookends.
+
+Two real live failures are guarded here:
+  * ?v=3 huwa started inside Qul leftover audio.
+  * ?v=4 huwa cut the ه onset (0.43s stub) and shipped ~7 dB under the other
+    clips, so it was barely audible on a phone.
+"""
 from pathlib import Path
 import subprocess
+
+import librosa
+import numpy as np
+import pytest
 
 SAMPLES = Path(__file__).resolve().parent / "static" / "samples"
 
@@ -9,9 +19,18 @@ MIN_DUR = {
     "stage_qul_husary.mp3": 0.65,
     "stage_qu_husary.mp3": 0.45,
     "stage_ul_husary.mp3": 0.35,
-    "stage_huwa_husary.mp3": 0.75,  # clean هو only (~0.43s) + silence bookends
+    "stage_huwa_husary.mp3": 0.80,
     "stage_allahu_husary.mp3": 1.4,
     "stage_ahad_husary.mp3": 1.2,
+}
+
+# A teaching clip nobody can hear is a broken clip.
+MIN_SPEECH_RMS = 0.11
+MIN_PEAK = 0.35
+
+# Speech (silence stripped) must cover the whole word, not a clipped stub.
+MIN_SPEECH_DUR = {
+    "stage_huwa_husary.mp3": 0.55,
 }
 
 
@@ -28,9 +47,45 @@ def _duration(path: Path) -> float:
     return float(out)
 
 
+def _speech_region(y: np.ndarray) -> np.ndarray:
+    thr = 0.03 * float(np.abs(y).max() or 1.0)
+    nz = np.where(np.abs(y) > thr)[0]
+    return y[nz[0] : nz[-1] + 1] if len(nz) else y
+
+
 def test_stage_word_clips_long_enough_to_teach():
     for name, min_s in MIN_DUR.items():
         p = SAMPLES / name
         assert p.exists(), f"missing {name}"
         dur = _duration(p)
         assert dur >= min_s, f"{name} too short for teaching ({dur:.3f}s < {min_s}s)"
+
+
+@pytest.mark.parametrize("name", sorted(MIN_DUR))
+def test_stage_word_clips_are_audible(name):
+    y, sr = librosa.load(str(SAMPLES / name), sr=16000)
+    peak = float(np.abs(y).max())
+    rms = float(np.sqrt(np.mean(_speech_region(y) ** 2)))
+    assert peak >= MIN_PEAK, f"{name} peak too low ({peak:.3f})"
+    assert rms >= MIN_SPEECH_RMS, f"{name} too quiet to hear ({rms:.4f})"
+
+
+@pytest.mark.parametrize("name", sorted(MIN_SPEECH_DUR))
+def test_stage_word_clips_are_not_clipped_stubs(name):
+    y, sr = librosa.load(str(SAMPLES / name), sr=16000)
+    speech = _speech_region(y)
+    dur = len(speech) / sr
+    assert dur >= MIN_SPEECH_DUR[name], (
+        f"{name} speech only {dur:.3f}s — word onset likely cut"
+    )
+
+
+@pytest.mark.parametrize("name", sorted(MIN_DUR))
+def test_stage_word_clips_have_clean_start_and_end(name):
+    y, sr = librosa.load(str(SAMPLES / name), sr=16000)
+    edge = int(0.03 * sr)
+    rms = float(np.sqrt(np.mean(_speech_region(y) ** 2)))
+    lead = float(np.sqrt(np.mean(y[:edge] ** 2)))
+    trail = float(np.sqrt(np.mean(y[-edge:] ** 2)))
+    assert lead < rms * 0.5, f"{name} starts mid-sound (lead {lead:.4f})"
+    assert trail < rms * 0.5, f"{name} ends mid-sound (trail {trail:.4f})"
