@@ -19,6 +19,10 @@ If STAGE CLEAR but prompt stuck, hard-refresh and say — that was a client UI b
 
 Reply `chk log` after the batch.
 
+## Backlog (later — do not burn usage now)
+- If a Qul take clearly has both **ق** and **L**, skip Qu+ul → start at **huwa**.
+- Progress UI: **~17% sits stuck for a few seconds, then jumps** — smooth/phase timing.
+
 ## Next after Qu locks (via Qu or bridge)
 `ul` → `qul` → … ayah 1 full → ayahs 2–4 smoke.
 
