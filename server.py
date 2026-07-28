@@ -311,10 +311,73 @@ async def add_note(session: str = Form(...), note: str = Form(...)):
 @app.get("/sessions/{sid}/audio")
 def session_audio(sid: str):
     d = os.path.join(storage.STORE, sid)
+    if not os.path.isdir(d):
+        return JSONResponse({"error": "not found"}, status_code=404)
     for f in os.listdir(d):
         if f.startswith("audio."):
-            return FileResponse(os.path.join(d, f))
+            path = os.path.join(d, f)
+            ext = f.rsplit(".", 1)[-1].lower()
+            media = {
+                "m4a": "audio/mp4",
+                "mp4": "audio/mp4",
+                "aac": "audio/aac",
+                "mp3": "audio/mpeg",
+                "wav": "audio/wav",
+                "webm": "audio/webm",
+                "ogg": "audio/ogg",
+            }.get(ext, "application/octet-stream")
+            return FileResponse(
+                path,
+                media_type=media,
+                headers={
+                    "Content-Disposition": f'inline; filename="{sid}.{ext}"',
+                    "Accept-Ranges": "bytes",
+                    "Cache-Control": "private, max-age=3600",
+                },
+            )
     return JSONResponse({"error": "not found"}, status_code=404)
+
+
+@app.get("/sessions/{sid}/play")
+def session_play(sid: str):
+    """Simple HTML player so takes open in-browser instead of downloading."""
+    import re
+    if not re.fullmatch(r"[0-9]{8}-[0-9]{6}-[a-f0-9]+", sid or ""):
+        return JSONResponse({"error": "bad session"}, status_code=400)
+    d = os.path.join(storage.STORE, sid)
+    if not os.path.isdir(d):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    # Pull heard labels if present
+    label = ""
+    try:
+        import json
+        meta = json.load(open(os.path.join(d, "data.json"), encoding="utf-8"))
+        r = (meta.get("results") or [{}])[0]
+        ph = r.get("heard_phonetic") or ""
+        ar = r.get("heard_arabic") or ""
+        if ph or ar:
+            label = f"{ph} · {ar}".strip(" ·")
+    except Exception:
+        pass
+    from fastapi.responses import HTMLResponse
+    safe_label = (label or sid).replace("<", "").replace(">", "")
+    html = f"""<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Take {sid}</title>
+<style>
+body{{font-family:Georgia,serif;max-width:28rem;margin:2rem auto;padding:0 1.2rem;background:#f7f4ef;color:#1a1a1a}}
+h1{{font-size:1.1rem;margin:0 0 .5rem}}
+p{{color:#556;font-size:.9rem}}
+audio{{width:100%;margin-top:1rem}}
+a{{color:#0b5}}
+</style></head><body>
+<h1>Your take</h1>
+<p>{safe_label}</p>
+<audio controls autoplay src="/sessions/{sid}/audio"></audio>
+<p style="margin-top:1.2rem"><a href="/">← Tarteel</a></p>
+</body></html>"""
+    return HTMLResponse(html)
 
 
 @app.get("/husary/{code}")

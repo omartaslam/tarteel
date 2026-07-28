@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Last 3 takes — Tarteel</title>
+<style>
+  body{font-family:Georgia,serif;max-width:32rem;margin:2rem auto;padding:0 1.25rem;line-height:1.45;color:#1a1a1a;background:#f7f4ef}
+  h1{font-size:1.3rem;margin:0 0 .4rem}
+  p{margin:.4rem 0 1rem;color:#444;font-size:.95rem}
+  .box{background:#fff;border:1px solid #ddd;border-radius:10px;padding:1rem 1.1rem;margin:1rem 0}
+  .ok{border-color:#8bbb8b}
+  .bad{border-color:#d4a0a0}
+  .lbl{font-weight:700;font-size:.95rem;margin-bottom:.25rem}
+  .sub{font-size:.85rem;color:#666;margin-bottom:.7rem}
+  audio{width:100%}
+  a{color:#0b5}
+</style>
+</head>
+<body>
+  <h1>Your last 3 takes</h1>
+  <p>Play in the browser and compare with what the app reported.</p>
+
+  <div class="box bad">
+    <div class="lbl">1 — Incorrect (app: Ku → failed)</div>
+    <div class="sub">Raw Whisper: كُل · stayed on Qu</div>
+    <audio controls preload="metadata" src="/takes/1_incorrect_Ku_failed.mp3"></audio>
+  </div>
+
+  <div class="box ok">
+    <div class="lbl">2 — Correct (app: Qu → locked)</div>
+    <div class="sub">Raw Whisper: قَوْلَهُ · advanced to ul</div>
+    <audio controls preload="metadata" src="/takes/2_correct_Qu_locked.mp3"></audio>
+  </div>
+
+  <div class="box bad">
+    <div class="lbl">3 — Incorrect (app: Ku → failed)</div>
+    <div class="sub">Raw Whisper: كُلٍّ · stayed on Qu</div>
+    <audio controls preload="metadata" src="/takes/3_incorrect_Ku_failed.mp3"></audio>
+  </div>
+
+  <p><a href="/">← Back to Tarteel</a></p>
+</body>
+</html>
