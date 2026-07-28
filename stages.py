@@ -133,7 +133,10 @@ STAGES = {
             "title": "Allāhu",
             "say_en": "Allāhu",
             "say_ar": "ٱللَّهُ",
-            "hint": "Say only Allāhu.",
+            "hint": (
+                "Say only <b>Allāhu</b>. English cue: <b>Al-LAA-hu</b> — hold the doubled L "
+                "(like a long “ll”), then “hu”. Don’t rush it like English “Allah!”."
+            ),
             "words": ["Allāhu"],
             "idxs": [0],
         },
@@ -142,7 +145,10 @@ STAGES = {
             "title": "aṣ-ṣamad",
             "say_en": "aṣ-ṣamad",
             "say_ar": "ٱلصَّمَدُ",
-            "hint": "Say only aṣ-ṣamad.",
+            "hint": (
+                "Say only <b>aṣ-ṣamad</b>. English cue: <b>as-ṢA-mad</b> — heavy Ṣ "
+                "(darker than soft “s”), then “mad”."
+            ),
             "words": ["aṣ-ṣamad"],
             "idxs": [1],
         },
@@ -151,7 +157,7 @@ STAGES = {
             "title": "Full ayah",
             "say_en": "Allāhu aṣ-ṣamad",
             "say_ar": "ٱللَّهُ ٱلصَّمَدُ",
-            "hint": "Join both words.",
+            "hint": "Join: Al-LAA-hu · as-ṢA-mad. Keep the held L and the heavy Ṣ.",
             "words": ["Allāhu", "aṣ-ṣamad"],
             "idxs": [0, 1],
         },

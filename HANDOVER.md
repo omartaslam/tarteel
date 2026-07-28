@@ -165,22 +165,22 @@ A **stage pass** = app advances (or locks) when the take deserves it for that st
 
 ## 6. P0 — open decisions & next work
 
-### P0 UX decisions (held — need Omar once, then ship)
-1. **First action on ayah 1 open:** Listen full ayah / Hear only Qul / Compare / Record — which is the one obvious next step?  
-2. **Compare placement on iPhone:** inside stage box under Hear only, or lower so **Record** stays above the fold?  
-3. **Fail behaviour:** stay on **Say: Qul** with FOCUS until 3 fails (then Qu rescue) — confirm.  
-4. **Clear practice:** only explicit button (header = refresh only) — confirm still law.  
-5. ~~Merge detection/UX to main for live~~ — **DONE** (`4df95c7` on Railway).
+### P0 UX decisions (Omar locked 2026-07-28)
+1. **First visit:** whole-surah Listen once → then current task (Qul). Resume saved stage/ayah.  
+2. **Compare:** under Hear only.  
+3. **Qul fails:** ×3 then Qu rescue.  
+4. **Header tap:** clear practice, no confirm + refresh.  
+5. **Promo:** ayah 1 first; full 112 later.  
+6. **Ayah 2:** word isolate → join (English cues); ×3 rescue optional later.
 
 ### P0 product / detection
-- [ ] Formal male-adult accuracy protocol for Qul (N≥30 labeled takes; report %).  
-- [ ] Same for **huwa** (W vs F), **Allāhu** (shadda L), **aḥad** (Ḥ vs h).  
-- [ ] Mobile Chrome UX pass on **live** (elegance; no confusion).  
-- [ ] Incorrect audio clips for huwa / Allāhu / aḥad.  
-- [ ] Word-first ladder + clips for ayat 2–4.  
-- [ ] Progress UI ~17% stall (known backlog).  
-- [ ] Female / mom voice study (separate track).  
-- [ ] Scholar partnership pack once surah-level ≥80% male-adult.
+- [ ] Formal male-adult accuracy protocol for Qul (N≥30).  
+- [ ] Huwa / Allāhu / aḥad batteries; ayah 2 aṣ-ṣamad.  
+- [ ] Mobile Chrome UX pass on live.  
+- [ ] Incorrect clips where still TBD.  
+- [ ] Ayat 3–4 stage contract fill.  
+- [ ] Mom / female voice study (separate).  
+- [ ] Scholar partnership at ≥80% surah-level male-adult.
 
 ### P1
 - True audio ق-vs-ك detector beyond Whisper+XLSR onset (research).  

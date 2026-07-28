@@ -1,52 +1,32 @@
 # Tarteel — session handoff
 
-Last updated: 2026-07-28 (Qul live lock; QUALITY + PULL cues; phone ASR rescue)
+Last updated: 2026-07-28 (journey decisions locked; ayah 2 stages)
 
-Full handover (scholar summary + P0 + deploy): see `HANDOVER.md`.
+Full handover: `HANDOVER.md`.
 
-## START HERE NEXT SESSION — English mouth cues (non-negotiable)
-These two anchors unlocked adult-male **Qul** on phone. Lead with them every time:
+## START HERE — English mouth cues
+1. **QUALITY** — ق onset = QUAL / QUA like *quality*
+2. **PULL** — ul = end of *pull* / *full*
+Together → **Qul**. Labels stay **Qul/Qu**; cue stays QUALITY+PULL.
 
-1. **QUALITY** — onset of ق / Qu / Qul = **QUAL / QUA** like the start of *quality* (hollow **qh**). Never teach “Qul” as cull/cool (that’s ك). Not “ghwal” (drifts to غ).
-2. **PULL** — ending **ul** = end of *pull* / *full* (short u + clear L).
+## Journey decisions (Omar 2026-07-28) — locked
+1. **First visit:** Listen to the **whole short surah** once → then focus on current task (start Qul). Later visits: Listen = this ayah; banner says Continue + current Say.
+2. **Compare:** under Hear only in the stage box.
+3. **Qul fails:** stay on Qul ×3, then Qu rescue.
+4. **Header tap:** clears practice **with no confirm** + hard refresh. (Explicit Clear button still confirms.)
+5. **Promo:** ayah 1 first for founder recording; full 112 later.
+6. **Ayah 2:** word stages (Allāhu → aṣ-ṣamad → join) with English cues; ×3 syllable rescue later if needed.
 
-**Together:** QUALITY onset + PULL ending → **Qul**.  
-Split them when teaching; don’t mush into one vague “Quaull”.
+**Resume:** last ayah + stage saved on device (`tarteel_last_verse_v1` + practice store).
 
-Apply the same standard to later words (HOO-wa, Al-LAA-hu, a-ḤAD). See `STABLE.md`.
-
-## Live tester care
-Mom is testing production. **Do not wipe practice on deploy or header tap.**
-Clear only via explicit “Clear practice history” button.
+## Live tester note
+Header now clears progress (Omar chose 4C). Mom: header wipe is intentional for Omar’s testing rhythm — use carefully.
 
 ## Freeze rule
-**Qu / Qul:** letter-track / ASR **ق** pass; **ك** fail.
-**Phone rescue:** Whisper ك + XLSR onset ق (not ك) → pass.
-**Qul lock** needs ق evidence — shape-near without ق does not advance.
+ق pass / ك fail + phone rescue (Whisper ك + XLSR onset ق → pass).
 
-## Pedagogy (ayah 1) — word first
-1. **Qul** ×3 → pass with ق → **huwa** (locks qu+ul).
-2. After 3 word fails → syllable rescue **Qu** ×3 (not full Qul) → ul → huwa.
-3. After 3 Qu syllable fails → ask a teacher.
-
-## Pass / fail UX
-- Every stage shows **Hear only {current}** + **Correct/Incorrect for {current}** (stage contract on `STAGE_LADDER`).
-- Ayah 1 is the filled prototype; ayahs 2–4 use the same `hear` + `compare` shape (stubs until clips).
-- Do **not** hard-code a Qul-only compare panel — replicate per stage and move on.
-- Syllable rescue entry: banner **Say: Qu** + Hear only Qu (not mixed Qul copy).
-- Card ayah snippet for Qu marks **Qu** inside Qul, not the whole word.
-- **Heard vs target** on a word stage only shows that stage’s word(s) — never yellow the whole ayah for a one-word take.
-- Fail tag **FOCUS**. Stage-clear still says NEXT STEP.
-
-## Detection note (male Qul battery)
-Everyayah male murattal Qul cuts → pass when ق evidence present. Kaf bench fails.
-Phone rescue live on build `4df95c7`+. Milestone: `20260728-163050` Qul → huwa (Whisper Kullu, letters قل).
-
-## Backlog / P0 (see HANDOVER.md §6)
-- Five UX decisions still open (first action, compare vs Record fold, fail×3, clear button, …).
-- Formal male-adult % for Qul; then huwa / Allāhu / aḥad; target ≥80% across Surah 112 before scholar cohort.
-- Mom / female voice = separate track.
-- Incorrect clips; ayat 2–4 stage contract fill; progress ~17% stall.
+## Sprint goal
+Ayah 1 solid + ayah 2 usable → track to full Surah 112 ≥80% male-adult before Kickstarter. Founder promo = ayah 1 first.
 
 ## Stack
-Railway from `main`. Practice store `tarteel_practice_v7`. Live: https://tarteel-production.up.railway.app
+Railway `main`. Practice `tarteel_practice_v7`. Live: https://tarteel-production.up.railway.app

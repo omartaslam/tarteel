@@ -158,21 +158,21 @@ button{font-family:inherit;font-size:15px;padding:10px 18px;border:none;border-r
 .foot{margin-top:36px;font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px}
 </style></head><body>
 
-<div class="hero" id="hardRefresh" title="Tap to hard-refresh (keeps practice progress)">
+<div class="hero" id="hardRefresh" title="Tap header to clear practice and refresh">
   <span class="ar">ترتيل</span><h1>Tarteel</h1>
   <div class="sub">Recitation practice — Surah Al-Ikhlas</div>
-  <div class="hint">Tap header to refresh (progress kept)</div>
+  <div class="hint">Tap header to clear practice &amp; refresh</div>
 </div>
 
-<div class="banner">A practice aid for beginners — lock one piece at a time, then join. Not a teacher. Hafs an Asim.</div>
+<div class="banner" id="journeyBanner">A practice aid for beginners — lock one piece at a time, then join. Not a teacher. Hafs an Asim.</div>
 
 <div id="verseAr" class="verse-ar"></div>
 <div id="phon" class="phon"></div>
 <div id="trans" class="trans"></div>
 
 <div class="husary" id="husaryTop">
-  <button id="playH" type="button" aria-label="Play full ayah"></button>
-  <div class="lbl"><b>1 · Listen first (full ayah)</b><br>Sheikh Al-Husary — whole ayah model</div>
+  <button id="playH" type="button" aria-label="Listen first"></button>
+  <div class="lbl" id="listenLbl"><b>1 · Listen first (whole surah)</b><br>Sheikh Al-Husary — all 4 ayahs, then start with Qul</div>
 </div>
 
 <div id="stageBox" class="stagwrap"></div>
@@ -214,9 +214,48 @@ const V=[
 ];
 let v=1, rec=null, chunks=[], hAudio=null;
 let _lastRecUrl=null;
+let _surahQueue=null; // remaining husary codes when playing whole surah
 const $=id=>document.getElementById(id);
 const PRACTICE_STORE='tarteel_practice_v7';
 const BUILD_STORE='tarteel_build_id';
+const INTRO_STORE='tarteel_surah_intro_v1';
+const LAST_VERSE_STORE='tarteel_last_verse_v1';
+const SURAH_HUSARY=['112001','112002','112003','112004'];
+function surahIntroHeard(){
+  try{ return localStorage.getItem(INTRO_STORE)==='1'; }catch(e){ return false; }
+}
+function markSurahIntroHeard(){
+  try{ localStorage.setItem(INTRO_STORE,'1'); }catch(e){}
+}
+function saveLastVerse(n){
+  try{ localStorage.setItem(LAST_VERSE_STORE, String(n)); }catch(e){}
+}
+function loadLastVerse(){
+  try{
+    const n=parseInt(localStorage.getItem(LAST_VERSE_STORE)||'1',10);
+    return (n>=1 && n<=4) ? n : 1;
+  }catch(e){ return 1; }
+}
+function updateListenLabel(){
+  const lbl=$('listenLbl');
+  if(!lbl) return;
+  if(!surahIntroHeard()){
+    lbl.innerHTML='<b>1 · Listen first (whole surah)</b><br>Sheikh Al-Husary — all 4 ayahs, then start with Qul';
+  }else{
+    lbl.innerHTML='<b>1 · Listen (this ayah)</b><br>Sheikh Al-Husary — whole ayah model';
+  }
+}
+function updateJourneyBanner(){
+  const el=$('journeyBanner');
+  if(!el) return;
+  if(!surahIntroHeard()){
+    el.innerHTML='<b>First visit:</b> Listen to the <b>whole short surah</b> once, then lock one piece at a time starting with <b>Qul</b> (QUALITY + PULL). Resume anytime — progress is saved.';
+    return;
+  }
+  const {cur, idx, ladder}=currentStage(v);
+  const say=cur?cur.say_en:'this step';
+  el.innerHTML=`<b>Continue:</b> Say <b>${say}</b> — ayah ${v} of 4, stage ${idx+1} of ${ladder.length}. Goal: beautiful recitation of Al-Ikhlas.`;
+}
 // Beginner ladder — keep in sync with stages.py
 // Word-split ayah lines (keep in sync with coaching.AYAH_LINE) — used to yellow-mark where you are
 const AYAH_WORDS={
@@ -364,9 +403,42 @@ const STAGE_LADDER={
     },
   ],
   2:[
-    {id:'allahu', title:'Allāhu', say_en:'Allāhu', say_ar:'ٱللَّهُ', hint:'Say only Allāhu.', idxs:[0], hear:'', compare:stageStubCompare('Allāhu')},
-    {id:'samad', title:'aṣ-ṣamad', say_en:'aṣ-ṣamad', say_ar:'ٱلصَّمَدُ', hint:'Say only aṣ-ṣamad.', idxs:[1], hear:'', compare:stageStubCompare('aṣ-ṣamad')},
-    {id:'full', title:'Full ayah', say_en:'Allāhu aṣ-ṣamad', say_ar:'ٱللَّهُ ٱلصَّمَدُ', hint:'Join both words.', idxs:[0,1], hear:'', compare:stageStubCompare('Allāhu aṣ-ṣamad')},
+    {
+      id:'allahu', title:'Allāhu', say_en:'Allāhu', say_ar:'ٱللَّهُ',
+      hint:'Say only Allāhu. English cue: <b>Al-LAA-hu</b> — hold the doubled L (like a long “ll”), then “hu”. Don’t rush it like English “Allah!”.',
+      idxs:[0],
+      hear:'/samples/stage_allahu_ayah2_husary.mp3',
+      compare:stageComparePair(
+        'Allāhu',
+        'Correct is Al-LAA-hu — hold the doubled L. Common miss: rushed “Allah!” with no hold.',
+        '/samples/stage_allahu_ayah2_husary.mp3', 'Correct — Allāhu (Al-LAA-hu)', 'Al-Husary · hold ll',
+        '', 'Incorrect — rushed Allah', 'No doubled-L hold — clip TBD'
+      ),
+    },
+    {
+      id:'samad', title:'aṣ-ṣamad', say_en:'aṣ-ṣamad', say_ar:'ٱلصَّمَدُ',
+      hint:'Say only aṣ-ṣamad. English cue: <b>as-ṢA-mad</b> — heavy Ṣ (darker than soft “s”), then “mad”.',
+      idxs:[1],
+      hear:'/samples/stage_samad_husary.mp3',
+      compare:stageComparePair(
+        'aṣ-ṣamad',
+        'Correct is as-ṢA-mad — heavy Ṣ. Common miss: soft English “s” (samad).',
+        '/samples/stage_samad_husary.mp3', 'Correct — aṣ-ṣamad', 'Al-Husary · this word',
+        '', 'Incorrect — soft English S', 'Soft “samad” — clip TBD'
+      ),
+    },
+    {
+      id:'full', title:'Full ayah', say_en:'Allāhu aṣ-ṣamad', say_ar:'ٱللَّهُ ٱلصَّمَدُ',
+      hint:'Join: Al-LAA-hu · as-ṢA-mad. Keep the held L and the heavy Ṣ.',
+      idxs:[0,1],
+      hear:'/samples/real_ikhlas2_husary_full.mp3',
+      compare:stageComparePair(
+        'Allāhu aṣ-ṣamad',
+        'Join both words. Keep Al-LAA-hu hold and heavy Ṣ on aṣ-ṣamad.',
+        '/samples/real_ikhlas2_husary_full.mp3', 'Correct — full ayah 2', 'Al-Husary · whole line',
+        '', 'Incorrect — rush / soft S', 'Clip TBD'
+      ),
+    },
   ],
   3:[
     {id:'lam', title:'Lam', say_en:'Lam', say_ar:'لَمْ', hint:'Say only Lam.', idxs:[0], hear:'', compare:stageStubCompare('Lam')},
@@ -458,17 +530,13 @@ function stagePlayHtml(stageId, say, btnId){
 function playStageWordClip(stageId, btn){
   const src=stageHearSrc(stageId);
   if(!src){
-    // Fallback: full-ayah Husary at top
+    // Fallback: Listen control at top (ayah or surah intro)
     $('playH').click();
     return;
   }
   stopSampleAudio();
   stopStageClip();
-  if(hAudio){
-    try{ hAudio.pause(); }catch(e){}
-    hAudio=null;
-    const ph=$('playH'); if(ph) ph.classList.remove('playing');
-  }
+  stopHusaryAudio();
   const a=new Audio(src);
   a.setAttribute('playsinline','true');
   a.playsInline=true;
@@ -725,6 +793,8 @@ function renderStageBox(stOverride){
   if(samp) bindSampleButtons(box);
   const pcb=$('playStageCurrent');
   if(pcb) pcb.onclick=()=>playStageWordClip(cur.id, pcb);
+  updateJourneyBanner();
+  saveLastVerse(v);
 }
 let _sampAudio=null;
 function stopSampleAudio(){
@@ -989,44 +1059,77 @@ function draw(){
   $('vnum').textContent='Ayah '+v+' of 4';
   $('results').innerHTML=''; $('quality').className=''; $('quality').style.display='none';
   showProg(false);
+  updateListenLabel();
   renderStageBox();
+  saveLastVerse(v);
 }
 $('prev').onclick=()=>{if(v>1){v--;draw();}};
 $('next').onclick=()=>{if(v<4){v++;draw();}};
 
-// Al-Husary playback (same-origin proxy — more reliable on iPhone Safari)
-$('playH').onclick=()=>{
+// Al-Husary: first visit = whole surah; after that = this ayah. Then focus on Say: {current}.
+function stopHusaryAudio(){
   if(hAudio){
     try{ hAudio.pause(); }catch(e){}
     hAudio=null;
-    $('playH').classList.remove('playing');
-    return;
   }
+  _surahQueue=null;
+  const ph=$('playH'); if(ph) ph.classList.remove('playing');
+}
+function playHusaryCode(code, onDone){
   stopSampleAudio();
-  const code=V[v-1].h;
-  // Prefer same-origin; fall back to CDN if proxy missing on old deploy
-  hAudio=new Audio('/husary/'+code);
-  hAudio.setAttribute('playsinline','true');
-  hAudio.playsInline=true;
-  hAudio.preload='auto';
+  stopStageClip();
+  const a=new Audio('/husary/'+code);
+  a.setAttribute('playsinline','true');
+  a.playsInline=true;
+  a.preload='auto';
+  hAudio=a;
   const fail=()=>{
-    $('playH').classList.remove('playing');
-    // one retry via direct CDN
-    if(hAudio && !hAudio._retried){
-      hAudio._retried=true;
-      hAudio.src='https://everyayah.com/data/Husary_128kbps/'+code+'.mp3';
-      hAudio.load();
-      hAudio.play().then(()=>$('playH').classList.add('playing')).catch(()=>{
-        hAudio=null;
+    if(a && !a._retried){
+      a._retried=true;
+      a.src='https://everyayah.com/data/Husary_128kbps/'+code+'.mp3';
+      a.load();
+      a.play().then(()=>$('playH').classList.add('playing')).catch(()=>{
+        stopHusaryAudio();
         alert('Could not play Al-Husary on this phone. Check Wi‑Fi and try again.');
       });
       return;
     }
-    hAudio=null;
+    stopHusaryAudio();
   };
-  hAudio.onended=()=>{$('playH').classList.remove('playing');hAudio=null;};
-  hAudio.onerror=fail;
-  hAudio.play().then(()=>$('playH').classList.add('playing')).catch(fail);
+  a.onended=()=>{
+    if(hAudio===a) hAudio=null;
+    if(typeof onDone==='function') onDone();
+    else $('playH').classList.remove('playing');
+  };
+  a.onerror=fail;
+  a.play().then(()=>$('playH').classList.add('playing')).catch(fail);
+}
+function playNextSurahClip(){
+  if(!_surahQueue || !_surahQueue.length){
+    _surahQueue=null;
+    $('playH').classList.remove('playing');
+    markSurahIntroHeard();
+    updateListenLabel();
+    updateJourneyBanner();
+    flashBuildNote('Surah heard. Now say Qul — QUALITY onset + PULL ending.');
+    return;
+  }
+  const code=_surahQueue.shift();
+  playHusaryCode(code, playNextSurahClip);
+}
+$('playH').onclick=()=>{
+  if(hAudio || _surahQueue){
+    stopHusaryAudio();
+    return;
+  }
+  stopSampleAudio();
+  stopStageClip();
+  if(!surahIntroHeard()){
+    _surahQueue=SURAH_HUSARY.slice(1);
+    playHusaryCode(SURAH_HUSARY[0], playNextSurahClip);
+    return;
+  }
+  playHusaryCode(V[v-1].h, ()=>$('playH').classList.remove('playing'));
 };
 
 $('rec').onclick=async()=>{
@@ -1035,13 +1138,9 @@ $('rec').onclick=async()=>{
   cancelActiveAnalysis();
   stopSampleAudio();
   stopStageClip();
+  stopHusaryAudio();
   const ha=$('heardAudio');
   if(ha){ try{ ha.pause(); }catch(e){} }
-  if(hAudio){
-    try{ hAudio.pause(); }catch(e){}
-    hAudio=null;
-    $('playH').classList.remove('playing');
-  }
   $('results').innerHTML='';
   $('quality').style.display='none';
   $('sessionInfo').textContent='';
@@ -1417,23 +1516,32 @@ function bindRetry(data, opts){
     sn.textContent='Saved ✓'; sn.disabled=true;
   };
 }
+v=loadLastVerse();
 draw();
 syncBuildAndMaybeReset();
+updateListenLabel();
+updateJourneyBanner();
 
 $('clearHistory').onclick=()=>{
   if(!confirm('Clear all practice history on this device? Next take starts at stage 1.')) return;
   clearAllPractice();
+  try{ localStorage.removeItem(LAST_VERSE_STORE); }catch(e){}
   cancelActiveAnalysis();
   $('results').innerHTML='';
   $('quality').style.display='none';
   $('sessionInfo').textContent='';
+  v=1;
   paintAyahFocus();
   renderStageBox();
+  updateListenLabel();
+  updateJourneyBanner();
   flashBuildNote('Practice history cleared. Starting at stage 1.');
 };
 
-// Hard refresh for iOS — cache-bust only. Do not wipe practice (live testers).
+// Header tap: clear practice (no confirm) + hard refresh — Omar decision 4C
 $('hardRefresh').onclick=()=>{
+  clearAllPractice();
+  try{ localStorage.removeItem(LAST_VERSE_STORE); }catch(e){}
   const u=new URL(location.href);
   u.searchParams.set('v', String(Date.now()));
   location.replace(u.toString());
