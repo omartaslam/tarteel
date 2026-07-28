@@ -1,13 +1,15 @@
 # Tarteel — Full Project Handover
 
 **Document owner:** Omar Tanveer Aslam (`omartanveeraslam@gmail.com`)  
-**Last updated:** 2026-07-28  
+**Last updated:** 2026-07-28 (evening)  
 **Live app:** https://tarteel-production.up.railway.app  
 **Repo:** https://github.com/omartaslam/tarteel  
 **Branch that deploys:** `main` (Railway)  
-**Live build at handoff:** `4df95c7e97c8` (`/health` → `{"ok":true,"build":"…"}`)
+**Live build at handoff:** `2aa0cd0c406d` (`/health`)
 
-If you are new: read **§0 Summary** first, then **§1 Accuracy**, then **§8 Do not break**, then start on **§6 P0**.
+**→ New agent: open `CONTINUE.md` first.** P0 is broken Hear-only **huwa** on live. Omar will not test Allāhu until huwa is fixed. Do not ask him to test until you play the live clip yourself.
+
+If you are new: read **CONTINUE.md**, then **§0 Summary**, then **§8 Do not break**.
 
 ---
 
@@ -132,8 +134,10 @@ A **stage pass** = app advances (or locks) when the take deserves it for that st
 | `static/index.html` | Entire beginner UI + `STAGE_LADDER` contract |
 | `static/samples/` | Husary stage clips + ق/ك bench |
 | `static/takes/` | Omar labeled phone takes (celebrate Qu lock) |
+| `CONTINUE.md` | **Start here** — P0 huwa blocker + live SHA |
 | `STABLE.md` | Hard rules / stable markers |
 | `SESSION.md` | Short live-tester handoff |
+| `HANDOVER.md` | Full project / scholar-facing |
 | `test_qul_drills.py` | ق/ك + phone rescue tests |
 | `test_stage_contract.py` | Every ayah-1 stage has hear+compare |
 
@@ -174,6 +178,8 @@ A **stage pass** = app advances (or locks) when the take deserves it for that st
 6. **Ayah 2:** word isolate → join (English cues); ×3 rescue optional later.
 
 ### P0 product / detection
+- [ ] **P0 BLOCKER:** Hear-only **huwa** still wrong on live (`?v=4`, build `2aa0cd0`). Omar: “even worse”. Fix + listen on live before anything else. See `CONTINUE.md`.
+- [ ] After huwa: Omar retests Allāhu false-`wrong_stage:qul` fix (code already on `2aa0cd0`, untested by him).
 - [ ] Formal male-adult accuracy protocol for Qul (N≥30).  
 - [ ] Huwa / Allāhu / aḥad batteries; ayah 2 aṣ-ṣamad.  
 - [ ] Mobile Chrome UX pass on live.  
@@ -200,6 +206,8 @@ A **stage pass** = app advances (or locks) when the take deserves it for that st
 | ~16:20 | Phone rescue merged to `main` |
 | ~16:26 | Live health `4df95c7` |
 | ~16:30 | Qul pass again `Kullu`+letters قل → **huwa** (`20260728-163050`) |
+| ~20:03 | Merged Allāhu align fix + huwa retimed `1.45–1.88` `?v=4` → live `2aa0cd0` |
+| ~20:13 | Omar: **huwa even worse** — stopped testing; Allāhu fix unverified by him |
 
 ---
 

@@ -1,5 +1,9 @@
 # Deploy markers
 
+## Hard rule — do not ship unheard audio (2026-07-28 evening)
+Hear-only / Compare clips must be **listened to on live** after `/health` bumps before asking Omar to test.
+RMS / ASR / md5 checks are not enough. Huwa `?v=3` and `?v=4` both failed Omar’s ear.
+
 ## Hard rule — stage UI prototype (2026-07-28)
 **Every practice stage owns its own Hear only + Correct/Incorrect.**
 
