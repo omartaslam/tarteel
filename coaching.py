@@ -291,9 +291,14 @@ WORD_IDENTITY = {
 # Fine letter tips — only after words are roughly right.
 FIX = {
     ("ك", "ق"): {
-        "heard": "a front K sound (kaf)",
-        "want": "a deep K from the back of the throat (qaf)",
-        "fix": "Say qul with a deeper K — farther back than English “cool”.",
+        "heard": "a front K (like the K in “key” or “cool”)",
+        "want": "a deep Q from the uvula (not an English K)",
+        "fix": (
+            "On <b>Qul</b>: English “cool/key” is a mid-mouth K (tongue against the soft palate). "
+            "Arabic <b>qaf</b> is farther back — almost a soft gag-point stop at the uvula. "
+            "Sound target: less like “Kool”, more like a hollow “Qool” with a clicky catch deep in the throat, "
+            "then a short “ul”. Mouth slightly open; pull the tongue body back; one clean hit — don’t stretch into “Kulla…”."
+        ),
         "ar": ("ك", "ق"),
     },
     ("ق", "ك"): {
