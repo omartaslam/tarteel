@@ -1,18 +1,30 @@
-Real-world sample sources (NOT TTS)
+Benchmark: back Q (ق / qaf) vs middle K (ك / kaf)
+=================================================
+These are REAL recordings. Not TTS. Not tuned to pass the app.
 
-CORRECT — real_qul_minshawi.*
-  Reciter: Muhammad Siddiq al-Minshawi (male, classical murattal)
-  Source: https://everyayah.com/data/Minshawy_Murattal_128kbps/112001.mp3
-  Content: first word only (Qul) cut from Surah al-Ikhlas ayah 1
-  Also in app via everyayah / Husary proxy for full ayah reference.
+PRIMARY PAIR (same syllable shape قُل / كُل — place of articulation differs)
+---------------------------------------------------------------------------
+CORRECT  bench_correct_qaf_qul_minshawi.*
+  What: first word قُلْ (Qul) — uvular ق (back)
+  Who:  Muhammad Siddiq al-Minshawi (male Qur'an reciter, murattal)
+  From: https://everyayah.com/data/Minshawy_Murattal_128kbps/112001.mp3
+        (first ~0.55s cut = Qul only)
 
-REFERENCE — real_ikhlas1_husary_full.*
-  Reciter: Mahmoud Khalil al-Husary (male)
-  Source: https://everyayah.com/data/Husary_128kbps/112001.mp3
-  Full ayah 1, uncut.
-
-INCORRECT — real_cool_grendelkhan.*
-  Speaker: Wikimedia / Lingua Libre volunteer "Grendelkhan" (public contributor)
-  Source: https://commons.wikimedia.org/wiki/File:LL-Q1860_(eng)-Grendelkhan-cool.wav
+INCORRECT  bench_incorrect_kaf_kul_fjmustak.*
+  What: Arabic كلمة كل (kul/kull) — velar ك (middle), NOT English "cool"
+  Who:  Lingua Libre / Wikimedia volunteer Fjmustak (Arabic speaker)
+  From: https://commons.wikimedia.org/wiki/File:LL-Q13955_(ara)-Fjmustak-كل.wav
   License: CC BY-SA 4.0
-  Content: the English word "cool" (English K) — the realistic beginner error vs Arabic Q.
+
+SECONDARY PAIR (same speaker, letter names — pure ق vs ك)
+---------------------------------------------------------
+CORRECT  bench_correct_qaf_letter_alnatiq.*
+  Who: AlNatiq  File:LL-Q13955 (ara)-AlNatiq-ق.wav
+
+INCORRECT  bench_incorrect_kaf_letter_alnatiq.*
+  Who: AlNatiq  File:LL-Q13955 (ara)-AlNatiq-ك.wav
+  License: CC BY-SA 4.0
+
+What success looks like when you play these into Tarteel on Ku/Qul:
+  Correct  → app should show ق / Qul (back Q)
+  Incorrect → app should show ك / Kul (middle K), not pretend it heard ق
