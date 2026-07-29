@@ -244,7 +244,9 @@ def build_feedback(
         return cards
 
     detected = [l for l in letters if l["c"] != "|"]
-    if detected:
+    # Forced alignment always paints the expected ayah, so a 1-word stage still
+    # "finds" 4 words. Word-order tips are only meaningful on joins / full ayah.
+    if detected and len(stage_words or []) != 1 and not drill:
         nwords = len([l for l in letters if l["c"] == "|"]) + 1
         wo = coach.word_order_card(
             verse,
@@ -494,12 +496,15 @@ def build_feedback(
                         if has_kaf
                         else "no clear back Q (qaf / qh) in this take"
                     ),
-                    "want": "Arabic Qul — English cue <b>QUAL / qhul</b> like <b>quality</b>",
+                    "want": "Arabic Qul — throat from <b>“call”</b>, shorter vowel → <b>QUL</b>",
                     "fix": (
-                        "Say the full word <b>Qul</b> (قُلْ). Think <b>QUAL</b> / <b>qhul</b> "
-                        "like the start of <b>quality</b> — hollow qh, not “cull/cool”.<br>"
-                        "If you felt QUAL but the app shows Kull: we also check the letter track. "
-                        "Retry closer to the mic — we lock on ق (or clear qh), never on ك alone."
+                        "Say the full word <b>Qul</b> (قُلْ). Say <b>CAW-l</b> (the word "
+                        "<b>“call”</b>), then shorten the vowel: <b>QUL</b> — deep throat K, "
+                        "not “cull/cool”.<br>"
+                        "If you felt the “call” K but the app shows Kull: we also check the "
+                        "letter track. Retry closer to the mic — we lock on the deep throat K, "
+                        "“qaf” (ق) (or clear measured ق), never on the normal English K, "
+                        "“kaf” (ك) alone."
                     ),
                     "ar": ("ك" if has_kaf else "?", "ق"),
                 },

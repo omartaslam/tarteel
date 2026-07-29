@@ -173,7 +173,19 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
                         "matched_arabic":"","matched_phonetic":""}
         if cancel_check and cancel_check():
             raise AnalysisCancelled()
-        # Stage-scoped compare: only current stage words (not whole ayah yellow)
+        # Read ق vs ك from the free emissions BEFORE forced alignment, which
+        # would only ever hand back the expected ayah's letters.
+        try:
+            probe=onset_probe(emissions, proc, len(wav)/16000)
+        except Exception:
+            probe={"p_qaf":0.0,"p_kaf":0.0,"onset":""}
+        try:
+            sound=free_read(emissions, proc)
+        except Exception:
+            sound={"letters":"","evidence":{}}
+        # Stage-scoped compare: only current stage words (not whole ayah yellow).
+        # Build AFTER free_read so Whisper inventions (e.g. المؤمنون on a short
+        # Qul take) do not fill the You line — measured letters do.
         try:
             import coaching as _coach_early
             import stages as _stg_early
@@ -187,19 +199,10 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
                     heard_info.get("heard_arabic") or heard_info.get("heard_raw") or "",
                     heard_info.get("heard_phonetic") or "",
                     stage_words=_sw if _sw is not None else None,
+                    sound_letters=(sound or {}).get("letters") or "",
                 )
         except Exception:
             heard_info["compare_html"] = ""
-        # Read ق vs ك from the free emissions BEFORE forced alignment, which
-        # would only ever hand back the expected ayah's letters.
-        try:
-            probe=onset_probe(emissions, proc, len(wav)/16000)
-        except Exception:
-            probe={"p_qaf":0.0,"p_kaf":0.0,"onset":""}
-        try:
-            sound=free_read(emissions, proc)
-        except Exception:
-            sound={"letters":"","evidence":{}}
         prog(70, "align", "Lining up letters to the expected ayah…")
         vocab=proc.tokenizer.get_vocab()
         text=VTEXT[verse]

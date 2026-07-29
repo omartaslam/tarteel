@@ -1397,12 +1397,16 @@ function render(data){
          <div class="hmatchar" dir="rtl" lang="ar">${rawAr}</div></div>`
       : '';
     // The word guess comes from a language model that invents plausible Quranic
-    // words on one-syllable takes (it wrote كَفَرَ for a Qul). Show the measured
-    // sound as the headline and mark the word for what it is — a guess.
+    // words on one-syllable takes (it wrote كَفَرَ / المؤمنون for a Qul). Show the
+    // measured sound as the headline and mark the word for what it is — a guess.
     const soundAr=(view.sound_letters||'').trim();
     const wordGuess=(view.heard_arabic||'').trim();
-    const soundBlock = soundAr
-      ? `<div class="hmatch"><div class="hmatchlbl">Word guess (unreliable on single words)</div>
+    const guessLooksInvented = !!(soundAr && wordGuess && (
+      wordGuess.split(/\s+/).length > 1 ||
+      wordGuess.replace(/\s/g,'').length >= soundAr.replace(/\s/g,'').length + 4
+    ));
+    const soundBlock = (wordGuess && (soundAr || guessLooksInvented))
+      ? `<div class="hmatch"><div class="hmatchlbl">${guessLooksInvented?'Word guess — ignore this (Whisper invented it)':'Word guess (unreliable on single words)'}</div>
          <div class="hmatchar" dir="rtl" lang="ar">${wordGuess||'—'}</div>
          ${view.heard_phonetic?`<div class="hmatchph">${view.heard_phonetic}</div>`:''}</div>`
       : '';
