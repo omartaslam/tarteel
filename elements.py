@@ -138,6 +138,7 @@ def build_feedback(
                 heard_phonetic or "",
                 attempt=qu_bridge_attempt,
                 onset_probe=onset_probe,
+                acoustic=acoustic,
             )
         else:
             ev = coach.evaluate_drill(
@@ -146,6 +147,7 @@ def build_feedback(
                 heard_arabic or "",
                 heard_phonetic or "",
                 onset_probe=onset_probe,
+                acoustic=acoustic,
             )
         errors.extend(ev.get("cards") or [])
         # defer blocks advance (no false lock) but still feeds next-step coaching

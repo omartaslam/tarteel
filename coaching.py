@@ -583,6 +583,7 @@ def evaluate_drill(
     heard_arabic: str,
     heard_phonetic: str = "",
     onset_probe: dict | None = None,
+    acoustic: dict | None = None,
 ) -> dict:
     """
     Score syllable micro-drills (Qu / ul) without full-word ayah alignment.
@@ -601,6 +602,11 @@ def evaluate_drill(
     ph = (heard_phonetic or "").lower()
     ph_compact = re.sub(r"[^a-zāḥṣṭḍẓ]", "", ph)
     align_q = onset_qaf_verdict(onset_probe)
+    # Show the learner everything they said, even though the drill only scores
+    # one piece of it. Printing a clipped "Qu" when they said "Qul" reads like
+    # the app mis-heard them, and costs trust for no benefit.
+    said_ar = ((acoustic or {}).get("letters") or "").strip()
+    said_ph = _romanize(said_ar) if said_ar else ""
 
     def _drill_compare(you_ph: str, you_ar: str, tgt_ph: str, tgt_ar: str, ok: bool) -> str:
         you_cls = "" if ok else "marky"
@@ -609,10 +615,10 @@ def evaluate_drill(
         you_ar_h = f'<span class="{you_cls}">{you_ar}</span>' if you_cls else you_ar
         tgt_ph_h = f'<span class="{tgt_cls}">{tgt_ph}</span>' if tgt_cls else tgt_ph
         tgt_ar_h = f'<span class="{tgt_cls}">{tgt_ar}</span>' if tgt_cls else tgt_ar
-        note = "Drill match" if ok else "Yellow = this drill piece still needs work"
+        note = ("We only score the piece on the Target line — the rest of what you said is shown but not judged." if ok else "Yellow = the piece we score still needs work. Everything you said is on the You line.")
         return (
             '<div class="cmpwrap">'
-            '<div class="hmatchlbl">Heard vs target (this drill only)</div>'
+            '<div class="hmatchlbl">You said (all of it) vs the piece we score</div>'
             f'<div class="cmpline"><span class="cmplbl">You</span> '
             f'<span class="cmplinetxt">{you_ph_h}</span></div>'
             f'<div class="cmpline"><span class="cmplbl">Target</span> '
@@ -643,9 +649,9 @@ def evaluate_drill(
             return {
                 "passed": True,
                 "cards": [],
-                "display_arabic": "قُ",
-                "display_phonetic": "Qu",
-                "compare_html": _drill_compare("Qu", "قُ", "Qu", "قُ", True),
+                "display_arabic": said_ar or "قُ",
+                "display_phonetic": said_ph or "Qu",
+                "compare_html": _drill_compare(said_ph or "Qu", said_ar or "قُ", "Qu", "قُ", True),
                 "heard_match": "drill",
                 "qaf_rescue": bool(align_rescues and not has_q),
             }
@@ -667,9 +673,9 @@ def evaluate_drill(
             return {
                 "passed": False,
                 "cards": [card],
-                "display_arabic": "كُ",
-                "display_phonetic": "Ku",
-                "compare_html": _drill_compare("Ku", "كُ", "Qu", "قُ", False),
+                "display_arabic": said_ar or "كُ",
+                "display_phonetic": said_ph or "Ku",
+                "compare_html": _drill_compare(said_ph or "Ku", said_ar or "كُ", "Qu", "قُ", False),
                 "heard_match": "drill",
             }
         tip = {
@@ -690,9 +696,9 @@ def evaluate_drill(
         return {
             "passed": False,
             "cards": [card],
-            "display_arabic": "(unclear)",
-            "display_phonetic": "—",
-            "compare_html": _drill_compare("—", "(unclear)", "Qu", "قُ", False),
+            "display_arabic": said_ar or "(unclear)",
+            "display_phonetic": said_ph or "—",
+            "compare_html": _drill_compare(said_ph or "—", said_ar or "(unclear)", "Qu", "قُ", False),
             "heard_match": "drill",
         }
 
@@ -737,9 +743,9 @@ def evaluate_drill(
         return {
             "passed": False,
             "cards": [card],
-            "display_arabic": "(unclear)",
-            "display_phonetic": "—",
-            "compare_html": _drill_compare("—", "(unclear)", "ul", "ـُلْ", False),
+            "display_arabic": said_ar or "(unclear)",
+            "display_phonetic": said_ph or "—",
+            "compare_html": _drill_compare(said_ph or "—", said_ar or "(unclear)", "ul", "ـُلْ", False),
             "heard_match": "drill",
         }
 
@@ -752,6 +758,7 @@ def evaluate_qu_qul_bridge(
     heard_phonetic: str = "",
     attempt: int = 1,
     onset_probe: dict | None = None,
+    acoustic: dict | None = None,
 ) -> dict:
     """Syllable-rescue Qu attempts after word-first Qul failed.
 
@@ -769,6 +776,7 @@ def evaluate_qu_qul_bridge(
         heard_arabic or "",
         heard_phonetic or "",
         onset_probe=onset_probe,
+        acoustic=acoustic,
     )
     left = 3 - n
 
