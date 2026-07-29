@@ -7,7 +7,8 @@ Style for learners who aren't fluent in Arabic:
 HARD RULE — English phonetics must be spot-on (2026-07-28 lesson):
   Transliteration labels (Qul, Qu, aḥad) are NOT always the mouth cue.
   If an English reader would say the wrong sound from our spelling, rewrite the tip.
-  Example: “Qul” → cull/cool/ك. Working cue: QUAL / QUA like “quality”.
+  Example: “Qul” → cull/cool. Working cue: the K in “call” + the vowel in “pull”.
+  Measured on Omar 2026-07-29: “call” gives real qaf (ق) at 0.93; “quality” gives kaf (ك).
   Use familiar English anchors on every tip (word, syllable, letter, join).
 
 Iteration order for the student:
@@ -90,7 +91,7 @@ def section_html(verse: int, word_en: str, *, highlight: str | None = None) -> s
         k = key.lower().replace("ā", "a").replace("ḥ", "h").replace("ṣ", "s")
         # Syllable marks inside first word (Qul)
         if hl == "qu" and k == "qul":
-            # Qu + l  /  قُ + لْ  (written label Qul; mouth cue remains QUAL)
+            # Qu + l (written label Qul; mouth cue is the “call” K + “pull” vowel)
             ph_parts.append(
                 f'<span class="focusw">{ph[:2] if len(ph) >= 2 else ph}</span>'
                 f'{ph[2:] if len(ph) > 2 else ""}'
@@ -359,23 +360,24 @@ WORD_IDENTITY = {
 # Each tip MUST include an English mouth cue a beginner can imitate.
 FIX = {
     ("ك", "ق"): {
-        "heard": "an English K (like “cull” / “cool”)",
-        "want": "Arabic ق — say it like English <b>QUAL</b> (start of “quality”), not “Qul/cull”",
+        "heard": "the normal English K, “kaf” (ك) — the K in “cull” / “cool”",
+        "want": "the deep throat K, “qaf” (ق) — the K you already make in <b>“call”</b>",
         "fix": (
-            "The written word is <b>Qul</b> (قُلْ). The English sound cue is <b>QUAL / qhul</b> — "
-            "like the opening of <b>quality</b> / <b>quad</b>, not “cull” or “cool”.<br>"
-            "1) Tip of tongue rests on the back of your bottom front teeth.<br>"
-            "2) English “Qul/cull/cool” hits too far forward (middle ك) — that’s what we’re hearing.<br>"
-            "3) Make the first letter like <b>QUAL</b>: hollow <b>qh</b> deeper in the throat, short dry pop, then finish the L.<br>"
-            "4) One short word. Stop.<br>"
-            "Note: if you felt QUAL/qhul but the app shows Kull, phone ASR often flattens ق→ك — retry closer."
+            "You already make this sound. It is the K in the English word "
+            "<b>“call”</b>.<br>"
+            "<b>1.</b> Say <b>CAW-l</b> out loud.<br>"
+            "<b>2.</b> Freeze your throat exactly where it was for that K — right at the back.<br>"
+            "<b>3.</b> Keep it frozen there and change only the vowel, to the short "
+            "<b>u</b> in <b>“pull”</b> → <b>QUL</b>.<br>"
+            "Not <b>KWOL</b> (that is the normal English K again) and not <b>KUL</b>.<br>"
+            "One short word, then stop."
         ),
         "ar": ("ك", "ق"),
     },
     ("ق", "ك"): {
-        "heard": "a deep throat K (qaf) — QUAL-like",
-        "want": "a lighter front K (kaf) — like the K in “key” / “cool”",
-        "fix": "Use a lighter K, like the K in “key” — further forward than QUAL.",
+        "heard": "the deep throat K, “qaf” (ق) — the “call” K",
+        "want": "a lighter front K, “kaf” (ك) — the K in “key” / “cool”",
+        "fix": "Use a lighter K, like the K in “key” — further forward than the “call” K.",
         "ar": ("ق", "ك"),
     },
     ("ه", "ح"): {
@@ -552,7 +554,7 @@ def onset_qaf_verdict(probe: dict | None) -> dict:
 
 
 def phonetic_back_q(heard_phonetic: str) -> bool:
-    """True if English phonetics clearly cue hollow back ق (qh / QUAL), not middle K."""
+    """True if English phonetics clearly cue the deep throat K, “qaf” (ق), not middle K."""
     ph = (heard_phonetic or "").lower()
     if not ph.strip():
         return False
@@ -579,7 +581,7 @@ def evaluate_drill(
     """
     Score syllable micro-drills (Qu / ul) without full-word ayah alignment.
 
-    Qu gate: Arabic ق passes; Arabic ك fails. Clear qh/QUAL phonetics can pass
+    Qu gate: Arabic ق passes; Arabic ك fails. Clear deep-throat-K phonetics can pass
     when ق letter is missing — but never when Arabic ك / cull phonetics win.
     Phone rescue: if Whisper wrote ك but the onset is acoustically ق (not ك),
     pass — phone ASR flatten must not lock out the main audience. The onset
@@ -617,7 +619,7 @@ def evaluate_drill(
 
     if drill == "qu":
         # Stable: Arabic ق passes; Arabic ك fails.
-        # Honour clear qh/QUAL phonetics when ASR omitted ق (align teach ↔ measure).
+        # Honour clear deep-throat-K phonetics when ASR omitted ق (align teach ↔ measure).
         # Phone rescue: XLSR onset ق beats Whisper ك (flatten). Never pass align ك.
         has_q = "ق" in letters
         has_k_ar = "ك" in letters
@@ -645,11 +647,11 @@ def evaluate_drill(
         if has_k_ar or has_k_ph:
             tip = {
                 "heard": "a middle K (kaf) — like English “cool/cull”",
-                "want": "back ق — English cue <b>QUA / qhul</b> (as in “quality”), not “coo/cu”",
+                "want": "the deep throat K, “qaf” (ق) — the K in <b>“call”</b>, not “coo/cu”",
                 "fix": (
-                    "Say only the onset <b>Qu</b> (قُ). English cue: <b>QUA</b> like <b>quality</b> "
+                    "Say only the start (قُ): <b>CAW</b>, the start of <b>“call”</b>, stopped before the L. "
                     "(hollow <b>qh</b>, not “coo/cull”).<br>"
-                    "If you felt that hollow QUAL but the app shows Kull: phone ASR often flattens "
+                    "If you felt that deep “call” K but the app shows Kull: phone speech-to-text often flattens "
                     "ق→ك — hold the phone closer and retry. We only lock when we hear ق / qh."
                 ),
                 "ar": ("ك", "ق"),
@@ -670,9 +672,9 @@ def evaluate_drill(
                 if not (letters or ph.strip())
                 else "something without a clear Q onset"
             ),
-            "want": "short Qu (قُ) — English cue <b>QUA / qhul</b> (as in “quality”)",
+            "want": "short Qu (قُ) — the K in <b>“call”</b>, stopped before the L",
             "fix": (
-                "Say only <b>Qu</b> — think <b>QUA</b> like <b>quality</b> (hollow qh), not “coo/cu”. "
+                "Say only the start — <b>CAW</b>, the start of <b>“call”</b>, stopped before the L. Not “coo/cu”. "
                 "Deep back ق + short “u”. Stop after the short u."
             ),
             "ar": ("?", "ق"),
@@ -818,8 +820,8 @@ def evaluate_qu_qul_bridge(
         5, verse, "Qu", "قُ",
         {
             "heard": "no clear back Q",
-            "want": "QUA like quality",
-            "fix": "Say only <b>Qu</b> — English cue <b>QUA</b> like <b>quality</b>, not “coo”.",
+            "want": "the K in “call”, stopped before the L",
+            "fix": "Say only the start — <b>CAW</b>, the start of “call”, stopped before the L. Not “coo”.",
             "ar": ("?", "ق"),
         },
         "?", "ق", rule="drill",
@@ -831,7 +833,7 @@ def evaluate_qu_qul_bridge(
     )
     card["plain"] = (card.get("plain") or "") + f"<br><br><b>{more}</b>"
     card["fix"] = (
-        "Say only <b>Qu</b> (قُ). English cue: <b>QUA</b> like <b>quality</b> — "
+        "Say only the start (قُ): <b>CAW</b>, the start of <b>“call”</b>, stopped before the L — "
         "not “coo/cull”. Deep back ق + short “u”. Stop. "
         "Do <b>not</b> say the full word yet. Middle ك still fails."
     )
@@ -1321,15 +1323,15 @@ def describe_skill(key: str | None, card: dict | None = None) -> str:
         if rule == "pronunciation":
             hc, ec = card.get("heard_letter"), card.get("expected_letter")
             if hc == "ك" and ec == "ق":
-                return f"QUAL (deep ق), not cull/cool — in {wen}"
+                return f"deep throat K (the “call” K), not cull/cool — in {wen}"
             if hc == "ه" and ec == "ح":
                 return f"the strong Ḥ in {wen}"
             return f"the letter detail in {wen}"
         if rule == "drill":
             hc, ec = card.get("heard_letter"), card.get("expected_letter")
             if hc == "ك" and ec == "ق":
-                return "QUA like quality (not coo/cull) in Qu"
-            return "Qu onset — QUA like quality"
+                return "the “call” K (not coo/cull) in Qu"
+            return "Qu onset — the “call” K"
         if rule in ("madd",):
             return f"the vowel length in {wen}"
         if rule in ("qalqalah", "qalqalah_practice"):
@@ -1354,7 +1356,7 @@ def describe_skill(key: str | None, card: dict | None = None) -> str:
         wen = _tw(rest[0]) if rest else "this word"
         swap = rest[1] if len(rest) > 1 else ""
         if swap == "ك→ق":
-            return f"QUAL (deep ق), not cull/cool — in {wen}"
+            return f"deep throat K (the “call” K), not cull/cool — in {wen}"
         if swap == "ه→ح":
             return f"the strong Ḥ in {wen}"
         return f"the letter detail in {wen}"

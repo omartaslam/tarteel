@@ -56,10 +56,15 @@ This applies to chat replies, UI copy, cards and commit messages. No exceptions.
 ## Hard rule — English phonetics (learner lesson 2026-07-28)
 **Every coaching cue must use English sounds a beginner can actually make.**
 
-**Lead descriptors for ق / Qul (non-negotiable):**
-- ***quality*** → onset **QUAL / QUA** (hollow qh)
-- ***pull*** → ending **ul**
-- Together (taught split): QUALITY + PULL → **Qul**
+**Lead descriptors for the deep throat K, "qaf" (ق) / Qul — measured, not guessed:**
+- ***call*** → the onset. Say **CAW-l**, freeze the throat, keep it there.
+- ***pull*** → the ending **ul**.
+- Together: **CALL-throat + PULL-vowel → Qul**
+
+**"quality" is retired (2026-07-29).** Measured in Omar's own voice across four
+cut boundaries: "call" gave real qaf (ق) at 0.93 with kaf (ك) at 0.00, while
+"quality" gave kaf (ك) and was unstable. It was teaching him to say KWOL.
+Do not reintroduce it without a measurement that beats "call".
 
 - Scholarly transliteration (Qul, Qu, aḥad) is a *label*, not always the mouth cue.
 - If the English spelling reads as the *wrong* sound to a native English speaker, the tip has failed

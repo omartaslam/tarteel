@@ -23,10 +23,15 @@ Three fixes, all verified against live:
 Re-measure Qul accuracy from scratch (N≥30, teacher-labelled, ق/ك confusion
 matrix). The old ~70–80% figure was scored by the broken gate and is void.
 
-## START HERE — English mouth cues
-1. **QUALITY** — ق onset = QUAL / QUA like *quality*
-2. **PULL** — ul = end of *pull* / *full*
-Together → **Qul**. Labels stay **Qul/Qu**.
+## START HERE — English mouth cue (measured 2026-07-29, replaces QUALITY)
+> **throat from "CALL" + vowel from "PULL" = Qul**
+
+Say **CAW-l**, freeze the throat, change only the vowel to the short u in *pull*.
+
+Measured in Omar's own voice, same session, stable across 4 cut boundaries:
+his "call" produces real deep-throat-K, "qaf" (ق), at **0.93**; his "quality"
+produces the normal English K, "kaf" (ك). **QUALITY is retired as a cue** — it
+was making him say KWOL. Labels stay **Qul/Qu**.
 
 ## Journey decisions (Omar 2026-07-28) — locked
 1. First visit: whole-surah Listen once → current Say. Later: this ayah + Continue.

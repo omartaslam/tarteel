@@ -285,17 +285,31 @@ def test_syllable_rescue_copy_says_qu_not_qul_only():
     ev = coach.evaluate_qu_qul_bridge(1, "كُ", "ku", attempt=2)
     plain = (ev["cards"][0].get("plain") or "") + (ev["cards"][0].get("fix") or "")
     assert "only" in plain.lower() and "Qu" in plain
-    assert "quality" in plain.lower()
+    assert "call" in plain.lower()
     assert "not full Qul" in plain or "not</b> say the full word" in plain
     assert "focusw\">Qu" in (ev["cards"][0].get("section") or "")
 
 
-def test_qul_kaf_tip_teaches_qual_not_cull():
+def test_qul_kaf_tip_teaches_the_call_k_not_quality():
+    """Measured on Omar 2026-07-29: "call" produced real qaf (ق) at 0.93 across
+    four cut boundaries, while "quality" produced kaf (ك). The cue is "call"."""
     tip = coach.FIX[("ك", "ق")]
-    blob = (tip.get("want") or "") + (tip.get("fix") or "")
-    assert "QUAL" in blob
-    assert "quality" in blob.lower()
-    assert "cull" in blob.lower() or "cool" in blob.lower()
+    blob = " ".join(str(tip.get(k) or "") for k in ("heard", "want", "fix"))
+    low = blob.lower()
+    # The cue he can actually produce.
+    assert "call" in low and "CAW-l" in blob and "pull" in low
+    # Name the wrong sounds so he knows what to stop doing.
+    assert "cull" in low or "cool" in low
+    assert "KWOL" in blob
+    # "quality" made him say KWOL — a kaf. It must not come back as the cue.
+    assert "quality" not in low
+
+
+def test_no_stage_hint_still_teaches_quality():
+    from stages import list_stages
+    for v in (1, 2):
+        for s in list_stages(v):
+            assert "quality" not in (s.get("hint") or "").lower(), s["id"]
 
 
 def test_qul_again_on_huwa_is_wrong_stage_not_mystery_miss():

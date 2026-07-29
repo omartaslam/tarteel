@@ -26,8 +26,12 @@ STAGES = {
             "say_en": "Qul",
             "say_ar": "قُلْ",
             "hint": (
-                "Say the full word <b>Qul</b> (قُلْ). English sound cue: <b>QUAL</b> "
-                "like the start of <b>quality</b> — not “cull/cool”. "
+                "Say the full word <b>Qul</b> (قُلْ).<br>"
+                "<b>1.</b> Say <b>CAW-l</b> (the word “call”).<br>"
+                "<b>2.</b> Hold that throat position — don’t move it.<br>"
+                "<b>3.</b> Keep it there and change only the vowel to the short "
+                "<b>u</b> in “pull” → <b>QUL</b>.<br>"
+                "Not “KWOL” and not “KUL”. "
                 "Three tries here; if stuck we’ll break it into Qu + ul."
             ),
             "words": ["qul"],
@@ -39,8 +43,10 @@ STAGES = {
             "say_en": "Qu",
             "say_ar": "قُ",
             "hint": (
-                "Syllable rescue — only Qu (قُ). English cue: <b>QUA</b> like <b>quality</b>, "
-                "not “coo/cu”. Yellow mark on the ayah shows where you are."
+                "Syllable rescue — only the start (قُ). Say <b>CAW</b> (the start of "
+                "“call”) and stop before the L. That back throat position is the "
+                "sound. Not “coo”, not “kwa”. "
+                "Yellow mark on the ayah shows where you are."
             ),
             "words": [],
             "idxs": [0],
@@ -78,8 +84,8 @@ STAGES = {
             "say_en": "Qul huwa",
             "say_ar": "قُلْ هُوَ",
             "hint": (
-                "Join: <b>QUAL</b> (like quality) then <b>HOO-wa</b>. "
-                "Keep the ق from Qul and the W from huwa."
+                "Join: <b>QUL</b> (throat from “call” + vowel from “pull”) then <b>HOO-wa</b>. "
+                "Keep the deep throat K from Qul and the W from huwa."
             ),
             "words": ["qul", "huwa"],
             "idxs": [0, 1],
@@ -101,7 +107,7 @@ STAGES = {
             "title": "Qul huwa Allāhu",
             "say_en": "Qul huwa Allāhu",
             "say_ar": "قُلْ هُوَ ٱللَّهُ",
-            "hint": "Join through Allāhu — QUAL · HOO-wa · Al-LAA-hu.",
+            "hint": "Join through Allāhu — QUL (call-throat + pull-vowel) · HOO-wa · Al-LAA-hu.",
             "words": ["qul", "huwa", "Allāhu"],
             "idxs": [0, 1, 2],
         },
@@ -122,7 +128,7 @@ STAGES = {
             "title": "Full ayah",
             "say_en": "Qul huwa Allāhu aḥad",
             "say_ar": "قُلْ هُوَ ٱللَّهُ أَحَدٌ",
-            "hint": "Whole ayah: QUAL · HOO-wa · Al-LAA-hu · a-ḤAD. Keep every locked piece.",
+            "hint": "Whole ayah: QUL (call-throat + pull-vowel) · HOO-wa · Al-LAA-hu · a-ḤAD. Keep every locked piece.",
             "words": ["qul", "huwa", "Allāhu", "aḥad"],
             "idxs": [0, 1, 2, 3],
         },

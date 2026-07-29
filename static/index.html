@@ -249,7 +249,7 @@ function updateJourneyBanner(){
   const el=$('journeyBanner');
   if(!el) return;
   if(!surahIntroHeard()){
-    el.innerHTML='<b>First visit:</b> Listen to the <b>whole short surah</b> once, then lock one piece at a time starting with <b>Qul</b> (QUALITY + PULL). Resume anytime — progress is saved.';
+    el.innerHTML='<b>First visit:</b> Listen to the <b>whole short surah</b> once, then lock one piece at a time starting with <b>Qul</b> (say “call”, hold the throat, then the “pull” vowel). Resume anytime — progress is saved.';
     return;
   }
   const {cur, idx, ladder}=currentStage(v);
@@ -295,24 +295,24 @@ const STAGE_LADDER={
   1:[
     {
       id:'qul', title:'Qul', say_en:'Qul', say_ar:'قُلْ',
-      hint:'Say the full word Qul (قُلْ). English cue: <b>QUAL</b> like <b>quality</b> — not “cull/cool”. Three tries here; if stuck we’ll break it into Qu + ul.',
+      hint:'Say the full word Qul (قُلْ).<br><b>1.</b> Say <b>CAW-l</b> (the word “call”).<br><b>2.</b> Hold that throat position — don’t move it.<br><b>3.</b> Keep it there and change only the vowel to the short <b>u</b> in “pull” → <b>QUL</b>.<br>Not “KWOL” and not “KUL”. Three tries here; if stuck we’ll break it into Qu + ul.',
       idxs:[0],
       hear:'/samples/stage_qul_husary.mp3',
       compare:stageComparePair(
         'Qul',
-        'Correct is QUAL / hollow ق. Incorrect is middle ك (cull/cool) — the app must fail that.',
-        '/samples/bench_correct_qaf_qul_minshawi.mp3', 'Correct — Qul (ق / QUAL)', 'Minshawi · back ق',
+        'Correct is the deep throat K, “qaf” (ق) — the K in “call”. Incorrect is the normal English K, “kaf” (ك), as in “cull/cool” — the app must fail that.',
+        '/samples/bench_correct_qaf_qul_minshawi.mp3', 'Correct — Qul (deep throat K)', 'Minshawi · “qaf” (ق)',
         '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — Kul (ك / cull)', 'Arabic speaker · forward K'
       ),
     },
     {
       id:'qu', title:'Qu', say_en:'Qu', say_ar:'قُ',
-      hint:'Syllable rescue — only Qu. English cue: <b>QUA</b> like <b>quality</b>, not “coo/cu”. Yellow mark on the ayah shows where you are.',
+      hint:'Syllable rescue — only the start. Say <b>CAW</b> (the start of “call”), stop before the L. That back throat position is the sound. Not “coo”, not “kwa”. Yellow mark on the ayah shows where you are.',
       idxs:[0], highlight:'qu',
       hear:'/samples/stage_qu_husary.mp3',
       compare:stageComparePair(
         'Qu',
-        'Same contrast for the Qu onset — QUAL / qh, not coo/cull.',
+        'Same contrast for the Qu onset — the deep throat K in “call”, not “coo/cull”.',
         '/samples/bench_correct_qaf_qul_minshawi.mp3', 'Correct — Qu onset (ق / QUA)', 'Minshawi · back ق',
         '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — Ku (ك)', 'Forward K — must fail'
       ),
@@ -343,12 +343,12 @@ const STAGE_LADDER={
     },
     {
       id:'qul_huwa', title:'Qul huwa', say_en:'Qul huwa', say_ar:'قُلْ هُوَ',
-      hint:'Join: <b>QUAL</b> (like quality) then <b>HOO-wa</b>. Keep ق and the W.',
+      hint:'Join: <b>QUL</b> (throat from “call”, vowel from “pull”) then <b>HOO-wa</b>. Keep the deep throat K and the W.',
       idxs:[0,1],
       hear:'/samples/real_ikhlas1_husary_full.mp3',
       compare:stageComparePair(
         'Qul huwa',
-        'Join QUAL then HOO-wa. Keep back ق — middle ك still fails.',
+        'Join QUL then HOO-wa. Keep the deep throat K, “qaf” (ق) — the normal English K, “kaf” (ك), still fails.',
         '/samples/real_ikhlas1_husary_full.mp3', 'Correct — Qul huwa join', 'Al-Husary · phrase model',
         '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — ك on Qul', 'Forward K in the join — must fail'
       ),
@@ -367,12 +367,12 @@ const STAGE_LADDER={
     },
     {
       id:'qul_huwa_allahu', title:'Qul huwa Allāhu', say_en:'Qul huwa Allāhu', say_ar:'قُلْ هُوَ ٱللَّهُ',
-      hint:'Join: QUAL · HOO-wa · Al-LAA-hu.',
+      hint:'Join: QUL (call-throat + pull-vowel) · HOO-wa · Al-LAA-hu.',
       idxs:[0,1,2],
       hear:'/samples/real_ikhlas1_husary_full.mp3',
       compare:stageComparePair(
         'Qul huwa Allāhu',
-        'QUAL · HOO-wa · Al-LAA-hu. Keep back ق through the join.',
+        'QUL · HOO-wa · Al-LAA-hu. Keep the deep throat K, “qaf” (ق), through the join.',
         '/samples/real_ikhlas1_husary_full.mp3', 'Correct — three-word join', 'Al-Husary · phrase model',
         '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — ك on Qul', 'Forward K — must fail'
       ),
@@ -391,12 +391,12 @@ const STAGE_LADDER={
     },
     {
       id:'full', title:'Full ayah', say_en:'Qul huwa Allāhu aḥad', say_ar:'قُلْ هُوَ ٱللَّهُ أَحَدٌ',
-      hint:'Whole ayah: QUAL · HOO-wa · Al-LAA-hu · a-ḤAD. Keep every locked piece.',
+      hint:'Whole ayah: QUL (call-throat + pull-vowel) · HOO-wa · Al-LAA-hu · a-ḤAD. Keep every locked piece.',
       idxs:[0,1,2,3],
       hear:'/samples/real_ikhlas1_husary_full.mp3',
       compare:stageComparePair(
         'Qul huwa Allāhu aḥad',
-        'Full ayah: QUAL · HOO-wa · Al-LAA-hu · a-ḤAD. Back ق still required.',
+        'Full ayah: QUL · HOO-wa · Al-LAA-hu · a-ḤAD. Deep throat K, “qaf” (ق), still required.',
         '/samples/real_ikhlas1_husary_full.mp3', 'Correct — full ayah', 'Al-Husary · whole line',
         '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — ك on Qul', 'Forward K — must fail'
       ),
@@ -768,7 +768,7 @@ function renderStageBox(stOverride){
       + (left? `${left} left, then ask a teacher.` : `Last try — then ask a teacher if it still misses.`)
       + `</p></div>`;
   } else if(onQu){
-    modeNote = `<div class="bridgebox"><p class="bt">Say only <b>Qu</b> — English cue <b>QUA</b> like <b>quality</b>, not “coo”. Not the full word Qul.</p></div>`;
+    modeNote = `<div class="bridgebox"><p class="bt">Say only the start — <b>CAW</b>, the start of “call”, stopped before the L. Not “coo”, not “kwa”. Not the full word Qul.</p></div>`;
   } else if(onUl){
     modeNote = `<div class="bridgebox"><p class="bt">Say only <b>ul</b> — like the end of “pull” / “full”. No Q/K onset.</p></div>`;
   }
@@ -1111,7 +1111,7 @@ function playNextSurahClip(){
     markSurahIntroHeard();
     updateListenLabel();
     updateJourneyBanner();
-    flashBuildNote('Surah heard. Now say Qul — QUALITY onset + PULL ending.');
+    flashBuildNote('Surah heard. Now say Qul — “call” throat, “pull” vowel.');
     return;
   }
   const code=_surahQueue.shift();
@@ -1432,7 +1432,7 @@ function render(data){
       <div class="al">Syllable rescue · not full Qul</div>
       <div class="as">Say: Qu</div>
       <div class="aa" dir="rtl" lang="ar">قُ</div>
-      <div class="an">Three word tries used. Now say <b>only Qu</b> — English cue <b>QUA</b> like <b>quality</b>. Stop. Listen first.</div>
+      <div class="an">Three word tries used. Now say <b>only the start</b> — <b>CAW</b>, the start of “call”, stopped before the L. Stop. Listen first.</div>
       ${stagePlayHtml('qu', 'Qu', 'playStageWord')}
     </div>`;
   }
