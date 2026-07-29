@@ -144,10 +144,18 @@ def record_label(profile: dict | None, label: str, snapshot: dict | None) -> dic
         "p_kaf": float(snap.get("p_kaf") or 0.0),
     }
     if stage in QAF_STAGES:
-        bucket = "qaf_good" if lab == "correct" else "qaf_bad"
-        rows = list(out.get(bucket) or [])
-        rows.append(point)
-        out[bucket] = rows[-MAX_SAMPLES:]
+        # Only keep anchors the acoustics actually support — a "correct" label
+        # on a take with no clear ق must not teach the profile that 0.57/0.43
+        # is a good deep-throat K.
+        if lab == "correct" and point["p_qaf"] < 0.60:
+            pass
+        elif lab == "wrong" and point["p_kaf"] < 0.35 and point["p_qaf"] >= point["p_kaf"]:
+            pass
+        else:
+            bucket = "qaf_good" if lab == "correct" else "qaf_bad"
+            rows = list(out.get(bucket) or [])
+            rows.append(point)
+            out[bucket] = rows[-MAX_SAMPLES:]
 
     letter = STAGE_LETTER.get((stage, verse_i or 0))
     if letter:
@@ -157,14 +165,19 @@ def record_label(profile: dict | None, label: str, snapshot: dict | None) -> dic
         # Dark L often lands as ر on Omar's takes — count that alias for laam.
         if letter == "ل":
             score = max(score, float(ev.get("ر") or 0.0))
-        letters = dict(out.get("letters") or {})
-        slot = dict(letters.get(letter) or {"good": [], "bad": []})
-        key = "good" if lab == "correct" else "bad"
-        scores = list(slot.get(key) or [])
-        scores.append(round(score, 4))
-        slot[key] = scores[-MAX_SAMPLES:]
-        letters[letter] = slot
-        out["letters"] = letters
+        # Don't store "correct" with near-zero letter evidence — that poisons
+        # the soft-pass baseline (session c9342d: learner said correct, L=0.13).
+        if lab == "correct" and score < 0.35:
+            pass
+        else:
+            letters = dict(out.get("letters") or {})
+            slot = dict(letters.get(letter) or {"good": [], "bad": []})
+            key = "good" if lab == "correct" else "bad"
+            scores = list(slot.get(key) or [])
+            scores.append(round(score, 4))
+            slot[key] = scores[-MAX_SAMPLES:]
+            letters[letter] = slot
+            out["letters"] = letters
 
     return out
 

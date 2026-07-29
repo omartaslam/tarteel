@@ -279,8 +279,8 @@ def test_compare_ignores_whisper_muminuna_invention():
     low = html.lower()
     assert "muʾmin" not in low and "mumin" not in low
     assert "measured sound" in low
-    # You line should be the measured letter, not the invented phrase.
-    assert ">L<" in html or ">l<" in html or "L</span>" in html or ">L</" in html
+    # You line shows measured Arabic letters, not the invented phrase.
+    assert ">ل<" in html or "ل</span>" in html
 
 
 def test_compare_html_full_ayah_still_shows_all_words():
@@ -410,10 +410,37 @@ def test_missing_ending_beats_the_generic_shape_complaint():
     assert cards[0].get("key") == "pronunciation:qul:need_ل"
     assert not any((c.get("key") or "") == "word_shape:qul" for c in cards)
     blob = (cards[0].get("fix") or "") + (cards[0].get("plain") or "")
-    assert "opening was right" in blob
+    assert "deep throat K" in blob or "opening" in blob.lower()
     assert "call" in blob.lower()
-    # Tell him what he actually landed on, not a bare question mark.
+    # Tell him what he actually landed on, not a bare question mark / fake Qūna.
     assert "(?)" not in blob
+    assert "Qūna" not in blob
+
+
+def test_ambiguous_qaf_with_noon_ending_is_honest():
+    """Session 20260729-213251-c9342d: learner said Qul/Qual, labelled correct.
+    Acoustics were ambiguous ق/ك (~0.57/0.43) ending like ن — must not invent
+    'Qūna' or claim the opening was right."""
+    cards = build_feedback(
+        1, [], None, heard_arabic="كُل", heard_phonetic="Kul",
+        stage_id="qul", locked_stages=[],
+        onset_probe={
+            "p_qaf": 0.571, "p_kaf": 0.428,
+            "p_qaf_full": 0.571, "p_kaf_full": 0.428, "onset": "قون",
+        },
+        acoustic={
+            "letters": "قون",
+            "evidence": {"ق": 0.571, "ك": 0.428, "ل": 0.132, "ر": 0.007, "ن": 0.8, "و": 1.0},
+        },
+    )
+    blob = ((cards[0].get("plain") or "") + (cards[0].get("fix") or "")).lower()
+    assert "qūna" not in blob and "quna" not in blob
+    assert "opening was right" not in blob
+    assert "n" in blob and "l" in blob
+    assert coach.onset_qaf_verdict({
+        "p_qaf": 0.571, "p_kaf": 0.428,
+        "p_qaf_full": 0.571, "p_kaf_full": 0.428, "onset": "قون",
+    })["has_qaf"] is False
 
 
 def test_huwa_needs_its_waw_not_just_a_ha():

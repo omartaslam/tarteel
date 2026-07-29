@@ -3,6 +3,7 @@ XLSR-based analysis: forced-align with the diverse-speaker model (works on
 ordinary voices), locate the qalqalah letter, run the trained classifier.
 Replaces the MFA path in analyze.py.
 """
+import re
 import torch, librosa, subprocess, os, pickle, numpy as np
 import torchaudio.functional as TAF
 from transformers import Wav2Vec2ForCTC, AutoProcessor
@@ -51,7 +52,19 @@ class AnalysisCancelled(Exception):
 ONSET_WINDOW_S = 0.50
 
 # Letters we gate stages on, so the gates can read audio instead of a transcript.
-GATE_LETTERS = "قكلرهوحادصمي"
+# ن is included so an ending that drifted to N (not L) can be named honestly.
+GATE_LETTERS = "قكلنرهوحادصمي"
+
+# Arabic letters only — drop harakat so we never display invented "Qūna".
+_AR_LETTER = re.compile(r"[\u0621-\u064A]")
+
+
+def _letters_only_ar(chars) -> str:
+    out = []
+    for c in chars or []:
+        if _AR_LETTER.fullmatch(c):
+            out.append(c)
+    return "".join(out)
 
 
 def free_read(emissions, proc) -> dict:
@@ -72,7 +85,7 @@ def free_read(emissions, proc) -> dict:
     for i in ids:
         if i != prev and i != blank:
             c = inv.get(i, "")
-            if c and c not in ("|", " "):
+            if c and c not in ("|", " ") and _AR_LETTER.fullmatch(c):
                 letters.append(c)
         prev = i
     ev = {
@@ -90,19 +103,20 @@ def onset_probe(emissions, proc, dur: float) -> dict:
     alignment is constrained to the expected ayah, so it can only ever emit ق
     and would report ق for silence; that bug let the Qul stage pass anything.
 
-    Returns {p_qaf, p_kaf, onset} where the probabilities are the strongest
-    frame-level evidence for each letter inside the first ONSET_WINDOW_S of
-    voiced audio.
+    Returns {p_qaf, p_kaf, p_qaf_full, p_kaf_full, onset}. Window scores decide
+    clear cases; full-clip scores confirm a first-letter tip when the window is
+    muddled. Session 20260729-213251: window/full both ~0.57/0.43 — must NOT
+    claim ق just because the argmax string started with ق.
     """
     vocab = proc.tokenizer.get_vocab()
     qaf, kaf = vocab.get("ق"), vocab.get("ك")
     blank = proc.tokenizer.pad_token_id
     if qaf is None or kaf is None:
-        return {"p_qaf": 0.0, "p_kaf": 0.0, "onset": ""}
+        return {"p_qaf": 0.0, "p_kaf": 0.0, "p_qaf_full": 0.0, "p_kaf_full": 0.0, "onset": ""}
     probs = emissions.exp()[0]
     T = probs.shape[0]
     if not T or dur <= 0:
-        return {"p_qaf": 0.0, "p_kaf": 0.0, "onset": ""}
+        return {"p_qaf": 0.0, "p_kaf": 0.0, "p_qaf_full": 0.0, "p_kaf_full": 0.0, "onset": ""}
     best = torch.argmax(probs, dim=-1)
     voiced = (best != blank).nonzero().flatten()
     start = int(voiced[0]) if len(voiced) else 0
@@ -112,11 +126,15 @@ def onset_probe(emissions, proc, dur: float) -> dict:
     letters, prev = [], None
     for tok in torch.argmax(win, dim=-1).tolist():
         if tok != prev and tok != blank:
-            letters.append(inv.get(tok, ""))
+            c = inv.get(tok, "")
+            if c and _AR_LETTER.fullmatch(c):
+                letters.append(c)
         prev = tok
     return {
         "p_qaf": round(float(win[:, qaf].max()), 3),
         "p_kaf": round(float(win[:, kaf].max()), 3),
+        "p_qaf_full": round(float(probs[:, qaf].max()), 3),
+        "p_kaf_full": round(float(probs[:, kaf].max()), 3),
         "onset": "".join(letters)[:8],
     }
 

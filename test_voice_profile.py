@@ -144,6 +144,21 @@ def test_unsure_does_not_pollute_profile():
     assert out["qaf_bad"] == []
 
 
+def test_weak_correct_label_does_not_poison_baselines():
+    """Learner said correct on c9342d but L was 0.13 and ق was 0.57 — keep out."""
+    prof = vp.empty_profile()
+    snap = {
+        "p_qaf": 0.571,
+        "p_kaf": 0.428,
+        "evidence": {"ل": 0.132, "ر": 0.007},
+        "stage_id": "qul",
+        "verse": 1,
+    }
+    out = vp.record_label(prof, "correct", snap)
+    assert out["qaf_good"] == []
+    assert out.get("letters", {}).get("ل", {}).get("good", []) == []
+
+
 def test_key_letter_soft_pass_from_learner_goods():
     # Absolute floor is 0.45 — 0.38 would fail without a profile.
     assert vp.key_letter_relative_ok("ح", 0.38, None) is False

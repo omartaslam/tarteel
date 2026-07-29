@@ -407,21 +407,36 @@ def build_feedback(
             stage_passed = False
             say = (stage or {}).get("say_en") or focus_word or "this word"
             say_ar = (stage or {}).get("say_ar") or ""
-            raw = (acoustic or {}).get("letters") or ""
-            measured = coach._romanize(raw)
-            # Name the sound they actually landed on, instead of a bare "?".
+            raw = coach.normalize_ar((acoustic or {}).get("letters") or "").replace(" ", "")
+            ev = ((acoustic or {}).get("evidence") or {})
+            # Never print CTC junk like "Qūna" as if that were the word heard.
+            # Describe the pieces in English from evidence.
+            heard_txt = miss_sounds_like
             ended_on = raw[-1] if raw else "?"
-            heard_txt = (
-                f"the sounds <b>{measured}</b> — {miss_sounds_like}"
-                if measured else miss_sounds_like
-            )
-            # Only Qul has an opening we separately verify, and only claim it was
-            # right when it actually was. On other stages the missing letter IS
-            # the point, so praising an "opening" would be meaningless noise.
-            onset_ok = bool(align_q.get("has_qaf")) or "ق" in (heard_arabic or "")
+            if letter == "ل" and (stage or {}).get("id") == "qul":
+                p_n = float(ev.get("ن") or 0.0)
+                p_l = max(float(ev.get("ل") or 0.0), float(ev.get("ر") or 0.0))
+                if p_n >= 0.35 and p_n > p_l:
+                    heard_txt = (
+                        "a Q-like start that ended more like an <b>N</b> "
+                        "(nose/lips) than an <b>L</b> (tongue tip)"
+                    )
+                    ended_on = "ن"
+                elif raw:
+                    heard_txt = (
+                        "a start without a clear tongue-tip <b>L</b> at the end "
+                        f"(measured letters: <span class=\"arlight\">{raw}</span>)"
+                    )
+            elif raw:
+                heard_txt = (
+                    f"measured letters <span class=\"arlight\">{raw}</span> — "
+                    f"{miss_sounds_like}"
+                )
+            # Only claim the Qul opening was right when ق clearly beat ك.
+            onset_ok = bool(align_q.get("has_qaf")) and not align_q.get("has_kaf")
             opener = (
-                "<b>Your opening was right this time</b> — it is only the ending "
-                "that is missing.<br>"
+                "<b>Your opening looked like the deep throat K</b> — it is the "
+                "ending that still needs work.<br>"
                 if onset_ok and (stage or {}).get("id") == "qul" else ""
             )
             miss = coach._card(

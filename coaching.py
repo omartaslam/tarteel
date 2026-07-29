@@ -500,8 +500,13 @@ def compare_html(
     )
     full_expected = EXPECTED.get(verse) or []
     line = AYAH_LINE.get(verse) or {"ph": [], "ar": []}
-    you_phs = _heard_phonetics(use_ar, use_ph)
-    aligned = _align_stage(verse, use_ar, use_ph, stage_words)
+    # When You is measured CTC letters, do NOT romanize into fake words
+    # like "Qūna" (session 20260729-213251). Show the Arabic letters.
+    if used_measured:
+        you_phs = [use_ar] if (use_ar or "").strip() else ["—"]
+    else:
+        you_phs = _heard_phonetics(use_ar, use_ph)
+    aligned = _align_stage(verse, use_ar, use_ph if not used_measured else use_ar, stage_words)
     allow = (
         {(w or "").lower() for w in stage_words}
         if stage_words is not None
@@ -593,24 +598,35 @@ def onset_qaf_verdict(probe: dict | None) -> dict:
     digital silence, which let the Qul stage pass anything (fixed 2026-07-28).
 
     `probe` comes from analyze_xlsr and carries free-decode probabilities:
-    {p_qaf, p_kaf, onset}. No probe (e.g. unit tests, no audio) means no
-    acoustic evidence either way, so no rescue.
+    {p_qaf, p_kaf, onset} plus optional full-clip {p_qaf_full, p_kaf_full}.
 
-    For speaker-relative gray-zone help, call voice_profile.resolve_qaf_verdict.
-    Absolute thresholds here must stay fixed — they guard the benchmarks.
+    First-letter rescue: a muddled 0.5s window can start with ق while scores are
+    split. Only honour that when the FULL clip also looks like ق (not ك). Session
+    20260729-213251 started with ق at 0.57/0.43 on both window and full — that
+    is ambiguous, not a pass.
     """
     pq = float((probe or {}).get("p_qaf") or 0.0)
     pk = float((probe or {}).get("p_kaf") or 0.0)
+    pq_full = float((probe or {}).get("p_qaf_full") or pq)
+    pk_full = float((probe or {}).get("p_kaf_full") or pk)
     onset = (probe or {}).get("onset") or ""
-    # The 0.5s window can straddle a slow or breathy release and end up split
-    # between both letters. The unconstrained decode also gives us the letters
-    # in order, so a take that literally starts with ق is qaf evidence even when
-    # the window is muddled. Omar's 11:55 take scored 0.58/0.42 in the window but
-    # decoded as قوم and measured 0.97 over the whole clip.
     first = next((c for c in onset if c in ("ق", "ك")), "")
+    clear_q = pq >= QAF_ONSET_MIN and pk <= QAF_ONSET_RIVAL_MAX
+    clear_k = pk >= QAF_ONSET_MIN and pq <= QAF_ONSET_RIVAL_MAX
+    # First-letter tip only when the whole take backs it with clear scores.
+    first_q = (
+        first == "ق"
+        and pq_full >= QAF_ONSET_MIN
+        and pk_full <= QAF_ONSET_RIVAL_MAX
+    )
+    first_k = (
+        first == "ك"
+        and pk_full >= QAF_ONSET_MIN
+        and pq_full <= QAF_ONSET_RIVAL_MAX
+    )
     return {
-        "has_qaf": (pq >= QAF_ONSET_MIN and pk <= QAF_ONSET_RIVAL_MAX) or first == "ق",
-        "has_kaf": (pk >= QAF_ONSET_MIN and pq <= QAF_ONSET_RIVAL_MAX) or first == "ك",
+        "has_qaf": clear_q or first_q,
+        "has_kaf": clear_k or first_k,
         "p_qaf": round(pq, 3),
         "p_kaf": round(pk, 3),
         "onset": onset,
