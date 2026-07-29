@@ -38,6 +38,21 @@ Ayah 1 is the filled prototype. Replicate the same shape for every later step:
 
 See `STAGE CONTRACT` in `static/index.html` and `test_stage_contract.py`.
 
+## Hard rule — NEVER write a bare Arabic letter (Omar, 2026-07-29, stated twice)
+Every Arabic letter must arrive as **English sound → English letter name → Arabic in brackets**.
+This applies to chat replies, UI copy, cards and commit messages. No exceptions.
+
+| write this | never just this |
+|---|---|
+| deep throat K, "qaf" (ق) | ق |
+| normal English K, "kaf" (ك) | ك |
+| L, "laam" (ل) | ل |
+| rolled R, "raa" (ر) | ر |
+| strong throat H, "haa" (ح) | ح |
+| soft breathy H, "ha" (ه) | ه |
+| W, "waw" (و) | و |
+| D, "daal" (د) | د |
+
 ## Hard rule — English phonetics (learner lesson 2026-07-28)
 **Every coaching cue must use English sounds a beginner can actually make.**
 
