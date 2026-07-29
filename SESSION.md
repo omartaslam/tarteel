@@ -1,11 +1,15 @@
 # Tarteel — session handoff
 
-Last updated: 2026-07-28 ~20:58 UTC
+Last updated: 2026-07-29 ~21:00 UTC
 
 **Full:** `HANDOVER.md` · **Next agent start:** `CONTINUE.md`
 
+## ROLLBACK MARKER (Opus 5)
+**Tag `stable-opus5-cursor` = commit `80ff5d9`.** Last Cursor Opus 5 live build
+(ح/ص gates). Revert here if speaker-relative baseline work goes wrong.
+
 ## LIVE NOW
-`/health` → **`ebc810a79b9c`** — hard-refresh the phone before testing.
+`/health` → **`80ff5d95565d`** (matches tag) — hard-refresh the phone before testing.
 
 Three fixes, all verified against live:
 
