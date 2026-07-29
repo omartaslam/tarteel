@@ -216,9 +216,32 @@ def heard_summary_en(
     ev = sound_evidence if isinstance(sound_evidence, dict) else {}
     probe = onset_probe if isinstance(onset_probe, dict) else {}
     sid = (stage_id or "").strip()
-    pq = float(probe.get("p_qaf") or ev.get("ق") or 0.0)
-    pk = float(probe.get("p_kaf") or ev.get("ك") or 0.0)
-    pl = max(float(ev.get("ل") or 0.0), float(ev.get("ر") or 0.0))
+
+    def _p(d: dict, *keys: str) -> float:
+        """Read a probability; treat missing as 0, but keep real 0.0 (do not
+        fall through with `or` — session 1f650c had window p_qaf=0.0 and
+        `0.0 or evidence` falsely pulled full-clip ق=1.0 into the summary)."""
+        for k in keys:
+            if k in d and d[k] is not None:
+                try:
+                    return float(d[k])
+                except (TypeError, ValueError):
+                    continue
+        return 0.0
+
+    pq = _p(probe, "p_qaf")
+    if "p_qaf" not in probe:
+        pq = _p(ev, "ق")
+    pk = _p(probe, "p_kaf")
+    if "p_kaf" not in probe:
+        pk = _p(ev, "ك")
+    # Ending L: require ل (or ر only as soft alias when ل is also present).
+    # Counting bare ر as “ending L ✓” on كور (ر=0.78, ل≈0) was another lie.
+    pl = _p(ev, "ل")
+    if pl < _SUMMARY_L_MIN:
+        pr = _p(ev, "ر")
+        if pl >= 0.15 and pr >= _SUMMARY_L_MIN:
+            pl = pr
     parts: list[str] = []
     # Use literals — this helper sits above the QAF_ONSET_* constants.
     q_min, k_rival = 0.60, 0.30
@@ -228,6 +251,8 @@ def heard_summary_en(
             parts.append('deep-throat K (“call”) ✓')
         elif pk >= q_min and pq <= k_rival:
             parts.append('English K (“cool/cull”) — not “call”')
+        elif pq >= q_min and pk >= q_min:
+            parts.append("opening unclear — both K colours present")
         elif pq >= pk and pq >= 0.35:
             parts.append("maybe deep-throat K — not sure yet")
         elif pk > pq and pk >= 0.35:

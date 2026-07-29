@@ -321,12 +321,25 @@ def resolve_qaf_verdict(
       1) absolute XLSR onset thresholds (benchmarks)
       2) english_anchor — multi-speaker “call/Qul” vs “cool/kaf” clusters
       3) speaker_relative — this device’s labelled takes (personalisation only)
+
+    Anchors must NOT pick a side when absolute already sees a strong ق or ك
+    (or both). Session 20260729-223145-849b3b: absolute ق=0.993 and ك=0.96
+    (both strong → unclear), then english_anchor forced has_kaf and the app
+    told Omar “middle K / ask a teacher” while ق was 0.993. That is fraud.
     """
-    from coaching import onset_qaf_verdict
+    from coaching import onset_qaf_verdict, QAF_ONSET_MIN
 
     abs_v = onset_qaf_verdict(probe)
     out = {**abs_v, "source": "absolute"}
     if abs_v.get("has_qaf") or abs_v.get("has_kaf"):
+        return out
+
+    pq = float(abs_v.get("p_qaf") or 0.0)
+    pk = float(abs_v.get("p_kaf") or 0.0)
+    # Either letter already strong (or both): stay with absolute ambiguity.
+    # Do not let cool/Qul clusters invent a confident winner.
+    if pq >= QAF_ONSET_MIN or pk >= QAF_ONSET_MIN:
+        out["source"] = "absolute_strong_ambiguous"
         return out
 
     hint = english_anchor_qaf_hint(english_anchor)

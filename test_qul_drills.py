@@ -533,6 +533,41 @@ def test_clear_kaf_still_gets_call_fix():
     assert "no clear ending l" in summary["headline"].lower()
 
 
+def test_both_strong_qaf_and_kaf_never_forced_to_kaf_by_anchor():
+    """Session 20260729-223145-849b3b: absolute ق=0.993 ك=0.96, then
+    english_anchor forced kaf → 'middle K' + eventually ask-a-teacher.
+    Anchors must stay silent; app must not invent a ك→ق fix."""
+    import voice_profile as vp
+
+    probe = {
+        "p_qaf": 0.993, "p_kaf": 0.96,
+        "p_qaf_full": 0.993, "p_kaf_full": 0.96, "onset": "كولق",
+    }
+    anchor = {
+        "p_qaf": 0.0619, "margin": -1.2035,
+        "d_q": 10.1769, "d_k": 8.9734, "version": "qu_acoustic_v1_corpus",
+    }
+    v = vp.resolve_qaf_verdict(probe, None, english_anchor=anchor)
+    assert v["has_qaf"] is False and v["has_kaf"] is False
+    assert v["source"] == "absolute_strong_ambiguous"
+
+    cards = build_feedback(
+        1, [], None, heard_arabic="كَلَّا", heard_phonetic="Kallā",
+        stage_id="qul", locked_stages=[],
+        onset_probe=probe,
+        acoustic={
+            "letters": "كولق",
+            "evidence": {"ق": 0.993, "ك": 0.96, "ل": 0.597, "و": 1.0},
+        },
+        english_anchor=anchor,
+    )
+    assert cards[0].get("key") == "pronunciation:qul:unclear_onset"
+    blob = ((cards[0].get("plain") or "") + (cards[0].get("fix") or "")).lower()
+    assert "will not guess" in blob or "unclear" in blob
+    assert "middle k" not in blob
+    assert "ك→ق" not in (cards[0].get("key") or "")
+
+
 def test_huwa_needs_its_waw_not_just_a_ha():
     """aḥad (heard "هُ أَحَدٌ") used to clear huwa — a bare ه scored near هو."""
     fail = build_feedback(
