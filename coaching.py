@@ -206,8 +206,12 @@ def heard_summary_en(
     """English-first reading of what the audio supports.
 
     Never show CTC letter salad (قنيا) or Whisper inventions (Kurrahu) as the
-    learner-facing "what we heard". Session 20260729-215205: ق was excellent,
-    ending was N not L — say that in English.
+    learner-facing "what we heard".
+
+    Ending letters: only report a clear L, or say it is not clear yet.
+    Do NOT name a rival (N / M / …) from whole-clip CTC max scores — those
+    invent endings (sessions affdf3→false N, 62ad5d→false M while playback
+    and Whisper both had L). Whack-a-mole rival claims are not a solution.
     """
     ev = sound_evidence if isinstance(sound_evidence, dict) else {}
     probe = onset_probe if isinstance(onset_probe, dict) else {}
@@ -215,8 +219,6 @@ def heard_summary_en(
     pq = float(probe.get("p_qaf") or ev.get("ق") or 0.0)
     pk = float(probe.get("p_kaf") or ev.get("ك") or 0.0)
     pl = max(float(ev.get("ل") or 0.0), float(ev.get("ر") or 0.0))
-    pn = float(ev.get("ن") or 0.0)
-    pm = float(ev.get("م") or 0.0)
     parts: list[str] = []
     # Use literals — this helper sits above the QAF_ONSET_* constants.
     q_min, k_rival = 0.60, 0.30
@@ -236,13 +238,6 @@ def heard_summary_en(
     if sid == "qul":
         if pl >= _SUMMARY_L_MIN:
             parts.append("ending L ✓")
-        # Need a clear N-over-L margin. Session 20260729-220246: L=0.38 N=0.57
-        # after a bad AAC loudnorm path — learner + playback + Whisper heard L.
-        # Do not call N when L is still substantial.
-        elif pn >= 0.55 and pn >= pl + 0.25:
-            parts.append("ending more like N than L")
-        elif pm >= 0.55 and pm >= pl + 0.25:
-            parts.append("ending more like M (lips closed) than L")
         else:
             parts.append("no clear ending L yet")
     elif sid == "ul":

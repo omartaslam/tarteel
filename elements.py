@@ -421,24 +421,15 @@ def build_feedback(
             say_ar = (stage or {}).get("say_ar") or ""
             raw = coach.normalize_ar((acoustic or {}).get("letters") or "").replace(" ", "")
             ev = ((acoustic or {}).get("evidence") or {})
-            # Never print CTC junk like "Qūna" as if that were the word heard.
-            # Describe the pieces in English from evidence.
+            # Never print CTC junk like "Qūna" / "كوم" as if that were the word
+            # heard, and never invent a rival ending (N/M) from whole-clip max.
             heard_txt = miss_sounds_like
-            ended_on = raw[-1] if raw else "?"
+            ended_on = raw[-1] if raw else ""
             if letter == "ل" and (stage or {}).get("id") == "qul":
-                p_n = float(ev.get("ن") or 0.0)
-                p_l = max(float(ev.get("ل") or 0.0), float(ev.get("ر") or 0.0))
-                if p_n >= 0.35 and p_n > p_l:
-                    heard_txt = (
-                        "a Q-like start that ended more like an <b>N</b> "
-                        "(nose/lips) than an <b>L</b> (tongue tip)"
-                    )
-                    ended_on = "ن"
-                elif raw:
-                    heard_txt = (
-                        "a start without a clear tongue-tip <b>L</b> at the end "
-                        f"(measured letters: <span class=\"arlight\">{raw}</span>)"
-                    )
+                heard_txt = (
+                    "a start without a clear tongue-tip <b>L</b> at the end"
+                )
+                ended_on = ""
             elif raw:
                 heard_txt = (
                     f"measured letters <span class=\"arlight\">{raw}</span> — "
@@ -465,13 +456,21 @@ def build_feedback(
                         f"{cue}.<br>{how_to}<br>"
                         f"Tap Hear only {say} and copy it."
                     ),
-                    "ar": (ended_on, letter),
+                    "ar": (ended_on, letter) if ended_on else ("", letter),
                 },
-                ended_on,
+                ended_on or "?",
                 letter,
                 rule="pronunciation",
             )
             miss["key"] = f"pronunciation:{(stage or {}).get('id')}:need_{letter}"
+            if letter == "ل" and (stage or {}).get("id") == "qul":
+                # Don't print "(?)" / fake heard-letter — we only know L was not clear.
+                miss["plain"] = (
+                    f"On <b>{say}</b> <span class=\"arlight\">({say_ar})</span>: "
+                    f"{heard_txt}. "
+                    f"Want {say} with {cue}."
+                )
+                miss["heard_letter"] = None
             # This is more useful than the generic shape complaint about the same
             # word, so replace it rather than stacking both.
             errors = [
@@ -481,20 +480,27 @@ def build_feedback(
             errors.insert(0, miss)
             blocking = [c for c in errors if _blocks_stage(c)]
 
-    # Qul lock requires back ق — Whisper ق, clear qh/QUAL, XLSR onset ق,
-    # or generic english-anchor cluster (cool vs Qul). Shape-near without ق
-    # must NOT skip to huwa.
+    # Qul lock requires back ق — clear acoustic onset ق, english-anchor cluster,
+    # or (tests without a probe) Whisper/phonetic cues. When a probe EXISTS,
+    # Whisper letters must NOT pick the fix: short takes invent ك/ق and then we
+    # coach the wrong sound. Ambiguous onset → honest "unclear", not a fake ك→ق.
     needs_qaf = (stage or {}).get("id") == "qul" or (
         {(w or "").lower() for w in (stage_words or [])} == {"qul"}
     )
-    has_qaf = (
-        "ق" in (heard_arabic or "")
-        or coach.phonetic_back_q(heard_phonetic or "")
-        or align_rescues_qaf
-    )
-    has_kaf = "ك" in (heard_arabic or "") or (
-        bool(align_q.get("has_kaf")) and not bool(align_q.get("has_qaf"))
-    )
+    if onset_probe is not None:
+        has_qaf = bool(align_q.get("has_qaf"))
+        has_kaf = bool(align_q.get("has_kaf")) and not has_qaf
+        onset_unclear = (not has_qaf) and (not has_kaf)
+    else:
+        has_qaf = (
+            "ق" in (heard_arabic or "")
+            or coach.phonetic_back_q(heard_phonetic or "")
+            or align_rescues_qaf
+        )
+        has_kaf = "ك" in (heard_arabic or "") or (
+            bool(align_q.get("has_kaf")) and not bool(align_q.get("has_qaf"))
+        )
+        onset_unclear = False
     if align_rescues_qaf:
         # Drop Whisper-only ك→ق blocks — letter track confirmed back ق.
         errors = [
@@ -512,7 +518,77 @@ def build_feedback(
         blocking = [c for c in errors if _blocks_stage(c)]
         stage_passed = not blocking and not miss_words
         has_kaf = False
-    if needs_qaf and (not has_qaf or has_kaf):
+        onset_unclear = False
+        has_qaf = True
+    if needs_qaf and onset_unclear:
+        # Strip any Whisper/transcript ك→ق — that is exactly the fraud path:
+        # invented letters → confident wrong fix. Ambiguous acoustics → no guess.
+        # Also drop "missing L" guesses: if we can't hear the opening, we must
+        # not pretend we diagnosed the ending either.
+        errors = [
+            e
+            for e in errors
+            if not (
+                (e.get("key") or "").endswith("ك→ق")
+                or (e.get("key") or "").endswith("need_ق")
+                or (e.get("key") or "").endswith("need_ل")
+                or (
+                    e.get("rule") == "pronunciation"
+                    and e.get("heard_letter") in ("ك", "?", None)
+                    and e.get("expected_letter") in ("ق", "ل")
+                )
+            )
+        ]
+        stage_passed = False
+        already = any((e.get("key") or "").endswith("unclear_onset") for e in errors)
+        if not already:
+            unclear = coach._card(
+                5,
+                verse,
+                "qul",
+                "قُلْ",
+                {
+                    "heard": "opening unclear on this take — we will not guess",
+                    "want": "one short Qul we can actually hear",
+                    "fix": (
+                        "Play your recording back. If <b>you</b> hear Qul, try again "
+                        "closer to the mic, one short word, then stop.<br>"
+                        "We only coach a specific fix when the opening is clear — "
+                        "guessing ك vs ق from a muddy take teaches the wrong thing."
+                    ),
+                    "ar": ("", "ق"),
+                },
+                "?",
+                "ق",
+                rule="pronunciation",
+            )
+            unclear["key"] = "pronunciation:qul:unclear_onset"
+            unclear["level"] = "error"  # blocks advance; still not a fake letter swap
+            unclear["plain"] = (
+                "On <b>Qul</b> <span class=\"arlight\">(قُلْ)</span>: "
+                "opening unclear on this take — we will not guess. "
+                "Want one short Qul we can actually hear."
+            )
+            unclear["heard_letter"] = None
+            errors.insert(0, unclear)
+            blocking = [c for c in errors if _blocks_stage(c)]
+    elif needs_qaf and (not has_qaf or has_kaf):
+        # Acoustic (or no-probe fallback) diagnosis is clear enough to name ك or missing ق.
+        # Drop competing Whisper ك→ق duplicates before inserting the acoustic one.
+        if onset_probe is not None:
+            errors = [
+                e
+                for e in errors
+                if not (
+                    (e.get("key") or "").endswith("ك→ق")
+                    or (e.get("key") or "").endswith("need_ق")
+                    or (
+                        e.get("rule") == "pronunciation"
+                        and e.get("heard_letter") in ("ك", "?")
+                        and e.get("expected_letter") == "ق"
+                    )
+                )
+            ]
         stage_passed = False
         already = any(
             (e.get("key") or "").endswith("ك→ق")

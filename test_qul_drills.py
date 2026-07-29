@@ -301,7 +301,10 @@ def test_kurrahu_never_shown_as_what_you_said():
     assert "Kurrahu" not in summary["headline"]
     assert "قنيا" not in summary["headline"]
     assert "call" in summary["headline"].lower()
-    assert "N" in summary["headline"] or "n" in summary["headline"].lower()
+    # Do not invent a rival ending letter from CTC max (N/M/…).
+    assert "ending L ✓" not in summary["headline"]
+    assert "more like" not in summary["headline"].lower()
+    assert "no clear ending L" in summary["headline"]
     html = coach.compare_html(
         1, "كُرَّةٌ", "Kurrahu", stage_words=["qul"], sound_letters="قنيا",
         you_display_en=summary["compare_you"],
@@ -309,6 +312,33 @@ def test_kurrahu_never_shown_as_what_you_said():
     assert "Kurrahu" not in html and "كُرَّة" not in html
     assert "قنيا" not in html
     assert "call" in html.lower()
+
+
+def test_summary_never_names_rival_ending_letter():
+    """Session 20260729-221917-62ad5d: CTC max said M=1; playback + Whisper had L.
+
+    Naming rivals from whole-clip max is whack-a-mole — just say L is unclear.
+    """
+    summary = coach.heard_summary_en(
+        "qul",
+        {"p_qaf": 0.005, "p_kaf": 0.995},
+        {"ق": 0.005, "ك": 0.995, "ل": 0.0, "ن": 0.0, "م": 1.0, "و": 1.0},
+        "كوم",
+    )
+    low = summary["headline"].lower()
+    assert "more like m" not in low
+    assert "more like n" not in low
+    assert "lips closed" not in low
+    assert "no clear ending l" in low
+    # Clear L still reported when evidence supports it.
+    ok = coach.heard_summary_en(
+        "qul",
+        {"p_qaf": 0.9, "p_kaf": 0.05},
+        {"ق": 0.9, "ك": 0.05, "ل": 0.92, "م": 0.8, "ن": 0.7},
+        "قلم",
+    )
+    assert "ending L ✓" in ok["headline"]
+    assert "more like" not in ok["headline"].lower()
 
 
 def test_compare_html_full_ayah_still_shows_all_words():
@@ -447,8 +477,9 @@ def test_missing_ending_beats_the_generic_shape_complaint():
 
 def test_ambiguous_qaf_with_noon_ending_is_honest():
     """Session 20260729-213251-c9342d: learner said Qul/Qual, labelled correct.
-    Acoustics were ambiguous ق/ك (~0.57/0.43) ending like ن — must not invent
-    'Qūna' or claim the opening was right."""
+    Acoustics were ambiguous ق/ك (~0.57/0.43). Must not invent 'Qūna', must not
+    claim the opening was right, and must not prescribe a confident ك→ق fix
+    from a muddy onset (wrong diagnosis → wrong fix)."""
     cards = build_feedback(
         1, [], None, heard_arabic="كُل", heard_phonetic="Kul",
         stage_id="qul", locked_stages=[],
@@ -464,11 +495,42 @@ def test_ambiguous_qaf_with_noon_ending_is_honest():
     blob = ((cards[0].get("plain") or "") + (cards[0].get("fix") or "")).lower()
     assert "qūna" not in blob and "quna" not in blob
     assert "opening was right" not in blob
-    assert "n" in blob and "l" in blob
+    assert cards[0].get("key") == "pronunciation:qul:unclear_onset"
+    assert "will not guess" in blob or "unclear" in blob
+    assert "ك→ق" not in (cards[0].get("key") or "")
     assert coach.onset_qaf_verdict({
         "p_qaf": 0.571, "p_kaf": 0.428,
         "p_qaf_full": 0.571, "p_kaf_full": 0.428, "onset": "قون",
     })["has_qaf"] is False
+
+
+def test_clear_kaf_still_gets_call_fix():
+    """Only a CLEAR kaf onset earns the specific ك→ق / “call” fix."""
+    cards = build_feedback(
+        1, [], None, heard_arabic="كَلَّا", heard_phonetic="Kallā",
+        stage_id="qul", locked_stages=[],
+        onset_probe={
+            "p_qaf": 0.005, "p_kaf": 0.995,
+            "p_qaf_full": 0.005, "p_kaf_full": 0.995, "onset": "كوم",
+        },
+        acoustic={
+            "letters": "كوم",
+            "evidence": {"ق": 0.005, "ك": 0.995, "ل": 0.0, "م": 1.0, "و": 1.0},
+        },
+    )
+    assert cards[0].get("key") == "pronunciation:qul:ك→ق"
+    blob = ((cards[0].get("plain") or "") + (cards[0].get("fix") or "")).lower()
+    assert "call" in blob
+    # Must not invent ending M in the fix card just because CTC max spiked.
+    assert "meem" not in blob and "lips closed" not in blob
+    summary = coach.heard_summary_en(
+        "qul",
+        {"p_qaf": 0.005, "p_kaf": 0.995},
+        {"ق": 0.005, "ك": 0.995, "ل": 0.0, "م": 1.0},
+        "كوم",
+    )
+    assert "more like m" not in summary["headline"].lower()
+    assert "no clear ending l" in summary["headline"].lower()
 
 
 def test_huwa_needs_its_waw_not_just_a_ha():
