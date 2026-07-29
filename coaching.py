@@ -193,6 +193,86 @@ def prefer_measured_for_compare(
     return False
 
 
+# Local floor for L in summaries (mirrors elements.KEY_LETTER_MIN_EVIDENCE).
+_SUMMARY_L_MIN = 0.45
+
+
+def heard_summary_en(
+    stage_id: str | None,
+    onset_probe: dict | None = None,
+    sound_evidence: dict | None = None,
+    sound_letters: str = "",
+) -> dict:
+    """English-first reading of what the audio supports.
+
+    Never show CTC letter salad (قنيا) or Whisper inventions (Kurrahu) as the
+    learner-facing "what we heard". Session 20260729-215205: ق was excellent,
+    ending was N not L — say that in English.
+    """
+    ev = sound_evidence if isinstance(sound_evidence, dict) else {}
+    probe = onset_probe if isinstance(onset_probe, dict) else {}
+    sid = (stage_id or "").strip()
+    pq = float(probe.get("p_qaf") or ev.get("ق") or 0.0)
+    pk = float(probe.get("p_kaf") or ev.get("ك") or 0.0)
+    pl = max(float(ev.get("ل") or 0.0), float(ev.get("ر") or 0.0))
+    pn = float(ev.get("ن") or 0.0)
+    pm = float(ev.get("م") or 0.0)
+    parts: list[str] = []
+    # Use literals — this helper sits above the QAF_ONSET_* constants.
+    q_min, k_rival = 0.60, 0.30
+
+    if sid in ("qul", "qu"):
+        if pq >= q_min and pk <= k_rival:
+            parts.append('deep-throat K (“call”) ✓')
+        elif pk >= q_min and pq <= k_rival:
+            parts.append('English K (“cool/cull”) — not “call”')
+        elif pq >= pk and pq >= 0.35:
+            parts.append("maybe deep-throat K — not sure yet")
+        elif pk > pq and pk >= 0.35:
+            parts.append("maybe English K (“cool”) — not sure yet")
+        else:
+            parts.append("opening unclear")
+
+    if sid == "qul":
+        if pl >= _SUMMARY_L_MIN:
+            parts.append("ending L ✓")
+        elif pn >= 0.35 and pn > pl:
+            parts.append("ending more like N than L")
+        elif pm >= 0.35 and pm > pl:
+            parts.append("ending more like M (lips closed) than L")
+        else:
+            parts.append("no clear ending L yet")
+    elif sid == "ul":
+        if pl >= _SUMMARY_L_MIN:
+            parts.append("L ending ✓")
+        else:
+            parts.append("no clear L ending yet")
+    elif sid == "huwa":
+        pw = float(ev.get("و") or 0.0)
+        parts.append("W ✓" if pw >= _SUMMARY_L_MIN else "no clear W yet")
+    elif sid in ("ahad",):
+        ph_ = float(ev.get("ح") or 0.0)
+        parts.append(
+            "strong throat H ✓" if ph_ >= _SUMMARY_L_MIN else "no clear strong throat H yet"
+        )
+    elif sid == "samad":
+        ps = float(ev.get("ص") or 0.0)
+        parts.append("heavy S ✓" if ps >= _SUMMARY_L_MIN else "no clear heavy S yet")
+
+    if not parts:
+        if (sound_letters or "").strip():
+            parts.append("sounds unclear — try again closer to the mic")
+        else:
+            parts.append("almost nothing clear on this take")
+
+    headline = " · ".join(parts)
+    return {
+        "headline": headline,
+        "compare_you": headline,
+        "hide_whisper": True,
+    }
+
+
 def compare_heard_pair(
     heard_arabic: str,
     heard_phonetic: str,
@@ -486,6 +566,7 @@ def compare_html(
     heard_phonetic: str = "",
     stage_words: list[str] | None = None,
     sound_letters: str = "",
+    you_display_en: str = "",
 ) -> str:
     """English-first compare with yellow on mismatched words.
 
@@ -493,17 +574,21 @@ def compare_html(
     Target — never paint the whole ayah yellow when the learner said one word.
 
     When Whisper invents a long phrase on a short take, the You line uses
-    measured sound_letters instead (see prefer_measured_for_compare).
+    measured sound / English summary instead (never Kurrahu / المؤمنون / قنيا).
     """
     use_ar, use_ph, used_measured = compare_heard_pair(
         heard_arabic, heard_phonetic, sound_letters, stage_words
     )
     full_expected = EXPECTED.get(verse) or []
     line = AYAH_LINE.get(verse) or {"ph": [], "ar": []}
-    # When You is measured CTC letters, do NOT romanize into fake words
-    # like "Qūna" (session 20260729-213251). Show the Arabic letters.
-    if used_measured:
-        you_phs = [use_ar] if (use_ar or "").strip() else ["—"]
+    # Learner-facing You line: English summary only. Never CTC salad or Whisper.
+    summary = (you_display_en or "").strip()
+    if summary:
+        you_phs = [summary]
+        used_measured = True
+    elif used_measured:
+        # Fallback if caller forgot the summary — still refuse romanized junk.
+        you_phs = ["(measured sounds — see tip below)"]
     else:
         you_phs = _heard_phonetics(use_ar, use_ph)
     aligned = _align_stage(verse, use_ar, use_ph if not used_measured else use_ar, stage_words)

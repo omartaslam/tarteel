@@ -47,6 +47,9 @@ def _diag_from_cards(cards):
         # Measured sound, with no vocabulary to guess from.
         "sound_letters": d.get("sound_letters", ""),
         "sound_evidence": d.get("sound_evidence", {}),
+        # English-first summary — never show Whisper inventions as "what you said".
+        "heard_summary_en": d.get("heard_summary_en", ""),
+        "hide_whisper": bool(d.get("hide_whisper", True)),
         # Acoustic snapshot for device voice calibration after self-label.
         "voice_sample": d.get("voice_sample"),
     }

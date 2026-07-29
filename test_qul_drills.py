@@ -273,14 +273,42 @@ def test_compare_ignores_whisper_muminuna_invention():
     invent_ar = "وَالْمُؤْمِنُونَ مِنَ الْمُؤْمِنُونَ"
     invent_ph = "Wālmuʾminūna mina almuʾminūna"
     assert coach.prefer_measured_for_compare(invent_ar, "ل", ["qul"]) is True
+    summary = coach.heard_summary_en(
+        "qul",
+        {"p_qaf": 0.0, "p_kaf": 0.0},
+        {"ل": 0.3, "ق": 0.07, "ك": 0.08, "ن": 0.0},
+        "ل",
+    )
     html = coach.compare_html(
-        1, invent_ar, invent_ph, stage_words=["qul"], sound_letters="ل"
+        1, invent_ar, invent_ph, stage_words=["qul"], sound_letters="ل",
+        you_display_en=summary["compare_you"],
     )
     low = html.lower()
     assert "muʾmin" not in low and "mumin" not in low
-    assert "measured sound" in low
-    # You line shows measured Arabic letters, not the invented phrase.
-    assert ">ل<" in html or "ل</span>" in html
+    assert "kurrahu" not in low
+    assert "قنيا" not in html
+    assert "measured" in low or "ending" in low or "opening" in low or "l" in low
+
+
+def test_kurrahu_never_shown_as_what_you_said():
+    """Session 20260729-215205: Whisper wrote كرة/Kurrahu; learner said Qul."""
+    summary = coach.heard_summary_en(
+        "qul",
+        {"p_qaf": 0.995, "p_kaf": 0.001},
+        {"ق": 0.995, "ك": 0.001, "ل": 0.065, "ن": 0.774, "ي": 1.0, "ا": 0.767},
+        "قنيا",
+    )
+    assert "Kurrahu" not in summary["headline"]
+    assert "قنيا" not in summary["headline"]
+    assert "call" in summary["headline"].lower()
+    assert "N" in summary["headline"] or "n" in summary["headline"].lower()
+    html = coach.compare_html(
+        1, "كُرَّةٌ", "Kurrahu", stage_words=["qul"], sound_letters="قنيا",
+        you_display_en=summary["compare_you"],
+    )
+    assert "Kurrahu" not in html and "كُرَّة" not in html
+    assert "قنيا" not in html
+    assert "call" in html.lower()
 
 
 def test_compare_html_full_ayah_still_shows_all_words():

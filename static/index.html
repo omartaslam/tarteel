@@ -1348,7 +1348,8 @@ let _selfLabel=null;
 
 function render(data){
   const rs=data.results||[];
-  const view = (data.heard_arabic!=null || data.audio_quality!=null) ? {
+  const fromCard = rs.find(r=>r.audio_quality) || {};
+  const view = (data.heard_arabic!=null || data.audio_quality!=null || data.heard_summary_en) ? {
     audio_quality: data.audio_quality,
     heard_arabic: data.heard_arabic,
     heard_phonetic: data.heard_phonetic,
@@ -1358,7 +1359,9 @@ function render(data){
     matched_phonetic: data.matched_phonetic,
     compare_html: data.compare_html,
     sound_letters: data.sound_letters,
-  } : (rs.find(r=>r.audio_quality) || {});
+    heard_summary_en: data.heard_summary_en || fromCard.heard_summary_en || '',
+    hide_whisper: data.hide_whisper!==false,
+  } : fromCard;
 
   const q=view.audio_quality;
   const qd=$('quality');
@@ -1380,41 +1383,29 @@ function render(data){
     const matchedPh=(view.matched_phonetic||'').trim();
     const compare=(view.compare_html||'').trim();
     const rawAr=(view.heard_raw||'').trim();
+    const summaryEn=(view.heard_summary_en||data.heard_summary_en||'').trim()
+      || ((data.results||[])[0]||{}).heard_summary_en || '';
+    const hideWhisper = view.hide_whisper!==false && data.hide_whisper!==false;
     const showMatch = matchedAr && (match==='exact'||match==='close');
     let note;
     if(match==='raw'||match==='empty'){
       note='Showing the literal capture of this take. Could not cleanly match a known ayah.';
     } else if(match==='drill'){
-      note='This drill only — top line is the piece we scored. Literal Whisper capture is under it when different.';
-    } else if(showMatch || compare){
-      note='English-first word compare below — green match, amber close, red different.';
+      note='This drill only — top line is the piece we scored.';
+    } else if(summaryEn || compare){
+      note='English reading of your sounds below — Whisper word-guess is hidden because it invents words.';
     } else {
       note='Arabic + English phonetics are what the app heard from your voice.';
     }
     const matchBlock = (showMatch || compare)
       ? `<div class="hmatch"><div class="hmatchlbl">Closest ayah match</div>
-         ${matchedAr?`<div class="hmatchar" dir="rtl" lang="ar">${matchedAr}</div>`:''}
-         ${matchedPh?`<div class="hmatchph">${matchedPh}</div>`:''}
+         ${(!hideWhisper && matchedAr)?`<div class="hmatchar" dir="rtl" lang="ar">${matchedAr}</div>`:''}
+         ${(!hideWhisper && matchedPh)?`<div class="hmatchph">${matchedPh}</div>`:''}
          ${compare||''}</div>`
       : '';
-    const rawBlock = (match==='drill' && rawAr && rawAr!==(view.heard_arabic||''))
-      ? `<div class="hmatch"><div class="hmatchlbl">Literal capture (Whisper)</div>
-         <div class="hmatchar" dir="rtl" lang="ar">${rawAr}</div></div>`
-      : '';
-    // The word guess comes from a language model that invents plausible Quranic
-    // words on one-syllable takes (it wrote كَفَرَ / المؤمنون for a Qul). Show the
-    // measured sound as the headline and mark the word for what it is — a guess.
-    const soundAr=(view.sound_letters||'').trim();
-    const wordGuess=(view.heard_arabic||'').trim();
-    const guessLooksInvented = !!(soundAr && wordGuess && (
-      wordGuess.split(/\s+/).length > 1 ||
-      wordGuess.replace(/\s/g,'').length >= soundAr.replace(/\s/g,'').length + 4
-    ));
-    const soundBlock = (wordGuess && (soundAr || guessLooksInvented))
-      ? `<div class="hmatch"><div class="hmatchlbl">${guessLooksInvented?'Word guess — ignore this (Whisper invented it)':'Word guess (unreliable on single words)'}</div>
-         <div class="hmatchar" dir="rtl" lang="ar">${wordGuess||'—'}</div>
-         ${view.heard_phonetic?`<div class="hmatchph">${view.heard_phonetic}</div>`:''}</div>`
-      : '';
+    const rawBlock = '';
+    // NEVER show Whisper's invented word (Kurrahu / المؤمنون / كفر) as what you said.
+    const soundBlock = '';
     const playBlock = (_lastRecUrl || data.session)
       ? `<div class="hplay">
           <div class="hplaylbl">Your recording — play back &amp; compare</div>
@@ -1422,20 +1413,18 @@ function render(data){
         </div>`
       : '';
     const heardCls=willAdvance?'heard pass':'heard fail';
-    const headline = soundAr
-      ? `<div class="hh">${willAdvance?'Nice — the sounds we measured':'Not yet — the sounds we measured'}</div>
-         <div class="har" dir="rtl" lang="ar">${soundAr}</div>
-         <div class="hph">measured straight from your voice — no word guessing</div>`
-      : `<div class="hh">${willAdvance?'Nice — what the app heard':'Not yet — what the app heard'}</div>
-         <div class="har" dir="rtl" lang="ar">${wordGuess||'(unclear)'}</div>
-         <div class="hph">${view.heard_phonetic||''}</div>`;
+    const headline = summaryEn
+      ? `<div class="hh">${willAdvance?'Nice — what we measured':'Not yet — what we measured'}</div>
+         <div class="hph" style="font-size:18px;font-style:normal;color:#1a2a3a;line-height:1.45;margin:8px 0">${summaryEn}</div>`
+      : `<div class="hh">${willAdvance?'Nice — what we measured':'Not yet — what we measured'}</div>
+         <div class="hph" style="font-size:18px;font-style:normal;color:#1a2a3a">unclear — try again closer to the mic</div>`;
     heardHtml=`<div class="${heardCls}" id="heardTop">
       ${headline}
       ${soundBlock}
       ${rawBlock}
       ${matchBlock}
       ${playBlock}
-      <div class="hnote">${soundAr?'Top line is the letters your audio actually supports. The word underneath is a guess and is often wrong on one-word takes.':note}</div>
+      <div class="hnote">${note}</div>
     </div>`;
   }
 

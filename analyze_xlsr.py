@@ -202,13 +202,21 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
         except Exception:
             sound={"letters":"","evidence":{}}
         # Stage-scoped compare: only current stage words (not whole ayah yellow).
-        # Build AFTER free_read so Whisper inventions (e.g. المؤمنون on a short
-        # Qul take) do not fill the You line — measured letters do.
+        # Build AFTER free_read so Whisper inventions (e.g. المؤمنون / كرة on a
+        # short Qul take) do not fill the You line — English summary does.
         try:
             import coaching as _coach_early
             import stages as _stg_early
             _st = _stg_early.get_stage(verse, stage_id) if stage_id else None
             _sw = list((_st or {}).get("words") or []) if _st else None
+            _summary = _coach_early.heard_summary_en(
+                stage_id,
+                probe,
+                (sound or {}).get("evidence") or {},
+                (sound or {}).get("letters") or "",
+            )
+            heard_info["heard_summary_en"] = _summary.get("headline") or ""
+            heard_info["hide_whisper"] = True
             if _st and _st.get("drill"):
                 heard_info["compare_html"] = ""  # drill path sets its own compare
             else:
@@ -218,9 +226,12 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
                     heard_info.get("heard_phonetic") or "",
                     stage_words=_sw if _sw is not None else None,
                     sound_letters=(sound or {}).get("letters") or "",
+                    you_display_en=_summary.get("compare_you") or "",
                 )
         except Exception:
             heard_info["compare_html"] = ""
+            heard_info["heard_summary_en"] = ""
+            heard_info["hide_whisper"] = True
         prog(70, "align", "Lining up letters to the expected ayah…")
         vocab=proc.tokenizer.get_vocab()
         text=VTEXT[verse]
@@ -261,6 +272,8 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
               "duration":round(dur,2),"letters":letters,"onset_probe":probe,
               "sound_letters":sound.get("letters",""),
               "sound_evidence":sound.get("evidence",{}),
+              "heard_summary_en": heard_info.get("heard_summary_en") or "",
+              "hide_whisper": bool(heard_info.get("hide_whisper", True)),
               "heard_arabic":heard_info.get("heard_arabic",""),
               "heard_phonetic":heard_ph,
               "heard_raw":heard_info.get("heard_raw",""),
