@@ -296,8 +296,11 @@ def test_qul_kaf_tip_teaches_the_call_k_not_quality():
     tip = coach.FIX[("ك", "ق")]
     blob = " ".join(str(tip.get(k) or "") for k in ("heard", "want", "fix"))
     low = blob.lower()
-    # The cue he can actually produce.
-    assert "call" in low and "CAW-l" in blob and "pull" in low
+    # "call" is the one anchor that gives him both sounds: measured 2026-07-29,
+    # his "call" scored qaf 0.99 AND laam 1.00, while his "pull" scored laam 0.012
+    # (his accent vocalises the final L), which is why "pull" must not be the cue.
+    assert "call" in low and "CAW-l" in blob
+    assert "pull" not in low
     # Name the wrong sounds so he knows what to stop doing.
     assert "cull" in low or "cool" in low
     assert "KWOL" in blob

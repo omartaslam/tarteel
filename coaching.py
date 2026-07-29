@@ -367,8 +367,7 @@ FIX = {
             "<b>“call”</b>.<br>"
             "<b>1.</b> Say <b>CAW-l</b> out loud.<br>"
             "<b>2.</b> Freeze your throat exactly where it was for that K — right at the back.<br>"
-            "<b>3.</b> Keep it frozen there and change only the vowel, to the short "
-            "<b>u</b> in <b>“pull”</b> → <b>QUL</b>.<br>"
+            "<b>3.</b> Say it again with a <b>shorter</b> vowel → <b>QUL</b>, keeping that same L.<br>"
             "Not <b>KWOL</b> (that is the normal English K again) and not <b>KUL</b>.<br>"
             "One short word, then stop."
         ),

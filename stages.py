@@ -27,11 +27,12 @@ STAGES = {
             "say_ar": "قُلْ",
             "hint": (
                 "Say the full word <b>Qul</b> (قُلْ).<br>"
-                "<b>1.</b> Say <b>CAW-l</b> (the word “call”).<br>"
-                "<b>2.</b> Hold that throat position — don’t move it.<br>"
-                "<b>3.</b> Keep it there and change only the vowel to the short "
-                "<b>u</b> in “pull” → <b>QUL</b>.<br>"
-                "Not “KWOL” and not “KUL”. "
+                "<b>1.</b> Say <b>CAW-l</b> (the word “call”) — that already gives you "
+                "both sounds you need.<br>"
+                "<b>2.</b> Say it again with a <b>shorter</b> vowel: <b>C-l</b> → <b>QUL</b>.<br>"
+                "<b>3.</b> Finish with the tongue touching behind your top front teeth, "
+                "like the L in “call”.<br>"
+                "<b>Do not</b> let your lips close at the end — that turns it into an <b>M</b>.<br>"
                 "Three tries here; if stuck we’ll break it into Qu + ul."
             ),
             "words": ["qul"],
@@ -59,7 +60,7 @@ STAGES = {
             "title": "ul",
             "say_en": "ul",
             "say_ar": "ـُلْ",
-            "hint": "Only the ending: <b>ul</b> — like the end of “pull” / “full” (short u + clear L). No Q/K at the front.",
+            "hint": "Only the ending: <b>ul</b> — the L from <b>“call”</b> or <b>“full”</b> (tongue behind the top teeth, lips open). Not “pull”. No K at the front.",
             "words": [],
             "idxs": [0],
             "drill": "ul",
