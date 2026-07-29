@@ -51,10 +51,26 @@ VERSE_ELEMENTS = {
 #   لَهُ        cleared Allāhu (له is within edit distance 2 of الله)
 # (stage_id, verse) -> (required letters, English cue, what a miss sounds like)
 STAGE_KEY_LETTER = {
-    ("huwa", 1): ("و", "the <b>W</b> in <b>HOO-wa</b>", "“hoo-a” or “hoo-fa” with no W"),
-    ("qul", 1): ("ل", "the <b>L</b> at the end of <b>QUAL</b>", "a ق word that never lands on L"),
-    ("allahu", 1): ("لل", "the held double <b>L</b> in <b>Al-LAA-hu</b>", "a single quick L, like “lahu”"),
-    ("allahu", 2): ("لل", "the held double <b>L</b> in <b>Al-LAA-hu</b>", "a single quick L, like “lahu”"),
+    ("huwa", 1): (
+        "و",
+        "the <b>W</b>, “waw” (و), in <b>HOO-wa</b>",
+        "“hoo-a” with no W at the end",
+    ),
+    ("qul", 1): (
+        "ل",
+        "the <b>L</b>, “laam” (ل) — the L you make at the end of <b>“pull”</b>",
+        "a word that starts right but never lands on an L",
+    ),
+    ("allahu", 1): (
+        "لل",
+        "the held double <b>L</b>, “laam” (ل), in <b>Al-LAA-hu</b>",
+        "one quick L, like “lahu”",
+    ),
+    ("allahu", 2): (
+        "لل",
+        "the held double <b>L</b>, “laam” (ل), in <b>Al-LAA-hu</b>",
+        "one quick L, like “lahu”",
+    ),
 }
 
 # Sounds that count as an honest attempt at a key letter. An English dark L
@@ -325,17 +341,24 @@ def build_feedback(
             stage_passed = False
             say = (stage or {}).get("say_en") or focus_word or "this word"
             say_ar = (stage or {}).get("say_ar") or ""
+            measured = coach._romanize((acoustic or {}).get("letters") or "")
+            heard_txt = f"{miss_sounds_like}"
+            if measured:
+                heard_txt = f"the sounds <b>{measured}</b> — {miss_sounds_like}"
             miss = coach._card(
                 5,
                 verse,
                 say,
                 say_ar,
                 {
-                    "heard": f"no {letter} in this take — {miss_sounds_like}",
+                    "heard": heard_txt,
                     "want": f"{say} with {cue}",
                     "fix": (
-                        f"Say <b>{say}</b> <span class=\"arlight\">({say_ar})</span> "
-                        f"with {cue}. Tap Hear only {say} and copy the ending."
+                        f"The start was right — it is the ending that is missing.<br>"
+                        f"Say <b>{say}</b> <span class=\"arlight\">({say_ar})</span> and finish on "
+                        f"{cue}. Let the tongue touch behind your top front teeth, like the "
+                        f"end of <b>“pull”</b> — don’t close your lips.<br>"
+                        f"Tap Hear only {say} and copy just the ending."
                     ),
                     "ar": ("?", letter),
                 },

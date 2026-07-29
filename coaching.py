@@ -544,12 +544,19 @@ def onset_qaf_verdict(probe: dict | None) -> dict:
     """
     pq = float((probe or {}).get("p_qaf") or 0.0)
     pk = float((probe or {}).get("p_kaf") or 0.0)
+    onset = (probe or {}).get("onset") or ""
+    # The 0.5s window can straddle a slow or breathy release and end up split
+    # between both letters. The unconstrained decode also gives us the letters
+    # in order, so a take that literally starts with ق is qaf evidence even when
+    # the window is muddled. Omar's 11:55 take scored 0.58/0.42 in the window but
+    # decoded as قوم and measured 0.97 over the whole clip.
+    first = next((c for c in onset if c in ("ق", "ك")), "")
     return {
-        "has_qaf": pq >= QAF_ONSET_MIN and pk <= QAF_ONSET_RIVAL_MAX,
-        "has_kaf": pk >= QAF_ONSET_MIN and pq <= QAF_ONSET_RIVAL_MAX,
+        "has_qaf": (pq >= QAF_ONSET_MIN and pk <= QAF_ONSET_RIVAL_MAX) or first == "ق",
+        "has_kaf": (pk >= QAF_ONSET_MIN and pq <= QAF_ONSET_RIVAL_MAX) or first == "ك",
         "p_qaf": round(pq, 3),
         "p_kaf": round(pk, 3),
-        "onset": (probe or {}).get("onset") or "",
+        "onset": onset,
     }
 
 
