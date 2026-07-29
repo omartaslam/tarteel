@@ -59,7 +59,7 @@ def test_label_is_stored_against_the_take(client):
 def test_only_the_three_answers_are_accepted(client):
     c, store = client
     _seed(store, "s1")
-    for good in ("correct", "wrong", "unsure"):
+    for good in ("correct", "think_correct", "think_wrong", "wrong", "unsure"):
         assert c.post("/label", data={"session": "s1", "label": good}).status_code == 200
     # Rejected either by our check (400) or by form validation (422 for empty).
     for bad in ("yes", "", "pass", "true"):

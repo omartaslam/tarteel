@@ -1310,6 +1310,8 @@ function askSelfLabel(data){
       <p class="bt" style="margin:6px 0 14px">Did you say <b>${say}</b> correctly just now?</p>
       <div style="display:flex;flex-direction:column;gap:10px">
         <button class="btn" id="lblRight" style="background:#1e8449;color:#fff">I said it correctly</button>
+        <button class="btn" id="lblThinkRight" style="background:#3d8b5a;color:#fff">I think I got it right</button>
+        <button class="btn" id="lblThinkWrong" style="background:#a65a3a;color:#fff">I think I got it wrong</button>
         <button class="btn" id="lblWrong" style="background:#c0392b;color:#fff">I know I got it wrong</button>
         <button class="btn" id="lblUnsure" style="background:#6b7a86;color:#fff">I honestly can’t tell</button>
       </div>
@@ -1319,7 +1321,7 @@ function askSelfLabel(data){
     </div>`;
   document.getElementById('selfLabelBox').scrollIntoView({behavior:'smooth',block:'center'});
   const send=async(label)=>{
-    for(const id of ['lblRight','lblWrong','lblUnsure']){
+    for(const id of ['lblRight','lblThinkRight','lblThinkWrong','lblWrong','lblUnsure']){
       const b=document.getElementById(id); if(b) b.disabled=true;
     }
     try{
@@ -1337,6 +1339,8 @@ function askSelfLabel(data){
     render(data);
   };
   document.getElementById('lblRight').onclick=()=>send('correct');
+  document.getElementById('lblThinkRight').onclick=()=>send('think_correct');
+  document.getElementById('lblThinkWrong').onclick=()=>send('think_wrong');
   document.getElementById('lblWrong').onclick=()=>send('wrong');
   document.getElementById('lblUnsure').onclick=()=>send('unsure');
 }

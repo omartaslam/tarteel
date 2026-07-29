@@ -159,6 +159,44 @@ def test_weak_correct_label_does_not_poison_baselines():
     assert out.get("letters", {}).get("ل", {}).get("good", []) == []
 
 
+def test_english_anchor_resolves_gray_zone_toward_cool_kaf():
+    """Generic cool/Qul clusters — not Omar-specific. Ambiguous XLSR + cool-like
+    acoustic score must report kaf."""
+    probe = {
+        "p_qaf": 0.57, "p_kaf": 0.43,
+        "p_qaf_full": 0.57, "p_kaf_full": 0.43, "onset": "قون",
+    }
+    # Absolute must stay ambiguous
+    assert coach.onset_qaf_verdict(probe)["has_qaf"] is False
+    assert coach.onset_qaf_verdict(probe)["has_kaf"] is False
+    anchor = {
+        "p_qaf": 0.06,
+        "margin": -1.24,
+        "thresholds": {
+            "pass_p_hi": 0.82, "pass_p": 0.7, "pass_margin": 0.2,
+            "fail_p_lo": 0.28, "fail_p": 0.4, "fail_margin": -0.3,
+        },
+    }
+    v = vp.resolve_qaf_verdict(probe, None, english_anchor=anchor)
+    assert v["has_kaf"] is True
+    assert v["has_qaf"] is False
+    assert v["source"] == "english_anchor"
+
+
+def test_english_anchor_does_not_override_clear_absolute_qaf():
+    probe = {"p_qaf": 1.0, "p_kaf": 0.0, "onset": "قل"}
+    hostile = {
+        "p_qaf": 0.01, "margin": -3.0,
+        "thresholds": {
+            "pass_p_hi": 0.82, "pass_p": 0.7, "pass_margin": 0.2,
+            "fail_p_lo": 0.28, "fail_p": 0.4, "fail_margin": -0.3,
+        },
+    }
+    v = vp.resolve_qaf_verdict(probe, None, english_anchor=hostile)
+    assert v["has_qaf"] is True
+    assert v["source"] == "absolute"
+
+
 def test_key_letter_soft_pass_from_learner_goods():
     # Absolute floor is 0.45 — 0.38 would fail without a profile.
     assert vp.key_letter_relative_ok("ح", 0.38, None) is False

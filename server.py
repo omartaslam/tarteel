@@ -367,7 +367,7 @@ async def add_label(
     import voice_profile as vp
 
     label = (label or "").strip().lower()
-    if label not in ("correct", "wrong", "unsure"):
+    if label not in ("correct", "think_correct", "think_wrong", "wrong", "unsure"):
         return JSONResponse({"error": "bad label"}, status_code=400)
     p = os.path.join(storage.STORE, session, "data.json")
     if not os.path.exists(p):
@@ -420,8 +420,11 @@ def labels():
             "stage_id": d.get("stage_id"),
             "learner_said": lab,
             "app_passed": c.get("stage_passed"),
-            "agree": (lab == "correct") == bool(c.get("stage_passed"))
-                     if lab in ("correct", "wrong") else None,
+            "agree": (
+                (lab in ("correct", "think_correct")) == bool(c.get("stage_passed"))
+                if lab in ("correct", "think_correct", "wrong", "think_wrong")
+                else None
+            ),
             "sound_letters": c.get("sound_letters"),
             "word_guess": c.get("heard_arabic"),
             "p_qaf": probe.get("p_qaf"),

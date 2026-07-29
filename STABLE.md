@@ -15,6 +15,13 @@ git checkout stable-opus5-cursor
 
 Do not delete this tag. Do not move it to a newer commit.
 
+## Hard rule — generic phonetic anchors before personalisation (2026-07-29)
+ق/ك gray-zone decisions use **multi-speaker phonetic-anchor clusters** first
+(deep-throat K / Qul onsets vs English “cool” / middle K — `qu_acoustic`), then
+optional speaker-relative baselines from this device’s self-labels. Absolute
+XLSR onset thresholds still win on clear takes. Do not replace the generic
+anchor path with Omar-only thresholds.
+
 ## Hard rule — speaker-relative baselines help gray zone only (2026-07-29)
 Absolute letter gates (ق/ك onset thresholds, key-letter floors) still win on
 clear takes. A device voice profile (`tarteel_voice_v1`) learns from the

@@ -129,6 +129,11 @@ def record_label(profile: dict | None, label: str, snapshot: dict | None) -> dic
     out = parse_profile(profile)
     lab = (label or "").strip().lower()
     snap = snapshot if isinstance(snapshot, dict) else None
+    # Map soft think-* labels onto the same polarity buckets.
+    if lab == "think_correct":
+        lab = "correct"
+    elif lab == "think_wrong":
+        lab = "wrong"
     if lab not in ("correct", "wrong") or not snap:
         return out
 
@@ -268,14 +273,75 @@ def relative_qaf_hint(probe: dict | None, profile: dict | None) -> dict | None:
     return None
 
 
-def resolve_qaf_verdict(probe: dict | None, profile: dict | None = None) -> dict:
-    """Absolute onset first; speaker-relative only fills the gray zone."""
+def english_anchor_qaf_hint(anchor: dict | None) -> dict | None:
+    """Match this take to generic phonetic-anchor clusters (not one learner).
+
+    Anchors are multi-speaker: deep-throat-K / Qul onsets vs English “cool” /
+    middle-K clips (`qu_acoustic` corpus). Same idea as matching “call” vs
+    “cool” — place-of-articulation profiles, not Omar-specific thresholds.
+    Only used when absolute XLSR onset is ambiguous.
+    """
+    if not isinstance(anchor, dict) or anchor.get("p_qaf") is None:
+        return None
+    try:
+        p_q = float(anchor["p_qaf"])
+        margin = float(anchor.get("margin") or 0.0)
+    except (TypeError, ValueError):
+        return None
+    thr = anchor.get("thresholds") if isinstance(anchor.get("thresholds"), dict) else {}
+    import qu_acoustic as qa
+
+    if qa._acoustic_q(p_q, margin, thr):
+        return {
+            "has_qaf": True,
+            "has_kaf": False,
+            "source": "english_anchor",
+            "p_qaf": round(p_q, 4),
+            "margin": round(margin, 4),
+        }
+    if qa._acoustic_k(p_q, margin, thr):
+        return {
+            "has_qaf": False,
+            "has_kaf": True,
+            "source": "english_anchor",
+            "p_qaf": round(p_q, 4),
+            "margin": round(margin, 4),
+        }
+    return None
+
+
+def resolve_qaf_verdict(
+    probe: dict | None,
+    profile: dict | None = None,
+    english_anchor: dict | None = None,
+) -> dict:
+    """Absolute onset first; then generic English/phonetic anchors; then speaker.
+
+    Order matters:
+      1) absolute XLSR onset thresholds (benchmarks)
+      2) english_anchor — multi-speaker “call/Qul” vs “cool/kaf” clusters
+      3) speaker_relative — this device’s labelled takes (personalisation only)
+    """
     from coaching import onset_qaf_verdict
 
     abs_v = onset_qaf_verdict(probe)
     out = {**abs_v, "source": "absolute"}
     if abs_v.get("has_qaf") or abs_v.get("has_kaf"):
         return out
+
+    hint = english_anchor_qaf_hint(english_anchor)
+    if hint:
+        return {
+            **abs_v,
+            "has_qaf": bool(hint.get("has_qaf")),
+            "has_kaf": bool(hint.get("has_kaf")),
+            "source": "english_anchor",
+            "english_anchor": {
+                "p_qaf": hint.get("p_qaf"),
+                "margin": hint.get("margin"),
+            },
+        }
+
     hint = relative_qaf_hint(probe, profile)
     if not hint:
         return out

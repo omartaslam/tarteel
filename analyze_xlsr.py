@@ -307,6 +307,16 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
 
         import elements as el
         import voice_profile as vp
+        import qu_acoustic as qa
+
+        # Generic phonetic-anchor score: multi-speaker Qul/deep-K vs English “cool”.
+        # Not Omar-specific — same corpus for every learner.
+        try:
+            anchor = qa.score_path(wavp)
+            if isinstance(anchor, dict) and anchor.get("error"):
+                anchor = None
+        except Exception:
+            anchor = None
 
         cards=el.build_feedback(
             verse, diag["letters"], qcard,
@@ -320,7 +330,16 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
             onset_probe=probe,
             acoustic=sound,
             voice_profile=voice_profile,
+            english_anchor=anchor,
         )
+        if cards and anchor:
+            cards[0] = {**cards[0], "english_anchor": {
+                "p_qaf": anchor.get("p_qaf"),
+                "margin": anchor.get("margin"),
+                "d_q": anchor.get("d_q"),
+                "d_k": anchor.get("d_k"),
+                "version": anchor.get("version"),
+            }}
         # Snapshot for the client: fold into the device voice profile after
         # the learner self-labels (correct/wrong). No separate onboarding.
         snap = vp.take_snapshot(

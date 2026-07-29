@@ -659,6 +659,7 @@ def evaluate_drill(
     onset_probe: dict | None = None,
     acoustic: dict | None = None,
     voice_profile: dict | None = None,
+    english_anchor: dict | None = None,
 ) -> dict:
     """
     Score syllable micro-drills (Qu / ul) without full-word ayah alignment.
@@ -668,7 +669,7 @@ def evaluate_drill(
     Phone rescue: if Whisper wrote ك but the onset is acoustically ق (not ك),
     pass — phone ASR flatten must not lock out the main audience. The onset
     evidence is an unconstrained decode; align_letters cannot supply it.
-    Acoustic cluster is NOT used for lock/fail.
+    Gray zone: generic english_anchor clusters (cool vs Qul), then speaker profile.
     Returns passed/cards plus display_* for the UI (onset only — not Whisper's
     full-word guess like كل/Kul when the drill is Qu alone).
     """
@@ -678,7 +679,9 @@ def evaluate_drill(
     ph_compact = re.sub(r"[^a-zāḥṣṭḍẓ]", "", ph)
     import voice_profile as vp
 
-    align_q = vp.resolve_qaf_verdict(onset_probe, voice_profile)
+    align_q = vp.resolve_qaf_verdict(
+        onset_probe, voice_profile, english_anchor=english_anchor
+    )
     # Show the learner everything they said, even though the drill only scores
     # one piece of it. Printing a clipped "Qu" when they said "Qul" reads like
     # the app mis-heard them, and costs trust for no benefit.
@@ -837,6 +840,7 @@ def evaluate_qu_qul_bridge(
     onset_probe: dict | None = None,
     acoustic: dict | None = None,
     voice_profile: dict | None = None,
+    english_anchor: dict | None = None,
 ) -> dict:
     """Syllable-rescue Qu attempts after word-first Qul failed.
 
@@ -856,6 +860,7 @@ def evaluate_qu_qul_bridge(
         onset_probe=onset_probe,
         acoustic=acoustic,
         voice_profile=voice_profile,
+        english_anchor=english_anchor,
     )
     left = 3 - n
 

@@ -161,6 +161,7 @@ def build_feedback(
     onset_probe=None,
     acoustic=None,
     voice_profile=None,
+    english_anchor=None,
 ):
     spec = VERSE_ELEMENTS.get(verse, {})
     stage = stg.get_stage(verse, stage_id)
@@ -187,6 +188,7 @@ def build_feedback(
                 onset_probe=onset_probe,
                 acoustic=acoustic,
                 voice_profile=voice_profile,
+                english_anchor=english_anchor,
             )
         else:
             ev = coach.evaluate_drill(
@@ -197,6 +199,7 @@ def build_feedback(
                 onset_probe=onset_probe,
                 acoustic=acoustic,
                 voice_profile=voice_profile,
+                english_anchor=english_anchor,
             )
         errors.extend(ev.get("cards") or [])
         # defer blocks advance (no false lock) but still feeds next-step coaching
@@ -392,8 +395,17 @@ def build_feedback(
     # Speaker-relative baselines may fill the gray zone only.
     import voice_profile as vp
 
-    align_q = vp.resolve_qaf_verdict(onset_probe, voice_profile)
+    align_q = vp.resolve_qaf_verdict(
+        onset_probe, voice_profile, english_anchor=english_anchor
+    )
     align_rescues_qaf = bool(align_q.get("has_qaf") and not align_q.get("has_kaf"))
+    # On Qul, a clear middle-K (from absolute OR english-anchor “cool” cluster)
+    # is the main lesson — don't lead with "missing L" when the opening is already ك.
+    qul_kaf_lead = (
+        (stage or {}).get("id") == "qul"
+        and bool(align_q.get("has_kaf"))
+        and not bool(align_q.get("has_qaf"))
+    )
 
     # Isolated word stages must contain their teaching letter, not just a roughly
     # similar shape. This runs BEFORE the pass/fail verdict and regardless of it:
@@ -401,7 +413,7 @@ def build_feedback(
     # know WHICH piece is missing. Omar's قوط take got a generic "word shape"
     # message when his opening was finally correct and only the ending was absent.
     key_letter = STAGE_KEY_LETTER.get(((stage or {}).get("id"), verse))
-    if key_letter and len(stage_words or []) == 1:
+    if key_letter and len(stage_words or []) == 1 and not qul_kaf_lead:
         letter, cue, miss_sounds_like, how_to = key_letter
         if not _has_key_letter(letter, acoustic, heard_arabic or "", voice_profile):
             stage_passed = False
@@ -469,8 +481,9 @@ def build_feedback(
             errors.insert(0, miss)
             blocking = [c for c in errors if _blocks_stage(c)]
 
-    # Qul lock requires back ق — Whisper ق, clear qh/QUAL, or XLSR onset ق.
-    # Shape-near without ق/qh (طل, garbled Whisper) must NOT skip to huwa.
+    # Qul lock requires back ق — Whisper ق, clear qh/QUAL, XLSR onset ق,
+    # or generic english-anchor cluster (cool vs Qul). Shape-near without ق
+    # must NOT skip to huwa.
     needs_qaf = (stage or {}).get("id") == "qul" or (
         {(w or "").lower() for w in (stage_words or [])} == {"qul"}
     )
@@ -479,7 +492,9 @@ def build_feedback(
         or coach.phonetic_back_q(heard_phonetic or "")
         or align_rescues_qaf
     )
-    has_kaf = "ك" in (heard_arabic or "")
+    has_kaf = "ك" in (heard_arabic or "") or (
+        bool(align_q.get("has_kaf")) and not bool(align_q.get("has_qaf"))
+    )
     if align_rescues_qaf:
         # Drop Whisper-only ك→ق blocks — letter track confirmed back ق.
         errors = [
@@ -497,9 +512,14 @@ def build_feedback(
         blocking = [c for c in errors if _blocks_stage(c)]
         stage_passed = not blocking and not miss_words
         has_kaf = False
-    if stage_passed and needs_qaf and (not has_qaf or has_kaf):
-        if has_kaf or not has_qaf:
-            stage_passed = False
+    if needs_qaf and (not has_qaf or has_kaf):
+        stage_passed = False
+        already = any(
+            (e.get("key") or "").endswith("ك→ق")
+            or (e.get("key") or "").endswith("need_ق")
+            for e in errors
+        )
+        if not already:
             q_err = coach._card(
                 5,
                 verse,
@@ -507,19 +527,17 @@ def build_feedback(
                 "قُلْ",
                 {
                     "heard": (
-                        "middle K (kaf) — like “cull/cool”"
+                        "middle K (kaf) — like English “cool/cull”, not the “call” throat"
                         if has_kaf
-                        else "no clear back Q (qaf / qh) in this take"
+                        else "no clear deep throat K (“call” / qaf) in this take"
                     ),
                     "want": "Arabic Qul — throat from <b>“call”</b>, shorter vowel → <b>QUL</b>",
                     "fix": (
                         "Say the full word <b>Qul</b> (قُلْ). Say <b>CAW-l</b> (the word "
                         "<b>“call”</b>), then shorten the vowel: <b>QUL</b> — deep throat K, "
                         "not “cull/cool”.<br>"
-                        "If you felt the “call” K but the app shows Kull: we also check the "
-                        "letter track. Retry closer to the mic — we lock on the deep throat K, "
-                        "“qaf” (ق) (or clear measured ق), never on the normal English K, "
-                        "“kaf” (ك) alone."
+                        "We match your onset to phonetic anchors (deep-throat K vs English "
+                        "“cool”). Retry closer to the mic."
                     ),
                     "ar": ("ك" if has_kaf else "?", "ق"),
                 },
@@ -528,6 +546,8 @@ def build_feedback(
                 rule="pronunciation",
             )
             q_err["key"] = "pronunciation:qul:ك→ق" if has_kaf else "pronunciation:qul:need_ق"
+            if align_q.get("source") == "english_anchor":
+                q_err["anchor_source"] = "english_anchor"
             errors.insert(0, q_err)
             blocking = [c for c in errors if _blocks_stage(c)]
 
