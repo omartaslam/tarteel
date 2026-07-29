@@ -1,5 +1,20 @@
 # Deploy markers
 
+## Rollback — Opus 5 Cursor build (2026-07-29)
+**Git tag:** `stable-opus5-cursor`  
+**Commit:** `80ff5d95565d` — *Gate the strong throat H "haa" (ح) and the heavy S "saad" (ص)*  
+**Live health at tag time:** `{"ok":true,"build":"80ff5d95565d"}`
+
+This is the last Railway/`main` build from the Cursor **Opus 5** stretch, before
+speaker-relative acoustic baselines. If later work regresses detection or UX:
+
+```bash
+git checkout stable-opus5-cursor
+# or restore main to that commit after confirming /health
+```
+
+Do not delete this tag. Do not move it to a newer commit.
+
 ## Hard rule — ق/ك must be decided from unconstrained audio (fixed `ebc810a`)
 **Never** derive a letter identity from forced alignment. Forced alignment is
 constrained to the expected ayah, so it can only emit the letters you asked
