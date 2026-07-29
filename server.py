@@ -322,6 +322,68 @@ def batch():
     return JSONResponse(out)
 
 
+@app.post("/label")
+async def add_label(
+    session: str = Form(...),
+    label: str = Form(...),
+    stage_id: str = Form(""),
+):
+    """The learner's own verdict, captured BEFORE ours is revealed.
+
+    Order matters: a label collected after the app has said "wrong" is anchored
+    to the app's opinion and is worthless as ground truth. This is the only
+    record of what the learner intended, and the whole accuracy protocol
+    depends on it.
+    """
+    label = (label or "").strip().lower()
+    if label not in ("correct", "wrong", "unsure"):
+        return JSONResponse({"error": "bad label"}, status_code=400)
+    p = os.path.join(storage.STORE, session, "data.json")
+    if not os.path.exists(p):
+        return JSONResponse({"error": "not found"}, status_code=404)
+    d = json.load(open(p, encoding="utf-8"))
+    d["self_label"] = label
+    d["self_label_stage"] = (stage_id or d.get("stage_id") or "")
+    d["self_label_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    return {"ok": True, "self_label": label}
+
+
+@app.get("/labels")
+def labels():
+    """Every labelled take, flattened — this is the accuracy dataset."""
+    rows = []
+    for d in storage.list_sessions():
+        lab = d.get("self_label")
+        if not lab:
+            continue
+        c = (d.get("results") or [{}])[0]
+        probe = c.get("onset_probe") or {}
+        rows.append({
+            "session": d.get("session"),
+            "when": d.get("when"),
+            "verse": d.get("verse"),
+            "stage_id": d.get("stage_id"),
+            "learner_said": lab,
+            "app_passed": c.get("stage_passed"),
+            "agree": (lab == "correct") == bool(c.get("stage_passed"))
+                     if lab in ("correct", "wrong") else None,
+            "sound_letters": c.get("sound_letters"),
+            "word_guess": c.get("heard_arabic"),
+            "p_qaf": probe.get("p_qaf"),
+            "p_kaf": probe.get("p_kaf"),
+            "card": c.get("key"),
+        })
+    scored = [r for r in rows if r["agree"] is not None]
+    agreed = [r for r in scored if r["agree"]]
+    return JSONResponse({
+        "labelled": len(rows),
+        "scored": len(scored),
+        "agreement": round(100 * len(agreed) / len(scored), 1) if scored else None,
+        "takes": rows,
+    })
+
+
 @app.post("/note")
 async def add_note(session: str = Form(...), note: str = Form(...)):
     p = os.path.join(storage.STORE, session, "data.json")

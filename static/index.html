@@ -1204,7 +1204,7 @@ $('rec').onclick=async()=>{
           $('results').innerHTML=`<p>Server error (${res.status}). ${data.error||'Try again — tap the green header to refresh first.'}</p>`;
         } else {
           showProg(false);
-          render(data);
+          askSelfLabel(data);
         }
       } else {
         await pollJob(startData.job, myGen);
@@ -1258,7 +1258,7 @@ async function pollJob(job, gen){
         return;
       }
       showProg(false);
-      render(st.result||{});
+      askSelfLabel(st.result||{});
       if(_activeJob===job) _activeJob=null;
       return;
     }
@@ -1271,6 +1271,50 @@ async function pollJob(job, gen){
     await new Promise(r=>setTimeout(r, 400));
   }
 }
+
+/* Ask the learner first, then reveal our verdict.
+   A label collected after we have said "wrong" just echoes us back, so it is
+   useless as ground truth — and ground truth is the only thing that lets us
+   put an accuracy number on this app. Mandatory: no verdict until answered. */
+function askSelfLabel(data){
+  const sid=data.session;
+  const stage=(loadPractice(v).stageId)||'';
+  const lad=STAGE_LADDER[v]||[];
+  const stObj=lad.find(s=>s.id===stage);
+  const say=stObj?stObj.say_en:'that';
+  if(!sid){ render(data); return; }
+  $('quality').style.display='none';
+  $('results').innerHTML=`
+    <div class="heard" id="selfLabelBox">
+      <div class="hh">Before we show you anything — what do you think?</div>
+      <p class="bt" style="margin:6px 0 14px">Did you say <b>${say}</b> correctly just now?</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn" id="lblRight" style="background:#1e8449">I said it correctly</button>
+        <button class="btn" id="lblWrong" style="background:#c0392b">I know I got it wrong</button>
+        <button class="btn" id="lblUnsure" style="background:#6b7a86">I honestly can’t tell</button>
+      </div>
+      <div class="hnote">Your answer is the only record of what you meant to say. It is
+      what lets us measure whether the app is actually right — so answer honestly,
+      not to match what you think it wants.</div>
+    </div>`;
+  document.getElementById('selfLabelBox').scrollIntoView({behavior:'smooth',block:'center'});
+  const send=async(label)=>{
+    for(const id of ['lblRight','lblWrong','lblUnsure']){
+      const b=document.getElementById(id); if(b) b.disabled=true;
+    }
+    try{
+      const fd=new FormData();
+      fd.append('session',sid); fd.append('label',label); fd.append('stage_id',stage);
+      await fetch('/label',{method:'POST',body:fd});
+    }catch(e){}
+    _selfLabel=label;
+    render(data);
+  };
+  document.getElementById('lblRight').onclick=()=>send('correct');
+  document.getElementById('lblWrong').onclick=()=>send('wrong');
+  document.getElementById('lblUnsure').onclick=()=>send('unsure');
+}
+let _selfLabel=null;
 
 function render(data){
   const rs=data.results||[];
