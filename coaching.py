@@ -540,6 +540,9 @@ def onset_qaf_verdict(probe: dict | None) -> dict:
     `probe` comes from analyze_xlsr and carries free-decode probabilities:
     {p_qaf, p_kaf, onset}. No probe (e.g. unit tests, no audio) means no
     acoustic evidence either way, so no rescue.
+
+    For speaker-relative gray-zone help, call voice_profile.resolve_qaf_verdict.
+    Absolute thresholds here must stay fixed — they guard the benchmarks.
     """
     pq = float((probe or {}).get("p_qaf") or 0.0)
     pk = float((probe or {}).get("p_kaf") or 0.0)
@@ -584,6 +587,7 @@ def evaluate_drill(
     heard_phonetic: str = "",
     onset_probe: dict | None = None,
     acoustic: dict | None = None,
+    voice_profile: dict | None = None,
 ) -> dict:
     """
     Score syllable micro-drills (Qu / ul) without full-word ayah alignment.
@@ -601,7 +605,9 @@ def evaluate_drill(
     letters = _letters_only(ar)
     ph = (heard_phonetic or "").lower()
     ph_compact = re.sub(r"[^a-zāḥṣṭḍẓ]", "", ph)
-    align_q = onset_qaf_verdict(onset_probe)
+    import voice_profile as vp
+
+    align_q = vp.resolve_qaf_verdict(onset_probe, voice_profile)
     # Show the learner everything they said, even though the drill only scores
     # one piece of it. Printing a clipped "Qu" when they said "Qul" reads like
     # the app mis-heard them, and costs trust for no benefit.
@@ -759,6 +765,7 @@ def evaluate_qu_qul_bridge(
     attempt: int = 1,
     onset_probe: dict | None = None,
     acoustic: dict | None = None,
+    voice_profile: dict | None = None,
 ) -> dict:
     """Syllable-rescue Qu attempts after word-first Qul failed.
 
@@ -777,6 +784,7 @@ def evaluate_qu_qul_bridge(
         heard_phonetic or "",
         onset_probe=onset_probe,
         acoustic=acoustic,
+        voice_profile=voice_profile,
     )
     left = 3 - n
 

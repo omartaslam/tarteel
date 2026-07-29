@@ -15,6 +15,15 @@ git checkout stable-opus5-cursor
 
 Do not delete this tag. Do not move it to a newer commit.
 
+## Hard rule — speaker-relative baselines help gray zone only (2026-07-29)
+Absolute letter gates (ق/ك onset thresholds, key-letter floors) still win on
+clear takes. A device voice profile (`tarteel_voice_v1`) learns from the
+learner's own correct/wrong self-labels during practice — no separate
+onboarding. Relative scoring may only decide when the absolute verdict is
+ambiguous. Silence/noise must never pass. Clear kaf must never be rescued into
+qaf by a profile. Profile survives practice clears (it is the voice, not
+progress). Rollback tag if this regresses: `stable-opus5-cursor`.
+
 ## Hard rule — ق/ك must be decided from unconstrained audio (fixed `ebc810a`)
 **Never** derive a letter identity from forced alignment. Forced alignment is
 constrained to the expected ayah, so it can only emit the letters you asked

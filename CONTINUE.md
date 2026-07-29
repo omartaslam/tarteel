@@ -3,11 +3,26 @@
 **Owner:** Omar (`omartanveeraslam@gmail.com`)
 **Live:** https://tarteel-production.up.railway.app
 **Deploy:** `main` → Railway. A branch is not live. Check `GET /health`.
-**Live build:** `ebc810a79b9c`
+**Rollback:** git tag `stable-opus5-cursor` @ `80ff5d9` (last Opus 5 Cursor build).
 
 ---
 
-## Status — three fixes, all verified on live
+## Status — speaker-relative acoustic baselines (this branch)
+
+Folded into practice (no onboarding gate):
+
+1. Each take returns a `voice_sample` (onset p_qaf/p_kaf + letter evidence).
+2. After the mandatory self-label, `/label` updates the device profile and the
+   client stores it in `tarteel_voice_v1`.
+3. Next `/analyze` sends the profile. Absolute gates still win on clear takes;
+   relative scoring only fills the gray zone (`voice_profile.py`).
+
+Guarded by `test_voice_profile.py`. Do not let relative scoring override a clear
+ك fail or invent a letter from silence.
+
+---
+
+## Status — three fixes, all verified on live (Opus 5 era @ `80ff5d9`)
 
 ### 3. ق vs ك gate — FIXED (`ebc810a`)
 The rescue used to read letters from **forced alignment against the expected

@@ -121,7 +121,7 @@ def onset_probe(emissions, proc, dur: float) -> dict:
     }
 
 
-def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None, cancel_check=None, stage_id=None, locked_stages=None, qu_bridge_attempt=None):
+def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None, cancel_check=None, stage_id=None, locked_stages=None, qu_bridge_attempt=None, voice_profile=None):
     def prog(pct, phase, msg):
         if cancel_check and cancel_check():
             raise AnalysisCancelled()
@@ -285,6 +285,8 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
                 prog(92, "coach", "Writing your next-step tips…")
 
         import elements as el
+        import voice_profile as vp
+
         cards=el.build_feedback(
             verse, diag["letters"], qcard,
             heard_arabic=heard_ar,
@@ -296,6 +298,15 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
             qu_bridge_attempt=qu_bridge_attempt,
             onset_probe=probe,
             acoustic=sound,
+            voice_profile=voice_profile,
+        )
+        # Snapshot for the client: fold into the device voice profile after
+        # the learner self-labels (correct/wrong). No separate onboarding.
+        snap = vp.take_snapshot(
+            probe,
+            (sound or {}).get("evidence") or {},
+            stage_id=stage_id,
+            verse=verse,
         )
         # Keep literal Whisper in heard_raw; drill stages override the shown heard_*.
         if cards:
@@ -310,7 +321,7 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
                     "matched_arabic": "",
                     "matched_phonetic": "",
                 }
-            cards[0] = {**shown, **diag}
+            cards[0] = {**shown, **diag, "voice_sample": snap}
         prog(100, "done", "Done")
         return cards
     finally:
