@@ -57,6 +57,33 @@ STAGE_KEY_LETTER = {
     ("allahu", 2): ("لل", "the held double <b>L</b> in <b>Al-LAA-hu</b>", "a single quick L, like “lahu”"),
 }
 
+# Sounds that count as an honest attempt at a key letter. An English dark L
+# (the L in "pull") lands between Arabic ل and ر, and on Omar's takes it decodes
+# as ر every time — ل scored 0.03 while ر scored 0.96 on a clear Qul. Rejecting
+# those takes for "no L" was wrong.
+KEY_LETTER_ALIASES = {"ل": ("ل", "ر")}
+KEY_LETTER_MIN_EVIDENCE = 0.45
+
+
+def _has_key_letter(letters: str, acoustic: dict | None, heard_arabic: str) -> bool:
+    """Is the stage's letter really there? Judge from audio, not the transcript.
+
+    Whisper both invents the letter (كَاللَّهُ "contained" ل with no acoustic ل at
+    all) and loses it (كَرْ for a clear ق), so it cannot arbitrate this.
+    """
+    ev = ((acoustic or {}).get("evidence") or {})
+    sound = (acoustic or {}).get("letters") or ""
+    if not ev and not sound:
+        # No acoustic read available (unit tests, older clients) — fall back.
+        return letters in coach.normalize_ar(heard_arabic or "").replace(" ", "")
+    if len(letters) > 1:
+        # Doubled letters (ll) are a duration cue; the transcript carries that.
+        return letters in coach.normalize_ar(heard_arabic or "").replace(" ", "")
+    for alias in KEY_LETTER_ALIASES.get(letters, (letters,)):
+        if float(ev.get(alias) or 0.0) >= KEY_LETTER_MIN_EVIDENCE or alias in sound:
+            return True
+    return False
+
 
 def build_feedback(
     verse,
@@ -70,6 +97,7 @@ def build_feedback(
     locked_stages=None,
     qu_bridge_attempt=None,
     onset_probe=None,
+    acoustic=None,
 ):
     spec = VERSE_ELEMENTS.get(verse, {})
     stage = stg.get_stage(verse, stage_id)
@@ -293,8 +321,7 @@ def build_feedback(
     key_letter = STAGE_KEY_LETTER.get(((stage or {}).get("id"), verse))
     if key_letter and stage_passed and len(stage_words or []) == 1:
         letter, cue, miss_sounds_like = key_letter
-        heard_letters = coach.normalize_ar(heard_arabic or "").replace(" ", "")
-        if letter not in heard_letters:
+        if not _has_key_letter(letter, acoustic, heard_arabic or ""):
             stage_passed = False
             say = (stage or {}).get("say_en") or focus_word or "this word"
             say_ar = (stage or {}).get("say_ar") or ""

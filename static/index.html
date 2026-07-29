@@ -1283,6 +1283,7 @@ function render(data){
     matched_arabic: data.matched_arabic,
     matched_phonetic: data.matched_phonetic,
     compare_html: data.compare_html,
+    sound_letters: data.sound_letters,
   } : (rs.find(r=>r.audio_quality) || {});
 
   const q=view.audio_quality;
@@ -1326,6 +1327,16 @@ function render(data){
       ? `<div class="hmatch"><div class="hmatchlbl">Literal capture (Whisper)</div>
          <div class="hmatchar" dir="rtl" lang="ar">${rawAr}</div></div>`
       : '';
+    // The word guess comes from a language model that invents plausible Quranic
+    // words on one-syllable takes (it wrote كَفَرَ for a Qul). Show the measured
+    // sound as the headline and mark the word for what it is — a guess.
+    const soundAr=(view.sound_letters||'').trim();
+    const wordGuess=(view.heard_arabic||'').trim();
+    const soundBlock = soundAr
+      ? `<div class="hmatch"><div class="hmatchlbl">Word guess (unreliable on single words)</div>
+         <div class="hmatchar" dir="rtl" lang="ar">${wordGuess||'—'}</div>
+         ${view.heard_phonetic?`<div class="hmatchph">${view.heard_phonetic}</div>`:''}</div>`
+      : '';
     const playBlock = (_lastRecUrl || data.session)
       ? `<div class="hplay">
           <div class="hplaylbl">Your recording — play back &amp; compare</div>
@@ -1333,14 +1344,20 @@ function render(data){
         </div>`
       : '';
     const heardCls=willAdvance?'heard pass':'heard fail';
+    const headline = soundAr
+      ? `<div class="hh">${willAdvance?'Nice — the sounds we measured':'Not yet — the sounds we measured'}</div>
+         <div class="har" dir="rtl" lang="ar">${soundAr}</div>
+         <div class="hph">measured straight from your voice — no word guessing</div>`
+      : `<div class="hh">${willAdvance?'Nice — what the app heard':'Not yet — what the app heard'}</div>
+         <div class="har" dir="rtl" lang="ar">${wordGuess||'(unclear)'}</div>
+         <div class="hph">${view.heard_phonetic||''}</div>`;
     heardHtml=`<div class="${heardCls}" id="heardTop">
-      <div class="hh">${willAdvance?'Nice — what the app heard':'Not yet — what the app heard'}</div>
-      <div class="har" dir="rtl" lang="ar">${view.heard_arabic||'(unclear)'}</div>
-      <div class="hph">${view.heard_phonetic||''}</div>
+      ${headline}
+      ${soundBlock}
       ${rawBlock}
       ${matchBlock}
       ${playBlock}
-      <div class="hnote">${note}</div>
+      <div class="hnote">${soundAr?'Top line is the letters your audio actually supports. The word underneath is a guess and is often wrong on one-word takes.':note}</div>
     </div>`;
   }
 

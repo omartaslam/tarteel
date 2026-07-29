@@ -50,6 +50,38 @@ class AnalysisCancelled(Exception):
 
 ONSET_WINDOW_S = 0.50
 
+# Letters we gate stages on, so the gates can read audio instead of a transcript.
+GATE_LETTERS = "قكلرهوحادصمي"
+
+
+def free_read(emissions, proc) -> dict:
+    """Unconstrained read of the whole take: raw letters + per-letter evidence.
+
+    Whisper is a language model and invents plausible Quranic words on short
+    clips — it wrote كَفَرَ and كَرْ for one-syllable Qul takes, and وَالْمُؤْمِنُونَ
+    for digital silence. This is the honest alternative: the letters the
+    acoustics actually support, with no vocabulary to fall back on. Costs
+    nothing extra, since these emissions are already computed.
+    """
+    vocab = proc.tokenizer.get_vocab()
+    inv = {v: k for k, v in vocab.items()}
+    blank = proc.tokenizer.pad_token_id
+    probs = emissions.exp()[0]
+    ids = torch.argmax(probs, dim=-1).tolist()
+    letters, prev = [], None
+    for i in ids:
+        if i != prev and i != blank:
+            c = inv.get(i, "")
+            if c and c not in ("|", " "):
+                letters.append(c)
+        prev = i
+    ev = {
+        c: round(float(probs[:, vocab[c]].max()), 3)
+        for c in GATE_LETTERS
+        if c in vocab
+    }
+    return {"letters": "".join(letters)[:14], "evidence": ev}
+
 
 def onset_probe(emissions, proc, dur: float) -> dict:
     """Unconstrained read of the take's onset, for the ق vs ك decision.
@@ -164,6 +196,10 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
             probe=onset_probe(emissions, proc, len(wav)/16000)
         except Exception:
             probe={"p_qaf":0.0,"p_kaf":0.0,"onset":""}
+        try:
+            sound=free_read(emissions, proc)
+        except Exception:
+            sound={"letters":"","evidence":{}}
         prog(70, "align", "Lining up letters to the expected ayah…")
         vocab=proc.tokenizer.get_vocab()
         text=VTEXT[verse]
@@ -202,6 +238,8 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
         heard_ph = heard_info.get("heard_phonetic","")
         diag={"audio_quality":quality,"peak":round(peak,3),"rms_level":round(rmslev,4),
               "duration":round(dur,2),"letters":letters,"onset_probe":probe,
+              "sound_letters":sound.get("letters",""),
+              "sound_evidence":sound.get("evidence",{}),
               "heard_arabic":heard_info.get("heard_arabic",""),
               "heard_phonetic":heard_ph,
               "heard_raw":heard_info.get("heard_raw",""),
@@ -257,6 +295,7 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
             locked_stages=locked_stages,
             qu_bridge_attempt=qu_bridge_attempt,
             onset_probe=probe,
+            acoustic=sound,
         )
         # Keep literal Whisper in heard_raw; drill stages override the shown heard_*.
         if cards:

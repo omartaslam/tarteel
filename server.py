@@ -44,6 +44,9 @@ def _diag_from_cards(cards):
         "matched_phonetic": d.get("matched_phonetic", ""),
         "compare_html": d.get("compare_html", ""),
         "rms_level": d.get("rms_level"),
+        # Measured sound, with no vocabulary to guess from.
+        "sound_letters": d.get("sound_letters", ""),
+        "sound_evidence": d.get("sound_evidence", {}),
     }
 
 
