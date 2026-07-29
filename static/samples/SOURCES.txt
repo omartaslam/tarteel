@@ -62,6 +62,23 @@ stage_huwa_word.mp3
 
 Ayah 2 Husary full + stage cuts (Allāhu, aṣ-ṣamad) from EveryAyah Husary 112002.
 
+LETTER GATE BENCHMARKS — strong throat H "haa" (ح) and heavy S "saad" (ص)
+------------------------------------------------------------------------
+Same speaker on both sides of each pair, so the contrast is within one vocal
+tract. Fjmustak (male, median F0 ~127 Hz), Lingua Libre, CC BY-SA 4.0.
+
+bench_correct_haa_ahad_fjmustak.mp3       أحد   — has ح
+bench_incorrect_ha_hadha_fjmustak.mp3     هذا   — soft ه, no ح
+bench_correct_saad_sadiq_fjmustak.mp3     صادق  — has ص
+bench_incorrect_seen_suriya_fjmustak.mp3  سوريا — light س, no ص
+
+Measured before these gates were allowed to block a stage:
+  ح  scored 1.000 in all 4 ح words and 0.000 in all 8 soft-H words (3 speakers)
+  ص  detected in 7 of 9 native male words; both misses word-final (حمص, and مصر
+     for one speaker). Syllable-initial/doubled ص — the position aṣ-ṣamad needs
+     — scored 6 of 6. Do not extend the ص gate to word-final ص without new data.
+Guarded by test_haa_saad_benchmark.py.
+
 INCORRECT example clips (Compare panel) — ordinary speakers, not reciters
 ------------------------------------------------------------------------
 Chosen from Lingua Libre so the learner hears the miss from a normal voice.

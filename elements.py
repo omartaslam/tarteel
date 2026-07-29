@@ -55,21 +55,54 @@ STAGE_KEY_LETTER = {
         "و",
         "the <b>W</b>, “waw” (و), in <b>HOO-wa</b>",
         "“hoo-a” with no W at the end",
+        "Round your lips as if starting the word <b>“wet”</b>.",
     ),
     ("qul", 1): (
         "ل",
         "the <b>L</b>, “laam” (ل) — the L you make at the end of <b>“call”</b>",
         "a word that starts right but never lands on an L",
+        "Let the tongue touch behind your top front teeth, like the L in "
+        "<b>“call”</b> — and keep your lips open, or it becomes an <b>M</b>.",
     ),
     ("allahu", 1): (
         "لل",
         "the held double <b>L</b>, “laam” (ل), in <b>Al-LAA-hu</b>",
         "one quick L, like “lahu”",
+        "Hold the L about twice as long as feels natural: <b>Al-LLAA-hu</b>.",
     ),
     ("allahu", 2): (
         "لل",
         "the held double <b>L</b>, “laam” (ل), in <b>Al-LAA-hu</b>",
         "one quick L, like “lahu”",
+        "Hold the L about twice as long as feels natural: <b>Al-LLAA-hu</b>.",
+    ),
+    # Strong throat H, "haa" (ح). Benchmarked on male natives: scored 1.000 in
+    # every ح word and 0.000 in every soft-H word, so this is a safe blocker.
+    # It is also the sound Omar kept missing — four aḥad takes in a row came out
+    # with the soft English H and nothing told him.
+    ("ahad", 1): (
+        "ح",
+        "the strong throat <b>H</b>, “haa” (ح) — a fogging-the-mirror breath",
+        "the soft English H in “ahead”",
+        "Breathe out hard enough to steam a window, squeezing the middle of your "
+        "throat. Much stronger than the H in <b>“ahead”</b>: <b>a-ḤAD</b>.",
+    ),
+    ("ahad", 4): (
+        "ح",
+        "the strong throat <b>H</b>, “haa” (ح) — a fogging-the-mirror breath",
+        "the soft English H in “ahead”",
+        "Breathe out hard enough to steam a window, squeezing the middle of your "
+        "throat. Much stronger than the H in <b>“ahead”</b>: <b>a-ḤAD</b>.",
+    ),
+    # Heavy S, "saad" (ص). Detected in 7 of 9 native male words; both misses were
+    # word-final, and in the doubled syllable-initial position this stage needs
+    # it scored 6 of 6. Do not extend this gate to word-final ص without new data.
+    ("samad", 2): (
+        "ص",
+        "the heavy <b>S</b>, “saad” (ص) — dark and hollow, not a light “s”",
+        "the light English S in “see”",
+        "Drop the back of your tongue and say it from lower down, so the S sounds "
+        "dark and heavy: <b>aṣ-ṢA-mad</b>, not “as-sa-mad”.",
     ),
 }
 
@@ -348,7 +381,7 @@ def build_feedback(
     # message when his opening was finally correct and only the ending was absent.
     key_letter = STAGE_KEY_LETTER.get(((stage or {}).get("id"), verse))
     if key_letter and len(stage_words or []) == 1:
-        letter, cue, miss_sounds_like = key_letter
+        letter, cue, miss_sounds_like, how_to = key_letter
         if not _has_key_letter(letter, acoustic, heard_arabic or ""):
             stage_passed = False
             say = (stage or {}).get("say_en") or focus_word or "this word"
@@ -361,12 +394,14 @@ def build_feedback(
                 f"the sounds <b>{measured}</b> — {miss_sounds_like}"
                 if measured else miss_sounds_like
             )
-            # Only claim the start was right when it actually was.
+            # Only Qul has an opening we separately verify, and only claim it was
+            # right when it actually was. On other stages the missing letter IS
+            # the point, so praising an "opening" would be meaningless noise.
             onset_ok = bool(align_q.get("has_qaf")) or "ق" in (heard_arabic or "")
             opener = (
                 "<b>Your opening was right this time</b> — it is only the ending "
                 "that is missing.<br>"
-                if onset_ok else ""
+                if onset_ok and (stage or {}).get("id") == "qul" else ""
             )
             miss = coach._card(
                 5,
@@ -378,11 +413,9 @@ def build_feedback(
                     "want": f"{say} with {cue}",
                     "fix": (
                         f"{opener}"
-                        f"Say <b>{say}</b> <span class=\"arlight\">({say_ar})</span> and finish on "
-                        f"{cue}. Let the tongue touch behind your top front teeth, like the "
-                        f"L in <b>“call”</b> — and keep your lips open, or it becomes an "
-                        f"<b>M</b>.<br>"
-                        f"Tap Hear only {say} and copy just the ending."
+                        f"Say <b>{say}</b> <span class=\"arlight\">({say_ar})</span> with "
+                        f"{cue}.<br>{how_to}<br>"
+                        f"Tap Hear only {say} and copy it."
                     ),
                     "ar": (ended_on, letter),
                 },
