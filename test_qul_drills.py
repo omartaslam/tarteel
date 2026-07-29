@@ -381,6 +381,26 @@ def test_word_stages_need_their_own_letters(stage, heard_ar, heard_ph, expect_pa
     assert bool(cards[0].get("stage_passed")) is expect_pass, f"{note}: {heard_ar}"
 
 
+def test_missing_ending_beats_the_generic_shape_complaint():
+    """Omar's قوط take: his opening was finally right and only the L was absent,
+    but the app showed a generic "word shape" card and never said which piece
+    was missing. The specific ending card must lead and replace it."""
+    cards = build_feedback(
+        1, [], None, heard_arabic="قُوطُ", heard_phonetic="Qutu",
+        stage_id="qul", locked_stages=[],
+        onset_probe={"p_qaf": 0.756, "p_kaf": 0.228, "onset": "قوط"},
+        acoustic={"letters": "قوط",
+                  "evidence": {"ق": 0.756, "ك": 0.228, "و": 1.0, "ل": 0.02, "ر": 0.01}},
+    )
+    assert cards[0].get("key") == "pronunciation:qul:need_ل"
+    assert not any((c.get("key") or "") == "word_shape:qul" for c in cards)
+    blob = (cards[0].get("fix") or "") + (cards[0].get("plain") or "")
+    assert "opening was right" in blob
+    assert "call" in blob.lower()
+    # Tell him what he actually landed on, not a bare question mark.
+    assert "(?)" not in blob
+
+
 def test_huwa_needs_its_waw_not_just_a_ha():
     """aḥad (heard "هُ أَحَدٌ") used to clear huwa — a bare ه scored near هو."""
     fail = build_feedback(

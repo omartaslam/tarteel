@@ -58,7 +58,7 @@ STAGE_KEY_LETTER = {
     ),
     ("qul", 1): (
         "ل",
-        "the <b>L</b>, “laam” (ل) — the L you make at the end of <b>“pull”</b>",
+        "the <b>L</b>, “laam” (ل) — the L you make at the end of <b>“call”</b>",
         "a word that starts right but never lands on an L",
     ),
     ("allahu", 1): (
@@ -334,19 +334,40 @@ def build_feedback(
 
     stage_passed = not blocking and not miss_words
 
-    # Isolated word stages must contain their teaching letter, not just a
-    # roughly similar shape. Only applies when the stage is that single word.
+    # Phone ASR flatten rescue: Whisper often writes ك while the audio is ق.
+    # Honour acoustic ق for phone users — do not lock out the main audience.
+    # The evidence must come from an unconstrained decode of the onset; forced
+    # alignment cannot answer this (it only ever emits the expected letters).
+    align_q = coach.onset_qaf_verdict(onset_probe)
+    align_rescues_qaf = bool(align_q.get("has_qaf") and not align_q.get("has_kaf"))
+
+    # Isolated word stages must contain their teaching letter, not just a roughly
+    # similar shape. This runs BEFORE the pass/fail verdict and regardless of it:
+    # when the shape check has already failed the take, the learner still needs to
+    # know WHICH piece is missing. Omar's قوط take got a generic "word shape"
+    # message when his opening was finally correct and only the ending was absent.
     key_letter = STAGE_KEY_LETTER.get(((stage or {}).get("id"), verse))
-    if key_letter and stage_passed and len(stage_words or []) == 1:
+    if key_letter and len(stage_words or []) == 1:
         letter, cue, miss_sounds_like = key_letter
         if not _has_key_letter(letter, acoustic, heard_arabic or ""):
             stage_passed = False
             say = (stage or {}).get("say_en") or focus_word or "this word"
             say_ar = (stage or {}).get("say_ar") or ""
-            measured = coach._romanize((acoustic or {}).get("letters") or "")
-            heard_txt = f"{miss_sounds_like}"
-            if measured:
-                heard_txt = f"the sounds <b>{measured}</b> — {miss_sounds_like}"
+            raw = (acoustic or {}).get("letters") or ""
+            measured = coach._romanize(raw)
+            # Name the sound they actually landed on, instead of a bare "?".
+            ended_on = raw[-1] if raw else "?"
+            heard_txt = (
+                f"the sounds <b>{measured}</b> — {miss_sounds_like}"
+                if measured else miss_sounds_like
+            )
+            # Only claim the start was right when it actually was.
+            onset_ok = bool(align_q.get("has_qaf")) or "ق" in (heard_arabic or "")
+            opener = (
+                "<b>Your opening was right this time</b> — it is only the ending "
+                "that is missing.<br>"
+                if onset_ok else ""
+            )
             miss = coach._card(
                 5,
                 verse,
@@ -356,28 +377,28 @@ def build_feedback(
                     "heard": heard_txt,
                     "want": f"{say} with {cue}",
                     "fix": (
-                        f"The start was right — it is the ending that is missing.<br>"
+                        f"{opener}"
                         f"Say <b>{say}</b> <span class=\"arlight\">({say_ar})</span> and finish on "
                         f"{cue}. Let the tongue touch behind your top front teeth, like the "
-                        f"end of <b>“pull”</b> — don’t close your lips.<br>"
+                        f"L in <b>“call”</b> — and keep your lips open, or it becomes an "
+                        f"<b>M</b>.<br>"
                         f"Tap Hear only {say} and copy just the ending."
                     ),
-                    "ar": ("?", letter),
+                    "ar": (ended_on, letter),
                 },
-                "?",
+                ended_on,
                 letter,
                 rule="pronunciation",
             )
             miss["key"] = f"pronunciation:{(stage or {}).get('id')}:need_{letter}"
+            # This is more useful than the generic shape complaint about the same
+            # word, so replace it rather than stacking both.
+            errors = [
+                e for e in errors
+                if (e.get("key") or "") != f"word_shape:{(stage_words or [''])[0]}"
+            ]
             errors.insert(0, miss)
             blocking = [c for c in errors if _blocks_stage(c)]
-
-    # Phone ASR flatten rescue: Whisper often writes ك while the audio is ق.
-    # Honour acoustic ق for phone users — do not lock out the main audience.
-    # The evidence must come from an unconstrained decode of the onset; forced
-    # alignment cannot answer this (it only ever emits the expected letters).
-    align_q = coach.onset_qaf_verdict(onset_probe)
-    align_rescues_qaf = bool(align_q.get("has_qaf") and not align_q.get("has_kaf"))
 
     # Qul lock requires back ق — Whisper ق, clear qh/QUAL, or XLSR onset ق.
     # Shape-near without ق/qh (طل, garbled Whisper) must NOT skip to huwa.
