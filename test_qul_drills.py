@@ -268,6 +268,21 @@ def test_compare_html_stage_only_marks_qul_not_whole_ayah():
     assert "this stage" in low
 
 
+def test_compare_ignores_whisper_muminuna_invention():
+    """Session 20260729-211710-e622bd: Whisper invented المؤمنون; acoustics were ل."""
+    invent_ar = "وَالْمُؤْمِنُونَ مِنَ الْمُؤْمِنُونَ"
+    invent_ph = "Wālmuʾminūna mina almuʾminūna"
+    assert coach.prefer_measured_for_compare(invent_ar, "ل", ["qul"]) is True
+    html = coach.compare_html(
+        1, invent_ar, invent_ph, stage_words=["qul"], sound_letters="ل"
+    )
+    low = html.lower()
+    assert "muʾmin" not in low and "mumin" not in low
+    assert "measured sound" in low
+    # You line should be the measured letter, not the invented phrase.
+    assert ">L<" in html or ">l<" in html or "L</span>" in html or ">L</" in html
+
+
 def test_compare_html_full_ayah_still_shows_all_words():
     html = coach.compare_html(1, "كل", "Kull", stage_words=None)
     assert "huwa" in html.lower() or "Huwa" in html

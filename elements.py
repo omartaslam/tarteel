@@ -114,7 +114,12 @@ KEY_LETTER_ALIASES = {"ل": ("ل", "ر")}
 KEY_LETTER_MIN_EVIDENCE = 0.45
 
 
-def _has_key_letter(letters: str, acoustic: dict | None, heard_arabic: str) -> bool:
+def _has_key_letter(
+    letters: str,
+    acoustic: dict | None,
+    heard_arabic: str,
+    voice_profile: dict | None = None,
+) -> bool:
     """Is the stage's letter really there? Judge from audio, not the transcript.
 
     Whisper both invents the letter (كَاللَّهُ "contained" ل with no acoustic ل at
@@ -128,10 +133,18 @@ def _has_key_letter(letters: str, acoustic: dict | None, heard_arabic: str) -> b
     if len(letters) > 1:
         # Doubled letters (ll) are a duration cue; the transcript carries that.
         return letters in coach.normalize_ar(heard_arabic or "").replace(" ", "")
+    best = 0.0
     for alias in KEY_LETTER_ALIASES.get(letters, (letters,)):
-        if float(ev.get(alias) or 0.0) >= KEY_LETTER_MIN_EVIDENCE or alias in sound:
+        score = float(ev.get(alias) or 0.0)
+        if score > best:
+            best = score
+        if score >= KEY_LETTER_MIN_EVIDENCE or alias in sound:
             return True
-    return False
+    # Gray-zone: this learner's own labelled takes say the letter is usually
+    # present at a similar evidence level.
+    import voice_profile as vp
+
+    return vp.key_letter_relative_ok(letters, best, voice_profile)
 
 
 def build_feedback(
@@ -147,6 +160,7 @@ def build_feedback(
     qu_bridge_attempt=None,
     onset_probe=None,
     acoustic=None,
+    voice_profile=None,
 ):
     spec = VERSE_ELEMENTS.get(verse, {})
     stage = stg.get_stage(verse, stage_id)
@@ -172,6 +186,7 @@ def build_feedback(
                 attempt=qu_bridge_attempt,
                 onset_probe=onset_probe,
                 acoustic=acoustic,
+                voice_profile=voice_profile,
             )
         else:
             ev = coach.evaluate_drill(
@@ -181,6 +196,7 @@ def build_feedback(
                 heard_phonetic or "",
                 onset_probe=onset_probe,
                 acoustic=acoustic,
+                voice_profile=voice_profile,
             )
         errors.extend(ev.get("cards") or [])
         # defer blocks advance (no false lock) but still feeds next-step coaching
@@ -228,7 +244,9 @@ def build_feedback(
         return cards
 
     detected = [l for l in letters if l["c"] != "|"]
-    if detected:
+    # Forced alignment always paints the expected ayah, so a 1-word stage still
+    # "finds" 4 words. Word-order tips are only meaningful on joins / full ayah.
+    if detected and len(stage_words or []) != 1 and not drill:
         nwords = len([l for l in letters if l["c"] == "|"]) + 1
         wo = coach.word_order_card(
             verse,
@@ -371,7 +389,10 @@ def build_feedback(
     # Honour acoustic ق for phone users — do not lock out the main audience.
     # The evidence must come from an unconstrained decode of the onset; forced
     # alignment cannot answer this (it only ever emits the expected letters).
-    align_q = coach.onset_qaf_verdict(onset_probe)
+    # Speaker-relative baselines may fill the gray zone only.
+    import voice_profile as vp
+
+    align_q = vp.resolve_qaf_verdict(onset_probe, voice_profile)
     align_rescues_qaf = bool(align_q.get("has_qaf") and not align_q.get("has_kaf"))
 
     # Isolated word stages must contain their teaching letter, not just a roughly
@@ -382,7 +403,7 @@ def build_feedback(
     key_letter = STAGE_KEY_LETTER.get(((stage or {}).get("id"), verse))
     if key_letter and len(stage_words or []) == 1:
         letter, cue, miss_sounds_like, how_to = key_letter
-        if not _has_key_letter(letter, acoustic, heard_arabic or ""):
+        if not _has_key_letter(letter, acoustic, heard_arabic or "", voice_profile):
             stage_passed = False
             say = (stage or {}).get("say_en") or focus_word or "this word"
             say_ar = (stage or {}).get("say_ar") or ""
@@ -475,12 +496,15 @@ def build_feedback(
                         if has_kaf
                         else "no clear back Q (qaf / qh) in this take"
                     ),
-                    "want": "Arabic Qul — English cue <b>QUAL / qhul</b> like <b>quality</b>",
+                    "want": "Arabic Qul — throat from <b>“call”</b>, shorter vowel → <b>QUL</b>",
                     "fix": (
-                        "Say the full word <b>Qul</b> (قُلْ). Think <b>QUAL</b> / <b>qhul</b> "
-                        "like the start of <b>quality</b> — hollow qh, not “cull/cool”.<br>"
-                        "If you felt QUAL but the app shows Kull: we also check the letter track. "
-                        "Retry closer to the mic — we lock on ق (or clear qh), never on ك alone."
+                        "Say the full word <b>Qul</b> (قُلْ). Say <b>CAW-l</b> (the word "
+                        "<b>“call”</b>), then shorten the vowel: <b>QUL</b> — deep throat K, "
+                        "not “cull/cool”.<br>"
+                        "If you felt the “call” K but the app shows Kull: we also check the "
+                        "letter track. Retry closer to the mic — we lock on the deep throat K, "
+                        "“qaf” (ق) (or clear measured ق), never on the normal English K, "
+                        "“kaf” (ك) alone."
                     ),
                     "ar": ("ك" if has_kaf else "?", "ق"),
                 },

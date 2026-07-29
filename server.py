@@ -47,6 +47,8 @@ def _diag_from_cards(cards):
         # Measured sound, with no vocabulary to guess from.
         "sound_letters": d.get("sound_letters", ""),
         "sound_evidence": d.get("sound_evidence", {}),
+        # Acoustic snapshot for device voice calibration after self-label.
+        "voice_sample": d.get("voice_sample"),
     }
 
 
@@ -57,7 +59,24 @@ def _set_job(jid, **kw):
         _JOBS[jid] = job
 
 
-def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, last_focus=None, stage_id=None, locked_stages=None, qu_bridge_attempt=None):
+def _parse_voice_profile(raw) -> dict | None:
+    """Optional JSON voice profile from this device. Never raise."""
+    import voice_profile as vp
+
+    if not raw:
+        return None
+    if isinstance(raw, dict):
+        return vp.parse_profile(raw)
+    try:
+        data = json.loads(raw)
+        if isinstance(data, dict):
+            return vp.parse_profile(data)
+    except Exception:
+        pass
+    return None
+
+
+def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, last_focus=None, stage_id=None, locked_stages=None, qu_bridge_attempt=None, voice_profile=None):
     t0 = time.time()
 
     def cancelled():
@@ -87,6 +106,7 @@ def _run_job(jid, path, ext, raw, verse, filename, content_type, mastered=None, 
             stage_id=stage_id,
             locked_stages=locked_stages or [],
             qu_bridge_attempt=qu_bridge_attempt,
+            voice_profile=voice_profile,
         ) or []
         if cancelled():
             _set_job(
@@ -166,6 +186,7 @@ async def analyze_start(
     stage_id: str = Form(""),
     locked_stages: str = Form(""),
     qu_bridge_attempt: str = Form(""),
+    voice_profile: str = Form(""),
 ):
     raw = await audio.read()
     ext = (audio.filename or "audio.webm").split(".")[-1].lower()
@@ -179,6 +200,7 @@ async def analyze_start(
     locked_list = _parse_mastered(locked_stages)
     focus = (last_focus or "").strip() or None
     stage = (stage_id or "").strip() or None
+    voice = _parse_voice_profile(voice_profile)
     bridge_n = None
     try:
         if (qu_bridge_attempt or "").strip():
@@ -199,7 +221,7 @@ async def analyze_start(
         target=_run_job,
         args=(
             jid, path, ext, raw, verse, audio.filename, audio.content_type,
-            mastered_list, focus, stage, locked_list, bridge_n,
+            mastered_list, focus, stage, locked_list, bridge_n, voice,
         ),
         daemon=True,
     ).start()
@@ -252,6 +274,7 @@ async def do_analyze(
     stage_id: str = Form(""),
     locked_stages: str = Form(""),
     qu_bridge_attempt: str = Form(""),
+    voice_profile: str = Form(""),
 ):
     """Legacy one-shot analyze (still used as fallback)."""
     raw = await audio.read()
@@ -262,6 +285,7 @@ async def do_analyze(
     locked_list = _parse_mastered(locked_stages)
     focus = (last_focus or "").strip() or None
     stage = (stage_id or "").strip() or None
+    voice = _parse_voice_profile(voice_profile)
     bridge_n = None
     try:
         if (qu_bridge_attempt or "").strip():
@@ -274,7 +298,7 @@ async def do_analyze(
     try:
         results = await run_in_threadpool(
             analyze.analyze_verse,
-            path, verse, None, mastered_list, focus, None, stage, locked_list, bridge_n,
+            path, verse, None, mastered_list, focus, None, stage, locked_list, bridge_n, voice,
         )
     except Exception as e:
         return JSONResponse({"error": str(e), "results": [], "verse": verse}, status_code=500)
@@ -327,6 +351,8 @@ async def add_label(
     session: str = Form(...),
     label: str = Form(...),
     stage_id: str = Form(""),
+    voice_sample: str = Form(""),
+    voice_profile: str = Form(""),
 ):
     """The learner's own verdict, captured BEFORE ours is revealed.
 
@@ -334,7 +360,12 @@ async def add_label(
     to the app's opinion and is worthless as ground truth. This is the only
     record of what the learner intended, and the whole accuracy protocol
     depends on it.
+
+    When voice_sample + voice_profile are sent, fold the label into this
+    device's speaker-relative acoustic baseline and return the updated profile.
     """
+    import voice_profile as vp
+
     label = (label or "").strip().lower()
     if label not in ("correct", "wrong", "unsure"):
         return JSONResponse({"error": "bad label"}, status_code=400)
@@ -345,8 +376,31 @@ async def add_label(
     d["self_label"] = label
     d["self_label_stage"] = (stage_id or d.get("stage_id") or "")
     d["self_label_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    snap = None
+    if voice_sample:
+        try:
+            snap = json.loads(voice_sample)
+        except Exception:
+            snap = None
+    if not isinstance(snap, dict):
+        # Fall back to the acoustic snapshot saved with the take.
+        c0 = (d.get("results") or [{}])[0]
+        snap = c0.get("voice_sample") if isinstance(c0.get("voice_sample"), dict) else None
+    if isinstance(snap, dict) and stage_id and not snap.get("stage_id"):
+        snap = {**snap, "stage_id": stage_id}
+    if isinstance(snap, dict) and d.get("verse") and not snap.get("verse"):
+        snap = {**snap, "verse": d.get("verse")}
+
+    updated = vp.record_label(_parse_voice_profile(voice_profile), label, snap)
+    d["voice_sample"] = snap
     json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-    return {"ok": True, "self_label": label}
+    return {
+        "ok": True,
+        "self_label": label,
+        "voice_profile": updated,
+        "voice_stats": vp.profile_stats(updated),
+    }
 
 
 @app.get("/labels")

@@ -9,7 +9,12 @@ Last updated: 2026-07-29 ~21:00 UTC
 (ح/ص gates). Revert here if speaker-relative baseline work goes wrong.
 
 ## LIVE NOW
-`/health` → **`80ff5d95565d`** (matches tag) — hard-refresh the phone before testing.
+Check `/health` after merge. Rollback tag: **`stable-opus5-cursor` @ `80ff5d9`**.
+
+## Speaker-relative baselines (new)
+Learns your voice from correct/wrong self-labels during practice
+(`tarteel_voice_v1`). Absolute gates still win on clear takes; relative only
+helps the gray zone. No separate calibration step.
 
 Three fixes, all verified against live:
 

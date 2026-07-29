@@ -217,6 +217,23 @@ let _lastRecUrl=null;
 let _surahQueue=null; // remaining husary codes when playing whole surah
 const $=id=>document.getElementById(id);
 const PRACTICE_STORE='tarteel_practice_v7';
+/** Per-device acoustic baseline — survives practice clears and Railway redeploys. */
+const VOICE_STORE='tarteel_voice_v1';
+let _lastVoiceSample=null;
+
+function emptyVoice(){
+  return {version:1, qaf_good:[], qaf_bad:[], letters:{}};
+}
+function loadVoice(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(VOICE_STORE)||'null');
+    if(!raw || typeof raw!=='object') return emptyVoice();
+    return raw;
+  }catch(e){ return emptyVoice(); }
+}
+function saveVoice(p){
+  try{ localStorage.setItem(VOICE_STORE, JSON.stringify(p||emptyVoice())); }catch(e){}
+}
 const BUILD_STORE='tarteel_build_id';
 const INTRO_STORE='tarteel_surah_intro_v1';
 const LAST_VERSE_STORE='tarteel_last_verse_v1';
@@ -1183,6 +1200,7 @@ $('rec').onclick=async()=>{
     fd.append('locked_stages', JSON.stringify(prac.lockedStages||[]));
     if(prac.lastFocus) fd.append('last_focus', prac.lastFocus);
     if(prac.stageId) fd.append('stage_id', prac.stageId);
+    try{ fd.append('voice_profile', JSON.stringify(loadVoice())); }catch(e){}
     // Syllable rescue on Qu: count toward tutor defer after 3
     if(prac.stageId==='qu' && prac.syllableRescue && !prac.syllableExhausted){
       const attempt=Math.min(3, (prac.syllableFails||0)+1);
@@ -1282,6 +1300,7 @@ function askSelfLabel(data){
   const lad=STAGE_LADDER[v]||[];
   const stObj=lad.find(s=>s.id===stage);
   const say=stObj?stObj.say_en:'that';
+  _lastVoiceSample=data.voice_sample||((data.results||[])[0]||{}).voice_sample||null;
   if(!sid){ render(data); return; }
   $('quality').style.display='none';
   $('results').innerHTML=`
@@ -1305,7 +1324,13 @@ function askSelfLabel(data){
     try{
       const fd=new FormData();
       fd.append('session',sid); fd.append('label',label); fd.append('stage_id',stage);
-      await fetch('/label',{method:'POST',body:fd});
+      try{ fd.append('voice_profile', JSON.stringify(loadVoice())); }catch(e){}
+      if(_lastVoiceSample){
+        try{ fd.append('voice_sample', JSON.stringify(_lastVoiceSample)); }catch(e){}
+      }
+      const lr=await fetch('/label',{method:'POST',body:fd});
+      const body=await lr.json().catch(()=>({}));
+      if(body && body.voice_profile) saveVoice(body.voice_profile);
     }catch(e){}
     _selfLabel=label;
     render(data);
@@ -1372,12 +1397,16 @@ function render(data){
          <div class="hmatchar" dir="rtl" lang="ar">${rawAr}</div></div>`
       : '';
     // The word guess comes from a language model that invents plausible Quranic
-    // words on one-syllable takes (it wrote كَفَرَ for a Qul). Show the measured
-    // sound as the headline and mark the word for what it is — a guess.
+    // words on one-syllable takes (it wrote كَفَرَ / المؤمنون for a Qul). Show the
+    // measured sound as the headline and mark the word for what it is — a guess.
     const soundAr=(view.sound_letters||'').trim();
     const wordGuess=(view.heard_arabic||'').trim();
-    const soundBlock = soundAr
-      ? `<div class="hmatch"><div class="hmatchlbl">Word guess (unreliable on single words)</div>
+    const guessLooksInvented = !!(soundAr && wordGuess && (
+      wordGuess.split(/\s+/).length > 1 ||
+      wordGuess.replace(/\s/g,'').length >= soundAr.replace(/\s/g,'').length + 4
+    ));
+    const soundBlock = (wordGuess && (soundAr || guessLooksInvented))
+      ? `<div class="hmatch"><div class="hmatchlbl">${guessLooksInvented?'Word guess — ignore this (Whisper invented it)':'Word guess (unreliable on single words)'}</div>
          <div class="hmatchar" dir="rtl" lang="ar">${wordGuess||'—'}</div>
          ${view.heard_phonetic?`<div class="hmatchph">${view.heard_phonetic}</div>`:''}</div>`
       : '';

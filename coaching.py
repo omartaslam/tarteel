@@ -164,6 +164,51 @@ def _romanize(text: str) -> str:
     return romanize_ar(text or "")
 
 
+def prefer_measured_for_compare(
+    heard_arabic: str,
+    sound_letters: str,
+    stage_words: list[str] | None,
+) -> bool:
+    """True when the You-line should use measured letters, not Whisper.
+
+    Whisper invents whole Quranic phrases on short / unclear takes — session
+    20260729-211710-e622bd heard only ل acoustically but Whisper wrote
+    وَالْمُؤْمِنُونَ مِنَ الْمُؤْمِنُونَ. That garbage must not fill the compare card.
+    """
+    sound = (sound_letters or "").strip()
+    if not sound:
+        return False
+    sw = [w for w in (stage_words or []) if w]
+    heard_words = [w for w in normalize_ar(heard_arabic or "").split() if w]
+    # Isolated word / short stage: always prefer the free acoustic read.
+    if len(sw) <= 1:
+        return True
+    # Whisper spilled far more words than this stage asks for.
+    if heard_words and len(heard_words) > len(sw) + 1:
+        return True
+    # Whisper string is much longer than what acoustics support.
+    heard_letters = _letters_only(heard_arabic or "")
+    if len(heard_letters) >= len(sound) + 4 and len(heard_letters) >= 6:
+        return True
+    return False
+
+
+def compare_heard_pair(
+    heard_arabic: str,
+    heard_phonetic: str,
+    sound_letters: str = "",
+    stage_words: list[str] | None = None,
+) -> tuple[str, str, bool]:
+    """Pick Arabic + phonetics for the compare You-line.
+
+    Returns (arabic, phonetic, used_measured).
+    """
+    if prefer_measured_for_compare(heard_arabic, sound_letters, stage_words):
+        sound = (sound_letters or "").strip()
+        return sound, _romanize(sound), True
+    return heard_arabic or "", heard_phonetic or "", False
+
+
 def _heard_phonetics(heard_arabic: str, heard_phonetic: str) -> list[str]:
     heard_words = [w for w in normalize_ar(heard_arabic or "").split() if w]
     raw_words = [w for w in (heard_arabic or "").split() if w]
@@ -440,17 +485,23 @@ def compare_html(
     heard_arabic: str,
     heard_phonetic: str = "",
     stage_words: list[str] | None = None,
+    sound_letters: str = "",
 ) -> str:
     """English-first compare with yellow on mismatched words.
 
     If stage_words is set (e.g. ['qul']), only those stage words appear as
     Target — never paint the whole ayah yellow when the learner said one word.
+
+    When Whisper invents a long phrase on a short take, the You line uses
+    measured sound_letters instead (see prefer_measured_for_compare).
     """
+    use_ar, use_ph, used_measured = compare_heard_pair(
+        heard_arabic, heard_phonetic, sound_letters, stage_words
+    )
     full_expected = EXPECTED.get(verse) or []
     line = AYAH_LINE.get(verse) or {"ph": [], "ar": []}
-    heard_words = [w for w in normalize_ar(heard_arabic or "").split() if w]
-    you_phs = _heard_phonetics(heard_arabic, heard_phonetic)
-    aligned = _align_stage(verse, heard_arabic, heard_phonetic, stage_words)
+    you_phs = _heard_phonetics(use_ar, use_ph)
+    aligned = _align_stage(verse, use_ar, use_ph, stage_words)
     allow = (
         {(w or "").lower() for w in stage_words}
         if stage_words is not None
@@ -500,6 +551,8 @@ def compare_html(
             if n_bad
             else "This stage word lined up with the target"
         )
+        if used_measured:
+            note += " · You line is measured sound (Whisper word guess ignored)"
         lbl = "Heard vs target (this stage)"
     else:
         note = (
@@ -507,6 +560,8 @@ def compare_html(
             if n_bad
             else "All words lined up with the target"
         )
+        if used_measured:
+            note += " · You line is measured sound (Whisper word guess ignored)"
         lbl = "Heard vs target (English first)"
     return (
         '<div class="cmpwrap">'
@@ -540,6 +595,9 @@ def onset_qaf_verdict(probe: dict | None) -> dict:
     `probe` comes from analyze_xlsr and carries free-decode probabilities:
     {p_qaf, p_kaf, onset}. No probe (e.g. unit tests, no audio) means no
     acoustic evidence either way, so no rescue.
+
+    For speaker-relative gray-zone help, call voice_profile.resolve_qaf_verdict.
+    Absolute thresholds here must stay fixed — they guard the benchmarks.
     """
     pq = float((probe or {}).get("p_qaf") or 0.0)
     pk = float((probe or {}).get("p_kaf") or 0.0)
@@ -584,6 +642,7 @@ def evaluate_drill(
     heard_phonetic: str = "",
     onset_probe: dict | None = None,
     acoustic: dict | None = None,
+    voice_profile: dict | None = None,
 ) -> dict:
     """
     Score syllable micro-drills (Qu / ul) without full-word ayah alignment.
@@ -601,7 +660,9 @@ def evaluate_drill(
     letters = _letters_only(ar)
     ph = (heard_phonetic or "").lower()
     ph_compact = re.sub(r"[^a-zāḥṣṭḍẓ]", "", ph)
-    align_q = onset_qaf_verdict(onset_probe)
+    import voice_profile as vp
+
+    align_q = vp.resolve_qaf_verdict(onset_probe, voice_profile)
     # Show the learner everything they said, even though the drill only scores
     # one piece of it. Printing a clipped "Qu" when they said "Qul" reads like
     # the app mis-heard them, and costs trust for no benefit.
@@ -759,6 +820,7 @@ def evaluate_qu_qul_bridge(
     attempt: int = 1,
     onset_probe: dict | None = None,
     acoustic: dict | None = None,
+    voice_profile: dict | None = None,
 ) -> dict:
     """Syllable-rescue Qu attempts after word-first Qul failed.
 
@@ -777,6 +839,7 @@ def evaluate_qu_qul_bridge(
         heard_phonetic or "",
         onset_probe=onset_probe,
         acoustic=acoustic,
+        voice_profile=voice_profile,
     )
     left = 3 - n
 
