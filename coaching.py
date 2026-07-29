@@ -236,9 +236,12 @@ def heard_summary_en(
     if sid == "qul":
         if pl >= _SUMMARY_L_MIN:
             parts.append("ending L ✓")
-        elif pn >= 0.35 and pn > pl:
+        # Need a clear N-over-L margin. Session 20260729-220246: L=0.38 N=0.57
+        # after a bad AAC loudnorm path — learner + playback + Whisper heard L.
+        # Do not call N when L is still substantial.
+        elif pn >= 0.55 and pn >= pl + 0.25:
             parts.append("ending more like N than L")
-        elif pm >= 0.35 and pm > pl:
+        elif pm >= 0.55 and pm >= pl + 0.25:
             parts.append("ending more like M (lips closed) than L")
         else:
             parts.append("no clear ending L yet")

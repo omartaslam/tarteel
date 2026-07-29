@@ -165,13 +165,18 @@ def analyze_verse(path, verse, on_progress=None, mastered=None, last_focus=None,
             _pk=0.0
         gain = "volume=32dB," if _pk < 0.03 else ("volume=22dB," if _pk < 0.08 else ("volume=14dB," if _pk<0.15 else ""))
         prog(18, "normalize", "Cleaning & boosting the audio…")
-        # dynamic compression evens out the quiet iOS capture, then normalize
+        # Always filter the already-decoded PCM (`orig`), never the phone
+        # container (m4a/mp4/webm). Session 20260729-220246-affdf3: the same
+        # take read as ending N when loudnorm ran on AAC bytes, and as ending L
+        # (matching playback + Whisper كُلًّا) when loudnorm ran on the PCM wav.
+        # Container-sensitive ffmpeg filters flipped L↔N and lied to the learner.
         afilter = gain + "acompressor=threshold=-24dB:ratio=4:makeup=6," + "loudnorm=I=-14:TP=-1.5:LRA=11"
-        subprocess.run(["ffmpeg","-i",path,
+        decode_src = orig if os.path.exists(orig) else path
+        subprocess.run(["ffmpeg","-i",decode_src,
                         "-af",afilter,
                         "-ar","16000","-ac","1",wavp,"-y"],capture_output=True)
         if not os.path.exists(wavp):
-            subprocess.run(["ffmpeg","-i",path,"-ar","16000","-ac","1",wavp,"-y"],capture_output=True)
+            subprocess.run(["ffmpeg","-i",decode_src,"-ar","16000","-ac","1",wavp,"-y"],capture_output=True)
         if not os.path.exists(wavp):
             return [{"rule":"qalqalah","verdict":"defer","confidence":0.0,"reason":"audio_decode_failed",
                      "level":"defer","plain":"Could not read the recording. Try again.","scholarly":None}]

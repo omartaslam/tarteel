@@ -1304,10 +1304,15 @@ function askSelfLabel(data){
   _lastVoiceSample=data.voice_sample||((data.results||[])[0]||{}).voice_sample||null;
   if(!sid){ render(data); return; }
   $('quality').style.display='none';
+  const playSrc = _lastRecUrl || ('/sessions/'+sid+'/audio');
   $('results').innerHTML=`
     <div class="heard" id="selfLabelBox">
       <div class="hh">Before we show you anything — what do you think?</div>
-      <p class="bt" style="margin:6px 0 14px">Did you say <b>${say}</b> correctly just now?</p>
+      <p class="bt" style="margin:6px 0 10px">Did you say <b>${say}</b> correctly just now?</p>
+      <div class="hplay" style="margin:0 0 14px;padding-top:0;border-top:none">
+        <div class="hplaylbl">Play your recording first</div>
+        <audio id="selfLabelAudio" controls preload="metadata" playsinline src="${playSrc}"></audio>
+      </div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <button class="btn" id="lblRight" style="background:#1e8449;color:#fff">I said it correctly</button>
         <button class="btn" id="lblThinkRight" style="background:#3d8b5a;color:#fff">I think I got it right</button>
@@ -1315,15 +1320,21 @@ function askSelfLabel(data){
         <button class="btn" id="lblWrong" style="background:#c0392b;color:#fff">I know I got it wrong</button>
         <button class="btn" id="lblUnsure" style="background:#6b7a86;color:#fff">I honestly can’t tell</button>
       </div>
-      <div class="hnote">Your answer is the only record of what you meant to say. It is
-      what lets us measure whether the app is actually right — so answer honestly,
-      not to match what you think it wants.</div>
+      <div class="hnote">Listen back before you answer. Your answer is the only record of what you
+      meant to say — answer honestly, not to match what you think the app wants.</div>
     </div>`;
   document.getElementById('selfLabelBox').scrollIntoView({behavior:'smooth',block:'center'});
+  const aud=document.getElementById('selfLabelAudio');
+  if(aud){
+    aud.onplay=()=>{ try{
+      document.querySelectorAll('audio').forEach(a=>{ if(a!==aud) a.pause(); });
+    }catch(e){} };
+  }
   const send=async(label)=>{
     for(const id of ['lblRight','lblThinkRight','lblThinkWrong','lblWrong','lblUnsure']){
       const b=document.getElementById(id); if(b) b.disabled=true;
     }
+    try{ if(aud) aud.pause(); }catch(e){}
     try{
       const fd=new FormData();
       fd.append('session',sid); fd.append('label',label); fd.append('stage_id',stage);
