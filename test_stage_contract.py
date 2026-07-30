@@ -6,8 +6,7 @@ INDEX = Path(__file__).resolve().parent / "static" / "index.html"
 STAGES_PY = Path(__file__).resolve().parent / "stages.py"
 
 AYAH1_IDS = [
-    "qul", "qu", "ul", "huwa", "qul_huwa", "allahu",
-    "qul_huwa_allahu", "ahad", "full",
+    "qu", "ul", "qul", "hu", "wa", "huwa", "allahu", "ahad", "full",
 ]
 
 
@@ -48,4 +47,4 @@ def test_ayah1_every_stage_owns_hear_and_compare():
 def test_stages_py_documents_ui_contract():
     text = STAGES_PY.read_text(encoding="utf-8")
     assert "hear" in text and "compare" in text
-    assert "Do not hard-code a Qul-only compare" in text
+    assert "STAGE_LADDER" in text or "static/index.html" in text

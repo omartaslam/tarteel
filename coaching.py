@@ -76,7 +76,7 @@ AYAH_LINE = {
 def section_html(verse: int, word_en: str, *, highlight: str | None = None) -> str:
     """English-phonetic ayah line with the focus word highlighted; Arabic light under it.
 
-    highlight='qu'|'ul' marks only that part inside Qul (syllable rescue).
+    highlight='qu'|'ul'|'hu'|'wa' marks only that part inside the focus word.
     Do not treat 'qu' as a hit on full 'qul' via substring — that mixed Qul/Qu copy.
     """
     line = AYAH_LINE.get(verse)
@@ -111,6 +111,28 @@ def section_html(verse: int, word_en: str, *, highlight: str | None = None) -> s
             ar_parts.append(
                 f'{ar[:1] if ar else ""}'
                 f'<span class="focusw">{ar[1:] if len(ar) > 1 else ar}</span>'
+            )
+            continue
+        if hl == "hu" and k == "huwa":
+            cut = 2 if len(ph) >= 2 else 1
+            ph_parts.append(
+                f'<span class="focusw">{ph[:cut] if ph else ""}</span>'
+                f'{ph[cut:] if len(ph) > cut else ""}'
+            )
+            ar_parts.append(
+                f'<span class="focusw">{ar[:2] if len(ar) >= 2 else ar}</span>'
+                f'{ar[2:] if len(ar) > 2 else ""}'
+            )
+            continue
+        if hl == "wa" and k == "huwa":
+            cut = 2 if len(ph) >= 2 else 1
+            ph_parts.append(
+                f'{ph[:cut] if ph else ""}'
+                f'<span class="focusw">{ph[cut:] if len(ph) > cut else ph}</span>'
+            )
+            ar_parts.append(
+                f'{ar[:2] if len(ar) >= 2 else ""}'
+                f'<span class="focusw">{ar[2:] if len(ar) > 2 else ar}</span>'
             )
             continue
 
@@ -937,6 +959,80 @@ def evaluate_drill(
             "heard_match": "drill",
         }
 
+    if drill == "hu":
+        ev = ((acoustic or {}).get("evidence") or {})
+        ph_h = bool(re.search(r"\bhu\b|^hu|hoo", ph)) or ph_compact.startswith(("hu", "hoo"))
+        has_h = (
+            "ه" in letters
+            or float(ev.get("ه") or 0) >= 0.45
+            or ph_h
+        )
+        if has_h:
+            return {
+                "passed": True,
+                "cards": [],
+                "display_arabic": said_ar or "هُ",
+                "display_phonetic": said_ph or "hu",
+                "compare_html": _drill_compare(said_ph or "hu", said_ar or "هُ", "hu", "هُ", True),
+                "heard_match": "drill",
+            }
+        tip = {
+            "heard": "no clear soft H (ه) on this take",
+            "want": "short <b>hu</b> — like “who” without the W yet",
+            "fix": (
+                "Say only <b>hu</b> — soft H like the start of <b>“who”</b>. "
+                "You may say full <b>huwa</b> later; here we score only hu."
+            ),
+            "ar": ("?", "ه"),
+        }
+        card = _card(5, verse, "hu", "هُ", tip, "?", "ه", rule="drill")
+        card["key"] = "drill:hu:H"
+        return {
+            "passed": False,
+            "cards": [card],
+            "display_arabic": said_ar or "(unclear)",
+            "display_phonetic": said_ph or "—",
+            "compare_html": _drill_compare(said_ph or "—", said_ar or "(unclear)", "hu", "هُ", False),
+            "heard_match": "drill",
+        }
+
+    if drill == "wa":
+        ev = ((acoustic or {}).get("evidence") or {})
+        has_w = (
+            "و" in letters
+            or float(ev.get("و") or 0) >= 0.45
+            or bool(re.search(r"\bwa\b|woo|waa", ph))
+            or "wa" in ph_compact
+        )
+        if has_w:
+            return {
+                "passed": True,
+                "cards": [],
+                "display_arabic": said_ar or "وَ",
+                "display_phonetic": said_ph or "wa",
+                "compare_html": _drill_compare(said_ph or "wa", said_ar or "وَ", "wa", "وَ", True),
+                "heard_match": "drill",
+            }
+        tip = {
+            "heard": "no clear W (و) on this take",
+            "want": "short <b>wa</b> — round lips, like “wa” in “water”",
+            "fix": (
+                "Say only <b>wa</b> — round your lips for W. "
+                "You may say full <b>huwa</b>; here we score only wa."
+            ),
+            "ar": ("?", "و"),
+        }
+        card = _card(5, verse, "wa", "وَ", tip, "?", "و", rule="drill")
+        card["key"] = "drill:wa:W"
+        return {
+            "passed": False,
+            "cards": [card],
+            "display_arabic": said_ar or "(unclear)",
+            "display_phonetic": said_ph or "—",
+            "compare_html": _drill_compare(said_ph or "—", said_ar or "(unclear)", "wa", "وَ", False),
+            "heard_match": "drill",
+        }
+
     return {"passed": False, "cards": []}
 
 
@@ -1129,6 +1225,12 @@ def _card(
     elif rule == "drill" and (word_en or "").lower() == "ul":
         hl = "ul"
         sec_word = "qul"
+    elif rule == "drill" and (word_en or "").lower() == "hu":
+        hl = "hu"
+        sec_word = "huwa"
+    elif rule == "drill" and (word_en or "").lower() == "wa":
+        hl = "wa"
+        sec_word = "huwa"
     return {
         "level": "error",
         "rule": rule,

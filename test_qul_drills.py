@@ -1,4 +1,4 @@
-"""Unit tests: word-first Qul; Qu requires back ق; middle ك must fail."""
+"""Unit tests: syllable-first ayah 1; Qu requires back ق; middle ك must fail."""
 import pytest
 
 from elements import build_feedback
@@ -6,11 +6,13 @@ from stages import earliest_failing_stage, get_stage, list_stages
 import coaching as coach
 
 
-def test_verse1_starts_word_first():
+def test_verse1_starts_syllable_first():
     ids = [s["id"] for s in list_stages(1)]
-    assert ids[:4] == ["qul", "qu", "ul", "huwa"]
+    assert ids[:4] == ["qu", "ul", "qul", "hu"]
     assert get_stage(1, "qu")["drill"] == "qu"
     assert get_stage(1, "qul")["say_ar"] == "قُلْ"
+    assert get_stage(1, "hu")["drill"] == "hu"
+    assert get_stage(1, "wa")["drill"] == "wa"
 
 
 def test_qu_pass_on_qaf():
@@ -95,7 +97,7 @@ def test_qul_phone_asr_flatten_rescued_by_acoustic_qaf():
     )
     assert cards and cards[0].get("stage_passed") is True
     assert cards[0].get("stage_action") == "advance"
-    assert cards[0].get("next_stage_id") == "huwa"
+    assert cards[0].get("next_stage_id") == "hu"
 
 
 def test_qul_kaf_without_acoustic_qaf_must_fail():
@@ -171,14 +173,13 @@ def test_ul_fail_without_l():
         assert ev["passed"] is False, (ar, ph)
 
 
-def test_build_feedback_ul_advances_to_huwa():
-    # After word-first reorder, ul → huwa (qul already tried first).
+def test_build_feedback_ul_advances_to_qul():
     cards = build_feedback(
         1, [], None, heard_arabic="ل", heard_phonetic="ul", stage_id="ul"
     )
     assert cards[0].get("stage_passed") is True
     assert cards[0].get("stage_action") == "advance"
-    assert cards[0].get("next_stage_id") == "huwa"
+    assert cards[0].get("next_stage_id") == "qul"
 
 
 def test_build_feedback_ul_stays_on_qu_onset():
@@ -215,8 +216,7 @@ def test_qu_asr_qaf_locks_even_without_acoustic():
     assert cards[0].get("stage_action") == "advance"
 
 
-def test_build_feedback_qul_kaf_stays_word_first():
-    # Word-first: ك on Qul stays (no instant regress to Qu).
+def test_build_feedback_qul_kaf_stays_on_qul():
     cards = build_feedback(
         1,
         [{"c": "ك", "t": 0.0}, {"c": "ل", "t": 0.2}],
@@ -229,7 +229,7 @@ def test_build_feedback_qul_kaf_stays_word_first():
     assert cards[0].get("stage_action") == "stay"
 
 
-def test_build_feedback_qul_qaf_skips_to_huwa():
+def test_build_feedback_qul_qaf_advances_to_hu():
     cards = build_feedback(
         1,
         [{"c": "ق", "t": 0.0}, {"c": "ل", "t": 0.2}],
@@ -240,7 +240,7 @@ def test_build_feedback_qul_qaf_skips_to_huwa():
     )
     assert cards[0].get("stage_passed") is True
     assert cards[0].get("stage_action") == "advance"
-    assert cards[0].get("next_stage_id") == "huwa"
+    assert cards[0].get("next_stage_id") == "hu"
     assert "qu" in (cards[0].get("lock_also") or [])
     assert "ul" in (cards[0].get("lock_also") or [])
 
@@ -604,7 +604,7 @@ def test_allahu_is_not_false_wrong_stage_qul():
         heard_arabic="اللَّهُ",
         heard_phonetic="Allahu",
         stage_id="allahu",
-        locked_stages=["qul", "qu", "ul", "huwa", "qul_huwa"],
+        locked_stages=["qul", "qu", "ul", "hu", "wa", "huwa"],
     )
     assert not any(c.get("rule") == "wrong_stage" for c in cards)
     assert not any(

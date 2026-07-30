@@ -6,7 +6,7 @@ Beginner journey: stage ladder (isolate → join → full).
   One FOCUS tip inside the current stage (not stage advance).
   Green “Stage cleared · next step” + Hear only {next word} only after a lock.
   Forward only when the stage passes; step back if an earlier piece breaks.
-  Micro-drills (Qu / ul) use syllable scoring before full Qul.
+  Micro-drills (Qu / ul / hu / wa) use syllable scoring; longer chunks OK.
 """
 import coaching as coach
 import stages as stg
@@ -378,8 +378,7 @@ def build_feedback(
 
     blocking = [c for c in errors if _blocks_stage(c)]
 
-    # Word-first Qul: stay on Qul when ك — do NOT auto-drop to Qu on first miss.
-    # Client moves to syllable rescue (Qu) only after 3 word fails.
+    # Syllable-first: stay on the named stage when ك blocks — no auto-regress to Qu.
     regress_to = None
     if miss_words and stage and len(stage.get("words") or []) > 1:
         regress_to = stg.earliest_failing_stage(verse, miss_words)
@@ -676,9 +675,6 @@ def _finish_stage_cards(
     cards.extend(tips)
 
     nxt_stage = stg.next_stage(verse, (stage or {}).get("id")) if stage_passed else None
-    # Word-first: locking full Qul skips syllable rescue → huwa.
-    if stage_passed and (stage or {}).get("id") == "qul":
-        nxt_stage = stg.get_stage(verse, "huwa")
     say = (stage or {}).get("say_en") or focus_word or "this"
     say_ar = (stage or {}).get("say_ar") or ""
 
@@ -727,7 +723,8 @@ def _finish_stage_cards(
             "stage_action": "advance",
             "stage": stage_info,
             "lock_also": (
-                ["qu", "ul"] if (stage or {}).get("id") == "qul" else []
+                ["qu", "ul"] if (stage or {}).get("id") == "qul"
+                else (["hu", "wa"] if (stage or {}).get("id") == "huwa" else [])
             ),
             "next_say_en": nxt_stage.get("say_en"),
             "next_say_ar": nxt_stage.get("say_ar"),

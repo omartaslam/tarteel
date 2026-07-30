@@ -1,16 +1,15 @@
 """
 Beginner stage ladder for Al-Ikhlas.
 
-Isolate a chunk → lock it → join with the previous → only then move on.
-Forward only when the current stage passes; step back if an earlier piece breaks.
+Syllable-first (ayah 1): every sound unit in order — Qu → ul → Qul → hu → wa →
+huwa → Allāhu → aḥad → full ayah. Score ONLY the named unit (saying a longer
+chunk is fine). No cumulative “repeat from the start” joins.
 
-Stage UI contract (prototype — replicate for every new step; see static/index.html):
-  Every live stage must show Hear only {current} + Correct/Incorrect for THAT stage.
-  UI fields live on STAGE_LADDER in index.html:
-    hear     — clip for this step only
-    compare  — {note, ok:{src,title,sub}, bad:{src,title,sub}}
-  Do not hard-code a Qul-only compare panel. Ayah 1 is the filled prototype;
-  later ayahs get the same shape (stub compare until clips exist).
+After all units are locked once, the learner may review any syllable or attempt
+the full ayah.
+
+Stage UI contract: hear + compare live in static/index.html STAGE_LADDER.
+Do not hard-code a Qul-only compare — each stage owns its pair.
 """
 from __future__ import annotations
 
@@ -19,53 +18,86 @@ from __future__ import annotations
 # hear + compare are defined in static/index.html STAGE_LADDER (UI prototype).
 STAGES = {
     1: [
-        # Word-first: full Qul ×3, then syllable rescue (Qu → ul), then tutor defer.
-        {
-            "id": "qul",
-            "title": "Qul",
-            "say_en": "Qul",
-            "say_ar": "قُلْ",
-            "hint": (
-                "Say the full word <b>Qul</b> (قُلْ).<br>"
-                "<b>1.</b> Say <b>CAW-l</b> (the word “call”) — that already gives you "
-                "both sounds you need.<br>"
-                "<b>2.</b> Say it again with a <b>shorter</b> vowel: <b>C-l</b> → <b>QUL</b>.<br>"
-                "<b>3.</b> Finish with the tongue touching behind your top front teeth, "
-                "like the L in “call”.<br>"
-                "<b>Do not</b> let your lips close at the end — that turns it into an <b>M</b>.<br>"
-                "Three tries here; if stuck we’ll break it into Qu + ul."
-            ),
-            "words": ["qul"],
-            "idxs": [0],
-        },
+        # Syllable-first: each unit scored on its own probe. Longer chunks OK.
         {
             "id": "qu",
             "title": "Qu",
             "say_en": "Qu",
             "say_ar": "قُ",
             "hint": (
-                "Syllable rescue — only the start (قُ). Say <b>CAW</b> (the start of "
-                "“call”) and stop before the L. That back throat position is the "
-                "sound. Not “coo”, not “kwa”. "
-                "Yellow mark on the ayah shows where you are."
+                "We score only <b>Qu</b> (قُ) — the start of Qul.<br>"
+                "Say <b>CAW</b> (the start of “call”) and stop before the L. "
+                "You may say full <b>Qul</b> if that is easier; we still grade only Qu."
             ),
             "words": [],
             "idxs": [0],
             "drill": "qu",
             "focus_word": "qul",
             "highlight": "qu",
+            "unit": True,
         },
         {
             "id": "ul",
             "title": "ul",
             "say_en": "ul",
             "say_ar": "ـُلْ",
-            "hint": "Only the ending: <b>ul</b> — the L from <b>“call”</b> or <b>“full”</b> (tongue behind the top teeth, lips open). Not “pull”. No K at the front.",
+            "hint": (
+                "We score only <b>ul</b> — the L ending.<br>"
+                "Like the L in <b>“call”</b> or <b>“full”</b> (tongue behind top teeth, lips open). "
+                "Not “pull”. You may say full <b>Qul</b>; we still grade only ul."
+            ),
             "words": [],
             "idxs": [0],
             "drill": "ul",
             "focus_word": "qul",
             "highlight": "ul",
+            "unit": True,
+        },
+        {
+            "id": "qul",
+            "title": "Qul",
+            "say_en": "Qul",
+            "say_ar": "قُلْ",
+            "hint": (
+                "Join what you locked: <b>QUL</b> = throat from <b>“call”</b> + short vowel + L.<br>"
+                "Not <b>KUL</b> (English “cull”). Do not close lips at the end (that becomes M)."
+            ),
+            "words": ["qul"],
+            "idxs": [0],
+            "highlight": None,
+            "unit": True,
+        },
+        {
+            "id": "hu",
+            "title": "hu",
+            "say_en": "hu",
+            "say_ar": "هُ",
+            "hint": (
+                "We score only <b>hu</b> — soft H like “who” without the W yet.<br>"
+                "You may say full <b>huwa</b>; we still grade only hu."
+            ),
+            "words": [],
+            "idxs": [1],
+            "drill": "hu",
+            "focus_word": "huwa",
+            "highlight": "hu",
+            "unit": True,
+        },
+        {
+            "id": "wa",
+            "title": "wa",
+            "say_en": "wa",
+            "say_ar": "وَ",
+            "hint": (
+                "We score only <b>wa</b> — round lips, W sound like “wa” in “water”.<br>"
+                "You may say full <b>huwa</b>; we still grade only wa."
+            ),
+            "words": [],
+            "idxs": [1],
+            "drill": "wa",
+            "focus_word": "huwa",
+            "highlight": "wa",
+            "unit": True,
         },
         {
             "id": "huwa",
@@ -73,23 +105,11 @@ STAGES = {
             "say_en": "huwa",
             "say_ar": "هُوَ",
             "hint": (
-                "Say only <b>huwa</b>. English cue: <b>HOO-wa</b> — like “who” then “wa” "
-                "(round lips on the W). Not “hoo-fa” or “boo-a”."
+                "Join: <b>HOO-wa</b> — soft H then rounded W. Not “hoo-a” with no W."
             ),
             "words": ["huwa"],
             "idxs": [1],
-        },
-        {
-            "id": "qul_huwa",
-            "title": "Qul huwa",
-            "say_en": "Qul huwa",
-            "say_ar": "قُلْ هُوَ",
-            "hint": (
-                "Join: <b>QUL</b> (throat from “call” + vowel from “pull”) then <b>HOO-wa</b>. "
-                "Keep the deep throat K from Qul and the W from huwa."
-            ),
-            "words": ["qul", "huwa"],
-            "idxs": [0, 1],
+            "unit": True,
         },
         {
             "id": "allahu",
@@ -97,20 +117,11 @@ STAGES = {
             "say_en": "Allāhu",
             "say_ar": "ٱللَّهُ",
             "hint": (
-                "Say only <b>Allāhu</b>. English cue: <b>Al-LAA-hu</b> — hold the doubled L "
-                "(like a long “ll” in “Allah”), then “hu”. Don’t rush it like English “Allah!”."
+                "Say <b>Allāhu</b>. English cue: <b>Al-LAA-hu</b> — hold the doubled L, then “hu”."
             ),
             "words": ["Allāhu"],
             "idxs": [2],
-        },
-        {
-            "id": "qul_huwa_allahu",
-            "title": "Qul huwa Allāhu",
-            "say_en": "Qul huwa Allāhu",
-            "say_ar": "قُلْ هُوَ ٱللَّهُ",
-            "hint": "Join through Allāhu — QUL (call-throat + pull-vowel) · HOO-wa · Al-LAA-hu.",
-            "words": ["qul", "huwa", "Allāhu"],
-            "idxs": [0, 1, 2],
+            "unit": True,
         },
         {
             "id": "ahad",
@@ -118,20 +129,21 @@ STAGES = {
             "say_en": "aḥad",
             "say_ar": "أَحَدٌ",
             "hint": (
-                "Say only <b>aḥad</b>. English cue: <b>a-ḤAD</b> — the Ḥ is a fog-the-mirror breath "
-                "(stronger than the H in “ahead”), then a light bounce on the D."
+                "Say <b>aḥad</b>. English cue: <b>a-ḤAD</b> — fog-the-mirror Ḥ, light bounce on D."
             ),
             "words": ["aḥad"],
             "idxs": [3],
+            "unit": True,
         },
         {
             "id": "full",
             "title": "Full ayah",
             "say_en": "Qul huwa Allāhu aḥad",
             "say_ar": "قُلْ هُوَ ٱللَّهُ أَحَدٌ",
-            "hint": "Whole ayah: QUL (call-throat + pull-vowel) · HOO-wa · Al-LAA-hu · a-ḤAD. Keep every locked piece.",
+            "hint": "Whole ayah in one breath — every locked piece.",
             "words": ["qul", "huwa", "Allāhu", "aḥad"],
             "idxs": [0, 1, 2, 3],
+            "unit": False,
         },
     ],
     2: [
@@ -357,6 +369,22 @@ def stage_public(verse: int, stage_id: str | None) -> dict:
             for s in stages
         ],
     }
+
+
+def list_unit_stage_ids(verse: int) -> list[str]:
+    """Stages before full ayah — syllable/chunk units in learn order."""
+    return [
+        s["id"]
+        for s in list_stages(verse)
+        if s.get("id") != "full" and s.get("unit", True)
+    ]
+
+
+def learn_complete(verse: int, locked: list[str] | None) -> bool:
+    """True when every unit stage has been locked at least once."""
+    need = set(list_unit_stage_ids(verse))
+    have = set(locked or [])
+    return bool(need) and need <= have
 
 
 def word_in_stage(en: str, stage: dict | None) -> bool:

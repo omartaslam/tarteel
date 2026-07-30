@@ -217,7 +217,9 @@ let v=1, rec=null, chunks=[], hAudio=null;
 let _lastRecUrl=null;
 let _surahQueue=null; // remaining husary codes when playing whole surah
 const $=id=>document.getElementById(id);
-const PRACTICE_STORE='tarteel_practice_v7';
+const PRACTICE_STORE='tarteel_practice_v8';
+/** Ayah 1 syllable-first units (before full ayah). Keep in sync with stages.py */
+const AYAH1_UNITS=['qu','ul','qul','hu','wa','huwa','allahu','ahad'];
 /** Per-device acoustic baseline — survives practice clears and Railway redeploys. */
 const VOICE_STORE='tarteel_voice_v1';
 let _lastVoiceSample=null;
@@ -258,7 +260,7 @@ function updateListenLabel(){
   const lbl=$('listenLbl');
   if(!lbl) return;
   if(!surahIntroHeard()){
-    lbl.innerHTML='<b>1 · Listen first (whole surah)</b><br>Sheikh Al-Husary — all 4 ayahs, then start with Qul';
+    lbl.innerHTML='<b>1 · Listen first (whole surah)</b><br>Sheikh Al-Husary — all 4 ayahs, then start with Qu';
   }else{
     lbl.innerHTML='<b>1 · Listen (this ayah)</b><br>Sheikh Al-Husary — whole ayah model';
   }
@@ -267,12 +269,19 @@ function updateJourneyBanner(){
   const el=$('journeyBanner');
   if(!el) return;
   if(!surahIntroHeard()){
-    el.innerHTML='<b>First visit:</b> Listen to the <b>whole short surah</b> once, then lock one piece at a time starting with <b>Qul</b> (say “call”, hold the throat, then the “pull” vowel). Resume anytime — progress is saved.';
+    el.innerHTML='<b>First visit:</b> Listen to the <b>whole short surah</b> once, then lock one sound at a time starting with <b>Qu</b> (قُ — CAW, the start of “call”). Resume anytime — progress is saved.';
     return;
   }
-  const {cur, idx, ladder}=currentStage(v);
+  const {st, cur, idx, ladder}=currentStage(v);
   const say=cur?cur.say_en:'this step';
-  el.innerHTML=`<b>Continue:</b> Say <b>${say}</b> — ayah ${v} of 4, stage ${idx+1} of ${ladder.length}. Goal: beautiful recitation of Al-Ikhlas.`;
+  const review=v===1 && learnComplete(st);
+  const extra=review ? ' · review any locked syllable or try full ayah' : '';
+  el.innerHTML=`<b>Continue:</b> Say <b>${say}</b> — ayah ${v} of 4, stage ${idx+1} of ${ladder.length}${extra}. Goal: beautiful recitation of Al-Ikhlas.`;
+}
+function learnComplete(verse, st){
+  if(verse!==1) return false;
+  const locked=new Set(st.lockedStages||[]);
+  return AYAH1_UNITS.every(id=>locked.has(id));
 }
 // Beginner ladder — keep in sync with stages.py
 // Word-split ayah lines (keep in sync with coaching.AYAH_LINE) — used to yellow-mark where you are
@@ -312,111 +321,111 @@ function stageStubCompare(sayEn){
 const STAGE_LADDER={
   1:[
     {
-      id:'qul', title:'Qul', say_en:'Qul', say_ar:'قُلْ',
-      hint:'Say the full word Qul (قُلْ).<br><b>1.</b> Say <b>CAW-l</b> (the word “call”) — this already gives you both sounds you need.<br><b>2.</b> Say it again with a <b>shorter</b> vowel: <b>C-l</b> → <b>QUL</b>.<br><b>3.</b> Finish with the tongue touching behind your top front teeth, like the L in “call”.<br><b>Do not</b> let your lips close at the end — that turns it into an <b>M</b>. Do not use “pull” as your guide: in your accent its L disappears. Three tries here; if stuck we’ll break it into Qu + ul.',
-      idxs:[0],
-      hear:'/samples/stage_qul_husary.mp3',
-      compare:stageComparePair(
-        'Qul',
-        'Correct is the deep throat K, “qaf” (ق) — the K in “call”. Incorrect is the normal English K, “kaf” (ك), as in “cull/cool” — the app must fail that.',
-        '/samples/bench_correct_qaf_qul_minshawi.mp3', 'Correct — Qul (deep throat K)', 'Minshawi · “qaf” (ق)',
-        '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — Kul (ك / cull)', 'Arabic speaker · forward K'
-      ),
-    },
-    {
       id:'qu', title:'Qu', say_en:'Qu', say_ar:'قُ',
-      hint:'Syllable rescue — only the start. Say <b>CAW</b> (the start of “call”), stop before the L. That back throat position is the sound. Not “coo”, not “kwa”. Yellow mark on the ayah shows where you are.',
+      hint:'We score only <b>Qu</b>. Say <b>CAW</b> (start of “call”), stop before the L. Full <b>Qul</b> is fine — we still grade only Qu.',
       idxs:[0], highlight:'qu',
       hear:'/samples/stage_qu_husary.mp3',
       compare:stageComparePair(
         'Qu',
-        'Same contrast for the Qu onset — the deep throat K in “call”, not “coo/cull”.',
-        '/samples/bench_correct_qaf_qul_minshawi.mp3', 'Correct — Qu onset (ق / QUA)', 'Minshawi · back ق',
+        'Deep throat K in “call”, not “coo/cull”.',
+        '/samples/bench_correct_qaf_qul_minshawi.mp3', 'Correct — Qu onset (ق)', 'Minshawi · back ق',
         '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — Ku (ك)', 'Forward K — must fail'
       ),
     },
     {
       id:'ul', title:'ul', say_en:'ul', say_ar:'ـُلْ',
-      hint:'Only the ending: <b>ul</b> — the L from <b>“call”</b> or <b>“full”</b> (tongue behind the top teeth, lips open). Not “pull” — in your accent its L vanishes. No K at the front.',
+      hint:'We score only <b>ul</b> — L from <b>“call”</b> / <b>“full”</b>. Not “pull”. Full <b>Qul</b> is fine — we still grade only ul.',
       idxs:[0], highlight:'ul',
       hear:'/samples/stage_ul_husary.mp3',
       compare:stageComparePair(
         'ul',
-        'Correct ends like pull/full (clear L). Incorrect is onset-only with no L.',
-        '/samples/stage_ul_husary.mp3', 'Correct — ul (…ull)', 'Al-Husary · ending only',
-        '/samples/stage_qu_husary.mp3', 'Incorrect — Qu only (no L)', 'Onset without the L ending'
+        'Clear L ending. Incorrect = onset only, no L.',
+        '/samples/stage_ul_husary.mp3', 'Correct — ul', 'Al-Husary · ending only',
+        '/samples/stage_qu_husary.mp3', 'Incorrect — Qu only', 'No L ending'
+      ),
+    },
+    {
+      id:'qul', title:'Qul', say_en:'Qul', say_ar:'قُلْ',
+      hint:'Join Qu + ul: <b>QUL</b> = “call” throat + short vowel + L. Not <b>KUL</b>. Lips open at the end.',
+      idxs:[0],
+      hear:'/samples/stage_qul_husary.mp3',
+      compare:stageComparePair(
+        'Qul',
+        'Deep throat K (“call”) + clear L. English K (“cull”) fails.',
+        '/samples/bench_correct_qaf_qul_minshawi.mp3', 'Correct — Qul', 'Minshawi · ق + L',
+        '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — Kul (ك)', 'Forward K'
+      ),
+    },
+    {
+      id:'hu', title:'hu', say_en:'hu', say_ar:'هُ',
+      hint:'We score only <b>hu</b> — soft H like “who” without W. Full <b>huwa</b> is fine.',
+      idxs:[1], highlight:'hu',
+      hear:'/samples/stage_huwa_word.mp3?v=5',
+      compare:stageComparePair(
+        'hu',
+        'Soft H onset of huwa.',
+        '/samples/stage_huwa_word.mp3?v=5', 'Correct — hu (HOO…)', 'Word clip · first syllable',
+        '/samples/stage_huwa_incorrect_no_waw.mp3', 'Incorrect — no W later', 'For wa step'
+      ),
+    },
+    {
+      id:'wa', title:'wa', say_en:'wa', say_ar:'وَ',
+      hint:'We score only <b>wa</b> — round lips, W like “water”. Full <b>huwa</b> is fine.',
+      idxs:[1], highlight:'wa',
+      hear:'/samples/stage_huwa_word.mp3?v=5',
+      compare:stageComparePair(
+        'wa',
+        'Rounded W — the point of huwa.',
+        '/samples/stage_huwa_word.mp3?v=5', 'Correct — wa ending', 'HOO-wa',
+        '/samples/stage_huwa_incorrect_no_waw.mp3', 'Incorrect — no W', 'hiya / hoo-a'
       ),
     },
     {
       id:'huwa', title:'huwa', say_en:'huwa', say_ar:'هُوَ',
-      hint:'Say only huwa. English cue: <b>HOO-wa</b> — like “who” then “wa” (round lips on the W).',
+      hint:'Join: <b>HOO-wa</b> — soft H then rounded W.',
       idxs:[1],
       hear:'/samples/stage_huwa_word.mp3?v=5',
       compare:stageComparePair(
         'huwa',
-        'Correct is HOO-wa — the W is the whole point. Common miss: no W at all (“hoo-a”, “hee”).',
-        '/samples/stage_huwa_word.mp3?v=5', 'Correct — huwa (HOO-wa)', 'Word-by-word recitation',
-        '/samples/stage_huwa_incorrect_no_waw.mp3', 'Incorrect — no W (hiya)', 'Ends without rounding the lips'
-      ),
-    },
-    {
-      id:'qul_huwa', title:'Qul huwa', say_en:'Qul huwa', say_ar:'قُلْ هُوَ',
-      hint:'Join: <b>QUL</b> (throat from “call”, vowel from “pull”) then <b>HOO-wa</b>. Keep the deep throat K and the W.',
-      idxs:[0,1],
-      hear:'/samples/real_ikhlas1_husary_full.mp3',
-      compare:stageComparePair(
-        'Qul huwa',
-        'Join QUL then HOO-wa. Keep the deep throat K, “qaf” (ق) — the normal English K, “kaf” (ك), still fails.',
-        '/samples/real_ikhlas1_husary_full.mp3', 'Correct — Qul huwa join', 'Al-Husary · phrase model',
-        '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — ك on Qul', 'Forward K in the join — must fail'
+        'HOO-wa with clear W.',
+        '/samples/stage_huwa_word.mp3?v=5', 'Correct — huwa', 'Word-by-word',
+        '/samples/stage_huwa_incorrect_no_waw.mp3', 'Incorrect — no W', 'No lip rounding'
       ),
     },
     {
       id:'allahu', title:'Allāhu', say_en:'Allāhu', say_ar:'ٱللَّهُ',
-      hint:'Say only Allāhu. English cue: <b>Al-LAA-hu</b> — hold the doubled L, then “hu”. Don’t rush it.',
+      hint:'<b>Al-LAA-hu</b> — hold the doubled L, then “hu”.',
       idxs:[2],
       hear:'/samples/stage_allahu_husary.mp3',
       compare:stageComparePair(
         'Allāhu',
-        'Correct is Al-LAA-hu — hold the doubled L. Common miss: one quick L, like “lahu”.',
-        '/samples/stage_allahu_husary.mp3', 'Correct — Allāhu (Al-LAA-hu)', 'Al-Husary · hold ll',
-        '/samples/stage_allahu_incorrect_single_l.mp3', 'Incorrect — single quick L (lahu)', 'No held ll'
-      ),
-    },
-    {
-      id:'qul_huwa_allahu', title:'Qul huwa Allāhu', say_en:'Qul huwa Allāhu', say_ar:'قُلْ هُوَ ٱللَّهُ',
-      hint:'Join: QUL (call-throat + pull-vowel) · HOO-wa · Al-LAA-hu.',
-      idxs:[0,1,2],
-      hear:'/samples/real_ikhlas1_husary_full.mp3',
-      compare:stageComparePair(
-        'Qul huwa Allāhu',
-        'QUL · HOO-wa · Al-LAA-hu. Keep the deep throat K, “qaf” (ق), through the join.',
-        '/samples/real_ikhlas1_husary_full.mp3', 'Correct — three-word join', 'Al-Husary · phrase model',
-        '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — ك on Qul', 'Forward K — must fail'
+        'Held double L. Common miss: one quick L (“lahu”).',
+        '/samples/stage_allahu_husary.mp3', 'Correct — Allāhu', 'Al-Husary · hold ll',
+        '/samples/stage_allahu_incorrect_single_l.mp3', 'Incorrect — lahu', 'No held ll'
       ),
     },
     {
       id:'ahad', title:'aḥad', say_en:'aḥad', say_ar:'أَحَدٌ',
-      hint:'Say only aḥad. English cue: <b>a-ḤAD</b> — fog-mirror Ḥ (stronger than “ahead”), light bounce on D.',
+      hint:'<b>a-ḤAD</b> — fog-mirror Ḥ, light bounce on D.',
       idxs:[3],
       hear:'/samples/stage_ahad_husary.mp3',
       compare:stageComparePair(
         'aḥad',
-        'Correct is a-ḤAD — fog-mirror Ḥ, light bounce on D. Common miss: soft English “ahead” H.',
-        '/samples/stage_ahad_husary.mp3', 'Correct — aḥad (a-ḤAD)', 'Al-Husary · strong Ḥ',
-        '/samples/stage_ahad_incorrect_soft_h.mp3', 'Incorrect — soft ه (“ahead” H)', 'Same speaker as our ق/ك pair'
+        'Strong throat Ḥ. Common miss: soft English “ahead” H.',
+        '/samples/stage_ahad_husary.mp3', 'Correct — aḥad', 'Al-Husary · strong Ḥ',
+        '/samples/stage_ahad_incorrect_soft_h.mp3', 'Incorrect — soft H', 'ه not ح'
       ),
     },
     {
       id:'full', title:'Full ayah', say_en:'Qul huwa Allāhu aḥad', say_ar:'قُلْ هُوَ ٱللَّهُ أَحَدٌ',
-      hint:'Whole ayah: QUL (call-throat + pull-vowel) · HOO-wa · Al-LAA-hu · a-ḤAD. Keep every locked piece.',
+      hint:'Whole ayah in one go — every locked piece.',
       idxs:[0,1,2,3],
       hear:'/samples/real_ikhlas1_husary_full.mp3',
       compare:stageComparePair(
         'Qul huwa Allāhu aḥad',
-        'Full ayah: QUL · HOO-wa · Al-LAA-hu · a-ḤAD. Deep throat K, “qaf” (ق), still required.',
-        '/samples/real_ikhlas1_husary_full.mp3', 'Correct — full ayah', 'Al-Husary · whole line',
-        '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — ك on Qul', 'Forward K — must fail'
+        'Full ayah model.',
+        '/samples/real_ikhlas1_husary_full.mp3', 'Correct — full ayah', 'Al-Husary',
+        '/samples/bench_incorrect_kaf_kul_fjmustak.mp3', 'Incorrect — ك on Qul', 'Forward K'
       ),
     },
   ],
@@ -537,7 +546,7 @@ function stagePlayHtml(stageId, say, btnId){
   const src=stageHearSrc(stageId);
   if(!src || !say) return '';
   const id=btnId?` id="${btnId}"`:'';
-  const kind=(stageId==='qu'||stageId==='ul') ? 'this syllable only'
+  const kind=(stageId==='qu'||stageId==='ul'||stageId==='hu'||stageId==='wa') ? 'this syllable only'
     : (stageId==='full'||String(stageId).includes('_')) ? 'this step'
     : 'this word only';
   return `<div class="stageplay" data-role="hear-only">
@@ -704,16 +713,12 @@ function loadPractice(verse){
       lastFocus: st.lastFocus||null,
       stageId: st.stageId || defaultStage,
       lockedStages: Array.isArray(st.lockedStages)?st.lockedStages:[],
-      syllableRescue: !!st.syllableRescue,
-      syllableFails: Math.max(0, Math.min(3, Number(st.syllableFails)||0)),
-      syllableExhausted: !!st.syllableExhausted,
     };
   }catch(e){
     const ladder=STAGE_LADDER[verse]||[];
     return {
       mastered:[], iterations:[], lastFocus:null,
       stageId:ladder[0]?ladder[0].id:null, lockedStages:[],
-      syllableRescue:false, syllableFails:0, syllableExhausted:false,
     };
   }
 }
@@ -729,21 +734,10 @@ function clearPractice(verse){
   savePractice(verse, {
     mastered:[], iterations:[], lastFocus:null,
     stageId:ladder[0]?ladder[0].id:null, lockedStages:[],
-    syllableRescue:false, syllableFails:0, syllableExhausted:false,
   });
 }
 function clearAllPractice(){
   try{ localStorage.removeItem(PRACTICE_STORE); }catch(e){}
-}
-function qulWordFailCount(st){
-  return (st.iterations||[]).filter(it=>
-    it.stage==='qul' && it.stageAction==='stay'
-  ).length;
-}
-function quSyllableFailCount(st){
-  return (st.iterations||[]).filter(it=>
-    it.stage==='qu' && it.stageAction==='stay' && it.syllableRescue
-  ).length;
 }
 function currentStage(verse, stOverride){
   const st=stOverride || loadPractice(verse);
@@ -759,39 +753,21 @@ function renderStageBox(stOverride){
   const {st, ladder, idx, cur}=currentStage(v, stOverride);
   if(!cur){ box.innerHTML=''; return; }
   const locked=new Set(st.lockedStages||[]);
+  const review=v===1 && learnComplete(st);
   const chips=ladder.map((s,i)=>{
     let cls='stagchip';
     if(i===idx) cls+=' on';
     else if(locked.has(s.id) || i<idx) cls+=' done';
-    return `<span class="${cls}">${s.title}</span>`;
+    const pick=review && s.id!=='full' ? ` data-stage-pick="${s.id}" role="button" tabindex="0"` : '';
+    return `<span class="${cls}"${pick}>${s.title}</span>`;
   }).join('');
-  const onQul = (v===1 && cur.id==='qul');
-  const onQu = (v===1 && cur.id==='qu');
-  const onUl = (v===1 && cur.id==='ul');
-  const wordFails = qulWordFailCount(st);
-  const sylFails = st.syllableFails || quSyllableFailCount(st);
-  // Correct vs incorrect for THIS stage (whatever the student is practicing)
   const samp = stageCompareHtml(cur);
   let modeNote = '';
-  if(onQul){
-    const left=Math.max(0, 3-wordFails);
-    modeNote = `<div class="bridgebox"><p class="bt"><b>Word first</b> — up to 3 tries at full <b>Qul</b>. `
-      + (left? `${left} left before we break it into Qu + ul.` : `Next miss moves you to syllable rescue (Qu only).`)
-      + `</p></div>`;
-  } else if(onQu && st.syllableExhausted){
-    modeNote = `<div class="bridgebox"><p class="bt"><b>Ask a teacher</b> to check your deep Q before continuing.</p></div>`;
-  } else if(onQu && st.syllableRescue){
-    const left=Math.max(0, 3-sylFails);
-    modeNote = `<div class="bridgebox"><p class="bt"><b>Syllable rescue</b> — say only <b>Qu</b> (not full Qul). Try ${Math.min(3,sylFails+1)} of 3. `
-      + (left? `${left} left, then ask a teacher.` : `Last try — then ask a teacher if it still misses.`)
-      + `</p></div>`;
-  } else if(onQu){
-    modeNote = `<div class="bridgebox"><p class="bt">Say only the start — <b>CAW</b>, the start of “call”, stopped before the L. Not “coo”, not “kwa”. Not the full word Qul.</p></div>`;
-  } else if(onUl){
-    modeNote = `<div class="bridgebox"><p class="bt">Say only <b>ul</b> — like the end of “pull” / “full”. No Q/K onset.</p></div>`;
+  if(review){
+    modeNote = `<div class="bridgebox"><p class="bt"><b>Review mode</b> — tap any locked syllable to practise again, or continue to <b>Full ayah</b>.</p></div>`;
+  } else if(v===1 && cur.id!=='full' && AYAH1_UNITS.includes(cur.id)){
+    modeNote = `<div class="bridgebox"><p class="bt">We score only <b>${cur.say_en}</b> on this step — saying a longer chunk is fine.</p></div>`;
   }
-  const modeLbl = onQul ? ' · word first' : (onQu && st.syllableRescue ? ' · syllable rescue' : '');
-  // Hear only THIS stage sound — directly under Say: (never omit)
   let wordPlay = stagePlayHtml(cur.id, cur.say_en, 'playStageCurrent');
   if(!wordPlay){
     wordPlay = `<div class="stageplay" data-role="hear-only">
@@ -800,7 +776,7 @@ function renderStageBox(stOverride){
     </div>`;
   }
   box.innerHTML=`
-    <div class="staglbl">Beginner path — stage ${idx+1} of ${ladder.length}${modeLbl}</div>
+    <div class="staglbl">Beginner path — stage ${idx+1} of ${ladder.length}</div>
     <div class="stagsay">Say: ${cur.say_en}</div>
     <div class="stagar" dir="rtl" lang="ar">${cur.say_ar}</div>
     ${wordPlay}
@@ -809,6 +785,18 @@ function renderStageBox(stOverride){
     ${modeNote}
     ${samp}`;
   if(samp) bindSampleButtons(box);
+  if(review){
+    box.querySelectorAll('[data-stage-pick]').forEach(el=>{
+      el.onclick=()=>{
+        const st2=loadPractice(v);
+        st2.stageId=el.getAttribute('data-stage-pick');
+        savePractice(v, st2);
+        renderStageBox(st2);
+        paintAyahFocus(st2);
+        updateJourneyBanner();
+      };
+    });
+  }
   const pcb=$('playStageCurrent');
   if(pcb) pcb.onclick=()=>playStageWordClip(cur.id, pcb);
   updateJourneyBanner();
@@ -934,10 +922,6 @@ function updatePracticeLog(verse, data){
   }
 
   const nextKey=next.key || null;
-  const bridgeInfo = (rs.find(r=>r.bridge) || {}).bridge
-    || (stageMeta && stageMeta.bridge)
-    || null;
-  const wasSyllable = !!(st.syllableRescue || (bridgeInfo && bridgeInfo.mode==='syllable'));
   const advanced = action==='advance' || stageMeta.stage_passed===true;
   st.iterations.push({
     t: Date.now(),
@@ -950,47 +934,11 @@ function updatePracticeLog(verse, data){
     stageAction: advanced ? 'advance' : action,
     regression: action==='regress' || !!(next && next.regression),
     issueKeys,
-    syllableRescue: wasSyllable || (curStage==='qu' && !!st.syllableRescue),
   });
   if(st.iterations.length>30) st.iterations=st.iterations.slice(-30);
   st.mastered=[...mastered];
   st.lockedStages=[...locked];
   st.lastFocus=(advanced||action==='complete') ? null : nextKey;
-
-  // Word-first → syllable rescue → tutor defer (ayah 1 Qul path)
-  if(curStage==='qul'){
-    if(advanced){
-      st.syllableRescue=false;
-      st.syllableFails=0;
-      st.syllableExhausted=false;
-    } else if(!advanced){
-      const wf=qulWordFailCount(st);
-      if(wf>=3 && !st.syllableRescue){
-        st.syllableRescue=true;
-        st.syllableFails=0;
-        st.syllableExhausted=false;
-        st.stageId='qu';
-        flashBuildNote('Word tries used — syllable rescue: say only Qu.');
-      }
-    }
-  } else if(curStage==='qu'){
-    if(advanced){
-      st.syllableFails=0;
-    } else if(st.syllableRescue || bridgeInfo){
-      const att=bridgeInfo && bridgeInfo.attempt!=null
-        ? Number(bridgeInfo.attempt)
-        : (st.syllableFails||0)+1;
-      st.syllableRescue=true;
-      st.syllableFails=Math.max(0, Math.min(3, att));
-      if((bridgeInfo && bridgeInfo.verdict==='tutor') || st.syllableFails>=3){
-        st.syllableExhausted=true;
-      }
-    }
-  } else if(advanced && (curStage==='ul' || curStage==='huwa')){
-    st.syllableRescue=false;
-    st.syllableFails=0;
-    st.syllableExhausted=false;
-  }
 
   savePractice(verse, st);
   return st;
@@ -1036,7 +984,6 @@ function paintAyahFocus(stOverride){
   const {st, cur}=currentStage(v, stOverride);
   const words=AYAH_WORDS[v];
   const idxs=new Set((cur && cur.idxs) || []);
-  const bridgeOn = false; // word-first flow; no Qu→Qul bridge overlay
   const hl = cur && cur.highlight;
   if(!words || !idxs.size){
     $('verseAr').textContent=d.ar;
@@ -1053,6 +1000,12 @@ function paintAyahFocus(stOverride){
       // Mark ul inside Qul
       return escHtml(w.slice(0,1))+'<span class="focusw">'+escHtml(w.slice(1))+'</span>';
     }
+    if(hl==='hu' && i===1){
+      return '<span class="focusw">'+escHtml(w.slice(0,2))+'</span>'+escHtml(w.slice(2));
+    }
+    if(hl==='wa' && i===1){
+      return escHtml(w.slice(0,2))+'<span class="focusw">'+escHtml(w.slice(2))+'</span>';
+    }
     return '<span class="focusw">'+escHtml(w)+'</span>';
   });
   const arParts=words.ar.map((w,i)=>{
@@ -1063,6 +1016,12 @@ function paintAyahFocus(stOverride){
     }
     if(hl==='ul' && i===0){
       // ُلْ inside قُلْ
+      return escHtml(w.slice(0,1))+'<span class="focusw">'+escHtml(w.slice(1))+'</span>';
+    }
+    if(hl==='hu' && i===1){
+      return '<span class="focusw">'+escHtml(w.slice(0,2))+'</span>'+escHtml(w.slice(2));
+    }
+    if(hl==='wa' && i===1){
       return escHtml(w.slice(0,1))+'<span class="focusw">'+escHtml(w.slice(1))+'</span>';
     }
     return '<span class="focusw">'+escHtml(w)+'</span>';
@@ -1129,7 +1088,7 @@ function playNextSurahClip(){
     markSurahIntroHeard();
     updateListenLabel();
     updateJourneyBanner();
-    flashBuildNote('Surah heard. Now say Qul — “call” throat, “pull” vowel.');
+    flashBuildNote('Surah heard. Now say Qu — CAW, the start of “call”.');
     return;
   }
   const code=_surahQueue.shift();
@@ -1202,11 +1161,6 @@ $('rec').onclick=async()=>{
     if(prac.lastFocus) fd.append('last_focus', prac.lastFocus);
     if(prac.stageId) fd.append('stage_id', prac.stageId);
     try{ fd.append('voice_profile', JSON.stringify(loadVoice())); }catch(e){}
-    // Syllable rescue on Qu: count toward tutor defer after 3
-    if(prac.stageId==='qu' && prac.syllableRescue && !prac.syllableExhausted){
-      const attempt=Math.min(3, (prac.syllableFails||0)+1);
-      fd.append('qu_bridge_attempt', String(attempt));
-    }
     const myGen=_pollGen;
     showProg(true, 2, 'Uploading…', 0, 'queued');
     try{
@@ -1389,54 +1343,31 @@ function render(data){
 
   let heardHtml='';
   if(view.heard_arabic!==undefined){
-    const match=view.heard_match||'';
-    const matchedAr=(view.matched_arabic||'').trim();
-    const matchedPh=(view.matched_phonetic||'').trim();
-    const compare=(view.compare_html||'').trim();
-    const rawAr=(view.heard_raw||'').trim();
     const summaryEn=(view.heard_summary_en||data.heard_summary_en||'').trim()
       || ((data.results||[])[0]||{}).heard_summary_en || '';
     const hideWhisper = view.hide_whisper!==false && data.hide_whisper!==false;
-    const showMatch = matchedAr && (match==='exact'||match==='close');
-    let note;
-    if(match==='raw'||match==='empty'){
-      note='Showing the literal capture of this take. Could not cleanly match a known ayah.';
-    } else if(match==='drill'){
-      note='This drill only — top line is the piece we scored.';
-    } else if(summaryEn || compare){
-      note='English reading of your sounds below — Whisper word-guess is hidden because it invents words.';
-    } else {
-      note='Arabic + English phonetics are what the app heard from your voice.';
-    }
-    const matchBlock = (showMatch || compare)
-      ? `<div class="hmatch"><div class="hmatchlbl">Closest ayah match</div>
-         ${(!hideWhisper && matchedAr)?`<div class="hmatchar" dir="rtl" lang="ar">${matchedAr}</div>`:''}
-         ${(!hideWhisper && matchedPh)?`<div class="hmatchph">${matchedPh}</div>`:''}
-         ${compare||''}</div>`
-      : '';
-    const rawBlock = '';
-    // NEVER show Whisper's invented word (Kurrahu / المؤمنون / كفر) as what you said.
-    const soundBlock = '';
+    const trustSummary = !!(summaryEn && summaryEn.trim() &&
+      !/almost nothing clear|sounds unclear|opening unclear$|no clear/i.test(summaryEn));
     const playBlock = (_lastRecUrl || data.session)
       ? `<div class="hplay">
           <div class="hplaylbl">Your recording — play back &amp; compare</div>
           <audio id="heardAudio" controls preload="metadata" playsinline src="${_lastRecUrl || ('/sessions/'+data.session+'/audio')}"></audio>
         </div>`
       : '';
-    const heardCls=willAdvance?'heard pass':'heard fail';
-    const headline = summaryEn
-      ? `<div class="hh">${willAdvance?'Nice — what we measured':'Not yet — what we measured'}</div>
-         <div class="hph" style="font-size:18px;font-style:normal;color:#1a2a3a;line-height:1.45;margin:8px 0">${summaryEn}</div>`
-      : `<div class="hh">${willAdvance?'Nice — what we measured':'Not yet — what we measured'}</div>
-         <div class="hph" style="font-size:18px;font-style:normal;color:#1a2a3a">unclear — try again closer to the mic</div>`;
-    heardHtml=`<div class="${heardCls}" id="heardTop">
-      ${headline}
-      ${soundBlock}
-      ${rawBlock}
-      ${matchBlock}
-      ${playBlock}
-      <div class="hnote">${note}</div>
-    </div>`;
+    if(trustSummary){
+      const heardCls=willAdvance?'heard pass':'heard fail';
+      heardHtml=`<div class="${heardCls}" id="heardTop">
+        <div class="hh">${willAdvance?'Nice — what we measured':'Not yet — what we measured'}</div>
+        <div class="hph" style="font-size:18px;font-style:normal;color:#1a2a3a;line-height:1.45;margin:8px 0">${summaryEn}</div>
+        ${playBlock}
+        <div class="hnote">Measured on <b>${curSay}</b> only — Whisper word-guess hidden when unsure.</div>
+      </div>`;
+    } else if(playBlock){
+      heardHtml=`<div class="heard" id="heardTop">
+        ${playBlock}
+        <div class="hnote">Scoring <b>${curSay}</b> — no confident read on this take. Listen to the model, then try again.</div>
+      </div>`;
+    }
   }
 
   function cardHtml(r){
@@ -1492,7 +1423,6 @@ function render(data){
   const liveId = practice.stageId || curStageName;
   const liveObj = ladder.find(s=>s.id===liveId) || curStageObj;
   const liveSay = liveObj ? liveObj.say_en : curSay;
-  const enteredRescue = !didAdvance && from==='qul' && liveId==='qu';
 
   let advanceBanner='';
   if(didAdvance){
@@ -1504,15 +1434,6 @@ function render(data){
       <div class="an">Fresh start on this piece — listen to <b>only ${say}</b>, then record.</div>
       ${clipSrc?stagePlayHtml(to, say, 'playStageWord'):''}
     </div>`;
-  } else if(enteredRescue){
-    flashBuildNote('Word tries used — now say only Qu.');
-    advanceBanner=`<div class="advbanner failbanner" id="advanceBanner">
-      <div class="al">Syllable rescue · not full Qul</div>
-      <div class="as">Say: Qu</div>
-      <div class="aa" dir="rtl" lang="ar">قُ</div>
-      <div class="an">Three word tries used. Now say <b>only the start</b> — <b>CAW</b>, the start of “call”, stopped before the L. Stop. Listen first.</div>
-      ${stagePlayHtml('qu', 'Qu', 'playStageWord')}
-    </div>`;
   }
 
   // Fail path: Hear only + Try for the LIVE stage
@@ -1522,7 +1443,7 @@ function render(data){
          <button id="tryAgain" class="rbtn">● Record ${say}</button>
        </div>`
     : `<div class="retry">
-         ${enteredRescue ? '' : failHear}
+         ${failHear}
          <button id="tryAgain" class="rbtn">↻ Try ${liveSay} again</button>
        </div>
        <div class="notebox">
@@ -1531,7 +1452,7 @@ function render(data){
        </div>`;
 
   const logHtml=practiceLogHtml(v, practice);
-  const nextCards = (didAdvance || enteredRescue)
+  const nextCards = didAdvance
     ? []
     : rs.filter(r => r.level === 'next');
   const rest = rs.filter(r => r.level !== 'next');
@@ -1545,17 +1466,17 @@ function render(data){
   $('results').innerHTML =
     advanceBanner +
     heardHtml +
-    (didAdvance || enteredRescue ? '' : logHtml) +
+    (didAdvance ? '' : logHtml) +
     nextCards.map(cardHtml).join('') +
     retryHtml +
-    (didAdvance || enteredRescue ? logHtml : '') +
+    (didAdvance ? logHtml : '') +
     restHtml;
 
-  bindRetry(data, {didAdvance: didAdvance || enteredRescue, say: liveSay, stageId: liveId});
+  bindRetry(data, {didAdvance: didAdvance, say: liveSay, stageId: liveId});
   bindClearLog();
   bindHeardAudio();
   if(data.session) $('sessionInfo').textContent='session: '+data.session;
-  if(didAdvance || enteredRescue){
+  if(didAdvance){
     const ab=$('advanceBanner') || $('stageBox');
     if(ab) try{ ab.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){}
   } else {
