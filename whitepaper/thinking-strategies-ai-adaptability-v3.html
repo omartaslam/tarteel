@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Thinking Strategies for AI Adaptability — Qortex</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    font-family: "Liberation Sans", "Noto Sans", Arial, Helvetica, sans-serif;
+    color: #102033;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: #fff;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    height: 297mm;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* COVER */
+  .cover {
+    background:
+      radial-gradient(ellipse at 85% 15%, rgba(94, 214, 186, 0.28), transparent 45%),
+      linear-gradient(160deg, #071521 0%, #0d3b3a 42%, #156b5c 100%);
+    color: #fff;
+    padding: 24mm 20mm 18mm;
+  }
+  .eyebrow {
+    display: inline-block;
+    font-size: 8.5pt;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #8ee0cb;
+    border: 1px solid rgba(142,224,203,0.45);
+    border-radius: 999px;
+    padding: 5px 12px;
+    margin-bottom: 18mm;
+  }
+  .cover h1 {
+    font-family: "Liberation Serif", Georgia, serif;
+    font-size: 32pt;
+    line-height: 1.1;
+    max-width: 155mm;
+    margin-bottom: 8mm;
+  }
+  .cover-sub {
+    font-size: 13pt;
+    line-height: 1.45;
+    color: #cfece3;
+    max-width: 148mm;
+    margin-bottom: 16mm;
+  }
+  .cover-points {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 4mm;
+    margin-top: 8mm;
+  }
+  .cover-points div {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 5mm 4.5mm;
+  }
+  .cover-points strong {
+    display: block;
+    font-size: 10.5pt;
+    margin-bottom: 1.5mm;
+    color: #fff;
+  }
+  .cover-points span {
+    font-size: 8.5pt;
+    line-height: 1.35;
+    color: #b7ddd2;
+  }
+  .cover-foot {
+    position: absolute;
+    left: 20mm; right: 20mm; bottom: 14mm;
+    display: flex; justify-content: space-between;
+    font-size: 8.5pt; color: rgba(255,255,255,0.55);
+  }
+
+  /* INNER */
+  .inner { background: #f5faf8; padding: 15mm 17mm 14mm; }
+  .label {
+    color: #14745f;
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 3mm;
+  }
+  h2 {
+    font-family: "Liberation Serif", Georgia, serif;
+    font-size: 19pt;
+    line-height: 1.18;
+    margin-bottom: 4mm;
+    color: #0c1b2a;
+  }
+  .lede {
+    font-size: 11pt;
+    line-height: 1.45;
+    color: #3b4d5e;
+    margin-bottom: 7mm;
+    max-width: 168mm;
+  }
+
+  .quote {
+    background: #fff;
+    border-left: 4px solid #14745f;
+    border-radius: 0 10px 10px 0;
+    padding: 5mm 6mm;
+    margin-bottom: 7mm;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+  }
+  .quote p {
+    font-family: "Liberation Serif", Georgia, serif;
+    font-size: 12.5pt;
+    line-height: 1.4;
+    color: #0c1b2a;
+  }
+  .quote span {
+    display: block;
+    margin-top: 2.5mm;
+    font-family: "Liberation Sans", Arial, sans-serif;
+    font-size: 8.5pt;
+    color: #6b7c8c;
+  }
+
+  .two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4.5mm;
+    margin-bottom: 6mm;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid #d7e8e1;
+    border-radius: 11px;
+    padding: 5mm;
+  }
+  .card .t {
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 2mm;
+  }
+  .card.muted .t { color: #9a3412; }
+  .card.live .t { color: #14745f; }
+  .card h3 { font-size: 12pt; margin-bottom: 2mm; }
+  .card p { font-size: 9.2pt; line-height: 1.4; color: #445566; }
+
+  .matrix-title {
+    font-size: 10pt;
+    font-weight: 700;
+    margin: 1mm 0 3mm;
+  }
+  .matrix {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3.5mm;
+  }
+  .cell {
+    border-radius: 10px;
+    padding: 4.5mm;
+    min-height: 28mm;
+  }
+  .c1 { background: #d9f5e8; }
+  .c2 { background: #dff0fb; }
+  .c3 { background: #ffe8cc; }
+  .c4 { background: #e8eef4; }
+  .cell .mt {
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #526274;
+    margin-bottom: 1.5mm;
+  }
+  .cell h4 { font-size: 11pt; margin-bottom: 1.5mm; }
+  .cell p { font-size: 8.8pt; line-height: 1.35; color: #3f5162; }
+
+  .foot {
+    position: absolute;
+    left: 17mm; right: 17mm; bottom: 9mm;
+    display: flex; justify-content: space-between;
+    font-size: 8pt; color: #92a0ad;
+  }
+
+  /* page 3 */
+  .six {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 3.2mm;
+    margin-bottom: 6mm;
+  }
+  .s {
+    background: #fff;
+    border-radius: 10px;
+    padding: 4mm 3.5mm;
+    border: 1px solid #d7e8e1;
+  }
+  .s .n {
+    font-size: 8pt;
+    font-weight: 700;
+    color: #14745f;
+    margin-bottom: 1.2mm;
+  }
+  .s h4 { font-size: 10.5pt; margin-bottom: 1.2mm; }
+  .s p { font-size: 8.5pt; line-height: 1.35; color: #4a5c6c; }
+
+  .example {
+    background: #0d3b3a;
+    color: #fff;
+    border-radius: 12px;
+    padding: 5.5mm 6mm;
+    margin-bottom: 5mm;
+  }
+  .example .t {
+    font-size: 7.5pt;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #8ee0cb;
+    font-weight: 700;
+    margin-bottom: 2mm;
+  }
+  .example h3 {
+    font-family: "Liberation Serif", Georgia, serif;
+    font-size: 13pt;
+    margin-bottom: 2.5mm;
+  }
+  .example p {
+    font-size: 9.5pt;
+    line-height: 1.4;
+    color: #cfece3;
+  }
+
+  .questions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3.2mm;
+  }
+  .q {
+    background: #fff;
+    border-radius: 10px;
+    padding: 4mm;
+    border: 1px solid #d7e8e1;
+  }
+  .q h4 { font-size: 9.8pt; margin-bottom: 1.2mm; color: #0c1b2a; }
+  .q p { font-size: 8.5pt; line-height: 1.35; color: #4a5c6c; }
+
+  /* page 4 close */
+  .close-hero {
+    background: linear-gradient(135deg, #0d3b3a, #156b5c);
+    color: #fff;
+    border-radius: 14px;
+    padding: 7mm 7mm 6mm;
+    margin-bottom: 6mm;
+  }
+  .close-hero h2 {
+    color: #fff;
+    font-size: 17pt;
+    margin-bottom: 3mm;
+  }
+  .close-hero p {
+    font-size: 10.5pt;
+    line-height: 1.45;
+    color: #cfece3;
+  }
+  .ask {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 3.5mm;
+    margin-bottom: 6mm;
+  }
+  .ask .box {
+    background: #fff;
+    border-radius: 11px;
+    padding: 4.5mm;
+    border: 1px solid #d7e8e1;
+    min-height: 36mm;
+  }
+  .ask .box h4 {
+    font-size: 10.5pt;
+    margin-bottom: 2mm;
+    color: #14745f;
+  }
+  .ask .box p {
+    font-size: 8.8pt;
+    line-height: 1.4;
+    color: #445566;
+  }
+  .soft-close {
+    background: #fff;
+    border-radius: 12px;
+    padding: 5.5mm 6mm;
+    border: 1px solid #d7e8e1;
+  }
+  .soft-close h3 {
+    font-size: 12pt;
+    margin-bottom: 2mm;
+  }
+  .soft-close p {
+    font-size: 9.5pt;
+    line-height: 1.45;
+    color: #445566;
+  }
+  .soft-close .line {
+    margin-top: 3mm;
+    font-size: 9pt;
+    color: #14745f;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<section class="page cover">
+  <div class="eyebrow">Qortex white paper</div>
+  <h1>Thinking Strategies<br>for AI Adaptability</h1>
+  <p class="cover-sub">Most organisations have given people AI tools.<br>Far fewer know who can actually think with them.</p>
+  <div class="cover-points">
+    <div>
+      <strong>The false comfort</strong>
+      <span>Usage metrics and prompt training look like progress. They rarely predict judgement under pressure.</span>
+    </div>
+    <div>
+      <strong>The real advantage</strong>
+      <span>Opportunity recognition, AI judgement, collaboration, adaptability and agency.</span>
+    </div>
+    <div>
+      <strong>For senior leaders</strong>
+      <span>Hiring, L&amp;D, executive search and transformation teams who need more than AI literacy theatre.</span>
+    </div>
+  </div>
+  <div class="cover-foot">
+    <span>A professional thinking perspective</span>
+    <span>qortex.co.uk</span>
+  </div>
+</section>
+
+<!-- PAGE 2 -->
+<section class="page inner">
+  <div class="label">The uncomfortable distinction</div>
+  <h2>Your best thinkers may be your weakest AI adopters</h2>
+  <p class="lede">And your most enthusiastic AI users may be the people you least want making unsupervised decisions.</p>
+
+  <div class="quote">
+    <p>“She knows every prompt framework — and still accepts fluent nonsense when it sounds confident.”</p>
+    <span>A pattern we hear from engineering, product and talent leaders alike</span>
+  </div>
+
+  <div class="two">
+    <div class="card muted">
+      <div class="t">What most programmes measure</div>
+      <h3>Access &amp; activity</h3>
+      <p>Licences issued. Workshops attended. Chat threads opened. Copilot acceptance rates. These track motion — not thinking quality.</p>
+    </div>
+    <div class="card live">
+      <div class="t">What actually determines leverage</div>
+      <h3>Thinking with AI in the loop</h3>
+      <p>Who spots leverage unprompted. Who challenges incomplete output. Who redesigns the workflow instead of decorating a broken one.</p>
+    </div>
+  </div>
+
+  <div class="matrix-title">Four profiles that change how you hire, coach and trust</div>
+  <div class="matrix">
+    <div class="cell c1">
+      <div class="mt">Strong thinking · Strong AI use</div>
+      <h4>AI-native</h4>
+      <p>High leverage. Can see opportunity, judge outputs and redesign work. Rare — and worth paying for.</p>
+    </div>
+    <div class="cell c2">
+      <div class="mt">Strong thinking · Weak AI use</div>
+      <h4>Under-leveraged</h4>
+      <p>Often your best people. The opportunity is coaching, not competence. Huge hidden ROI.</p>
+    </div>
+    <div class="cell c3">
+      <div class="mt">Weak thinking · Strong AI use</div>
+      <h4>Confident risk</h4>
+      <p>Fast, fluent, persuasive — and dangerous at scale. Needs supervision, not more tools.</p>
+    </div>
+    <div class="cell c4">
+      <div class="mt">Weak thinking · Weak AI use</div>
+      <h4>Development gap</h4>
+      <p>Neither foundation nor leverage. Training tools alone will not fix this.</p>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>Thinking Strategies for AI Adaptability · Qortex</span>
+    <span>2</span>
+  </div>
+</section>
+
+<!-- PAGE 3 -->
+<section class="page inner">
+  <div class="label">A clearer lens</div>
+  <h2>Six thinking strategies behind AI adaptability</h2>
+  <p class="lede">Not another skills checklist. These are the behaviours that show up when AI is available — and the work still has consequences.</p>
+
+  <div class="six">
+    <div class="s"><div class="n">01</div><h4>Awareness</h4><p>Where AI creates leverage — and where human judgement must stay.</p></div>
+    <div class="s"><div class="n">02</div><h4>Opportunity</h4><p>Seeing AI potential before someone mandates a tool.</p></div>
+    <div class="s"><div class="n">03</div><h4>Judgement</h4><p>When to trust, challenge, verify or discard AI output.</p></div>
+    <div class="s"><div class="n">04</div><h4>Collaboration</h4><p>Using AI as a thinking partner, not a search box.</p></div>
+    <div class="s"><div class="n">05</div><h4>Adaptability</h4><p>Changing workflows when a step becomes almost redundant.</p></div>
+    <div class="s"><div class="n">06</div><h4>Strategy</h4><p>Redesigning how work gets done — not only accelerating it.</p></div>
+  </div>
+
+  <div class="example">
+    <div class="t">Example insight that changes a development conversation</div>
+    <h3>Strategy 91 · Reasoning 87 · Opportunity recognition 42</h3>
+    <p>The message is not “bad at AI.” It is: strong strategic thinker who is not yet spotting where AI could amplify the work they already do well. That is coachable. And commercially valuable.</p>
+  </div>
+
+  <div class="label">Questions that reveal more than a prompting quiz</div>
+  <div class="questions">
+    <div class="q"><h4>Delegate / retain / redesign</h4><p>On a complex task, what goes to AI, what stays with you, and what should be reinvented?</p></div>
+    <div class="q"><h4>Convincing but incomplete</h4><p>AI produces a polished recommendation on thin evidence. What happens next?</p></div>
+    <div class="q"><h4>Competitor moves first</h4><p>A rival automates a major process. Do you copy, wait, or rethink the operating model?</p></div>
+    <div class="q"><h4>Unprompted agency</h4><p>Nobody asked. You notice a transformable process. What do you do?</p></div>
+  </div>
+
+  <div class="foot">
+    <span>Thinking Strategies for AI Adaptability · Qortex</span>
+    <span>3</span>
+  </div>
+</section>
+
+<!-- PAGE 4 -->
+<section class="page inner">
+  <div class="label">Why this matters now</div>
+  <div class="close-hero">
+    <h2>AI programmes fail quietly when thinking quality is assumed.</h2>
+    <p>Boards see adoption dashboards. Leaders feel activity. Risk and opportunity both hide in how people think when the tool is fluent and the information is incomplete.</p>
+  </div>
+
+  <div class="ask">
+    <div class="box">
+      <h4>Hiring &amp; search</h4>
+      <p>Stop asking “have you used AI?” Start asking whether candidates can judge it, challenge it, and redesign work around it.</p>
+    </div>
+    <div class="box">
+      <h4>L&amp;D &amp; talent</h4>
+      <p>Train thinking strategies, not only tools. Your highest-ROI cohort is often strong thinkers who are under-leveraging AI.</p>
+    </div>
+    <div class="box">
+      <h4>Transformation leads</h4>
+      <p>Usage is not readiness. Pair enablement with a clearer read on judgement, opportunity recognition and agency.</p>
+    </div>
+  </div>
+
+  <div class="soft-close">
+    <h3>If this resonates, the useful next conversation is specific</h3>
+    <p>Which roles in your organisation are under-leveraged vs confidently risky? Where would a clearer thinking profile change a hire, a promotion, or an AI rollout decision?</p>
+    <p style="margin-top:2.5mm;">Qortex measures how professionals think. We are exploring AI Adaptability Thinking as a related layer — shaped with organisations that want insight they can act on, not another literacy certificate.</p>
+    <div class="line">Happy to compare notes against your hiring, development or AI programme. — Qortex</div>
+  </div>
+
+  <div class="foot">
+    <span>Thinking Strategies for AI Adaptability · Qortex · qortex.co.uk</span>
+    <span>4</span>
+  </div>
+</section>
+
+</body>
+</html>
